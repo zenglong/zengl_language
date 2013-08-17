@@ -54,11 +54,6 @@ class clsTest
 	endfun
 endcls
 
-class clsTestOther
-	m;
-	n;
-endclass
-
 fun init()
 	print 'global init';
 endfun
@@ -94,3 +89,13 @@ bltLoadScript('test3.zl');
 print TEST_MACRO;
 print TEST2_MACRO;
 print 'zengl version is v' + bltGetZLVersion();
+clsTestOther.testOther();
+
+class clsTestOther
+	m;
+	n;
+	fun testOther()
+		print 'i am in testOther';
+		print 'hello zengl';
+	endfun
+endclass

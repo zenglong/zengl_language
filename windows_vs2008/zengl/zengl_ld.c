@@ -92,6 +92,11 @@ ZL_VOID zengl_LDAddrListReplaceAll(ZL_VOID * VM_ARG)
 			else
 				op_data = &run->inst_list.insts[i].src;
 			
+			if(op_data->type == ZL_R_DT_LDFUNID) //如果是函数ID，则将函数ID先转为该函数的伪地址，再由该伪地址得到真实的汇编位置
+			{
+				op_data->val.num = compile->SymFunTable.funs[op_data->val.num].LDAdr;
+				op_data->type = ZL_R_DT_LDADDR;
+			}
 			if(op_data->type == ZL_R_DT_LDADDR)
 			{
 				if(compile->LDAddrList.addr[op_data->val.num].isvalid == ZL_FALSE)

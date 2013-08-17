@@ -510,8 +510,11 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 			case ZL_R_DT_STR:
 				run->info(VM_ARG,"\"%s\" ",run->InstData_StringPool.ptr + op_data.val.str_Index);
 				break;
-			case ZL_R_DT_LDADDR:
+			case ZL_R_DT_LDADDR: //伪地址
 				run->info(VM_ARG,"adr%d ",op_data.val.num);
+				break;
+			case ZL_R_DT_LDFUNID: //函数调用时，使用的函数ID，链接替换时会先转为伪地址
+				run->info(VM_ARG,"funid%d ",op_data.val.num);
 				break;
 			}
 		} //for(j=1;j<=2;j++)
@@ -529,7 +532,7 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 	ZENGL_RUN_RUNTIME_OP_DATA src; //临时变量，用于存放源操作数等。
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT tmpmem;  //临时的虚拟内存变量。
 	ZL_CHAR tmpchar[30]; //临时字符串数组
-	while(ZL_R_CUR_INST.type != ZL_R_IT_END) //根据PC寄存器的值来读取对应的汇编指令，如果当前指令不是END指令就继续运行。
+	while(ZL_R_CUR_INST.type != ZL_R_IT_END && run->isUserWantStop == ZL_FALSE) //根据PC寄存器的值来读取对应的汇编指令，如果当前指令不是END指令且用户没有要求停止脚本，就继续运行。
 	{
 		if(ZL_R_CUR_INST.isvalid == ZL_FALSE || 
 			ZL_R_CUR_INST.pc != ZL_R_REG_PC)

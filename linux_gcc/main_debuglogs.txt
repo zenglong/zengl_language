@@ -348,292 +348,314 @@ nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
 (220) print childs end 
 (14) fun childs end 
 (8) class childs end 
-(8) class has nextnode: nodenum:235 reserve token: class line:57,col:1 <'test.zl'>
-(235) class has 2 childs: 
-(235) class (0) child is nodenum:236 identifier token: clsTestOther line:57,col:7 <'test.zl'>
-(235) class (1) child is nodenum:237 identifier token: m line:58,col:2 <'test.zl'>
-(237) m has nextnode: nodenum:239 identifier token: n line:59,col:2 <'test.zl'>
-(235) class childs end 
-(235) class has nextnode: nodenum:242 reserve token: fun line:62,col:1 <'test.zl'>
-(242) fun has 3 childs: 
-(242) fun (0) child is nodenum:243 identifier token: init line:62,col:5 <'test.zl'>
-(242) fun (1) child is nodenum:-1 NULL node 
-(242) fun (2) child is nodenum:246 reserve token: print line:63,col:2 <'test.zl'>
-(246) print has 1 childs: 
-(246) print (0) child is nodenum:247 string token: 'global init' line:63,col:8 <'test.zl'>
-(246) print childs end 
-(242) fun childs end 
-(242) fun has nextnode: nodenum:251 ops token: . line:66,col:8 <'test.zl'>
-(251) . has 2 childs: 
-(251) . (0) child is nodenum:250 identifier token: clsTest line:66,col:1 <'test.zl'>
-(251) . (1) child is nodenum:252 funcall token: init line:66,col:9 <'test.zl'>
-(252) init has 1 childs: 
-(252) init (0) child is nodenum:-1 NULL node 
-(252) init childs end 
-(251) . childs end 
-(251) . has nextnode: nodenum:256 funcall token: init line:67,col:1 <'test.zl'>
-(256) init has 1 childs: 
-(256) init (0) child is (-1) (null) childs end 
-(256) init childs end 
-(256) init has nextnode: nodenum:260 class statement token: 'clsTest' line:68,col:1 <'test.zl'>
-(260) clsTest has 1 childs: 
-(260) clsTest (0) child is nodenum:261 identifier token: test line:68,col:9 <'test.zl'>
-(260) clsTest childs end 
-(260) clsTest has nextnode: nodenum:264 ops token: = line:69,col:10 <'test.zl'>
-(264) = has 2 childs: 
-(264) = (0) child is nodenum:263 identifier token: glmytest line:69,col:1 <'test.zl'>
-(264) = (1) child is nodenum:265 number token: 5 line:69,col:12 <'test.zl'>
-(264) = childs end 
-(264) = has nextnode: nodenum:268 ops token: = line:70,col:3 <'test.zl'>
-(268) = has 2 childs: 
-(268) = (0) child is nodenum:267 identifier token: i line:70,col:1 <'test.zl'>
-(268) = (1) child is nodenum:269 number token: 4 line:70,col:5 <'test.zl'>
-(268) = childs end 
-(268) = has nextnode: nodenum:272 ops token: = line:71,col:10 <'test.zl'>
-(272) = has 2 childs: 
-(272) = (0) child is nodenum:271 identifier token: floatnum line:71,col:1 <'test.zl'>
-(272) = (1) child is nodenum:273 float token: 3.677 line:71,col:12 <'test.zl'>
-(272) = childs end 
-(272) = has nextnode: nodenum:278 ops token: = line:72,col:8 <'test.zl'>
-(278) = has 2 childs: 
-(278) = (0) child is nodenum:276 ops token: . line:72,col:5 <'test.zl'>
-(276) . has 2 childs: 
-(276) . (0) child is nodenum:275 identifier token: test line:72,col:1 <'test.zl'>
-(276) . (1) child is nodenum:277 identifier token: a line:72,col:6 <'test.zl'>
-(276) . childs end 
-(278) = (1) child is nodenum:279 number token: 8 line:72,col:10 <'test.zl'>
-(278) = childs end 
-(278) = has nextnode: nodenum:284 ops token: = line:73,col:8 <'test.zl'>
-(284) = has 2 childs: 
-(284) = (0) child is nodenum:282 ops token: . line:73,col:5 <'test.zl'>
-(282) . has 2 childs: 
-(282) . (0) child is nodenum:281 identifier token: test line:73,col:1 <'test.zl'>
-(282) . (1) child is nodenum:283 identifier token: b line:73,col:6 <'test.zl'>
-(282) . childs end 
-(284) = (1) child is nodenum:285 number token: 10 line:73,col:10 <'test.zl'>
-(284) = childs end 
-(284) = has nextnode: nodenum:287 reserve token: print line:74,col:1 <'test.zl'>
-(287) print has 1 childs: 
-(287) print (0) child is nodenum:295 ops token: + line:74,col:43 <'test.zl'>
-(295) + has 2 childs: 
-(295) + (0) child is nodenum:293 ops token: + line:74,col:28 <'test.zl'>
-(293) + has 2 childs: 
-(293) + (0) child is nodenum:289 ops token: + line:74,col:19 <'test.zl'>
-(289) + has 2 childs: 
-(289) + (0) child is nodenum:288 string token: 'test a is ' line:74,col:7 <'test.zl'>
-(289) + (1) child is nodenum:291 ops token: . line:74,col:25 <'test.zl'>
-(291) . has 2 childs: 
-(291) . (0) child is nodenum:290 identifier token: test line:74,col:21 <'test.zl'>
-(291) . (1) child is nodenum:292 identifier token: a line:74,col:26 <'test.zl'>
-(291) . childs end 
-(289) + childs end 
-(293) + (1) child is nodenum:294 string token: ' test.b is ' line:74,col:30 <'test.zl'>
-(293) + childs end 
-(295) + (1) child is nodenum:297 ops token: . line:74,col:49 <'test.zl'>
-(297) . has 2 childs: 
-(297) . (0) child is nodenum:296 identifier token: test line:74,col:45 <'test.zl'>
-(297) . (1) child is nodenum:298 identifier token: b line:74,col:50 <'test.zl'>
-(297) . childs end 
-(295) + childs end 
-(287) print childs end 
-(287) print has nextnode: nodenum:301 ops token: . line:75,col:8 <'test.zl'>
-(301) . has 2 childs: 
-(301) . (0) child is nodenum:300 identifier token: clsTest line:75,col:1 <'test.zl'>
-(301) . (1) child is nodenum:302 funcall token: init line:75,col:9 <'test.zl'>
-(302) init has 1 childs: 
-(302) init (0) child is nodenum:304 identifier token: test line:75,col:14 <'test.zl'>
-(302) init childs end 
-(301) . childs end 
-(301) . has nextnode: nodenum:308 ops token: = line:77,col:3 <'test.zl'>
-(308) = has 2 childs: 
-(308) = (0) child is nodenum:307 identifier token: a line:77,col:1 <'test.zl'>
-(308) = (1) child is nodenum:309 number token: 678 line:77,col:5 <'test.zl'>
-(308) = childs end 
-(308) = has nextnode: nodenum:312 ops token: = line:78,col:3 <'test.zl'>
-(312) = has 2 childs: 
-(312) = (0) child is nodenum:311 identifier token: c line:78,col:1 <'test.zl'>
-(312) = (1) child is nodenum:313 funcall token: array line:78,col:5 <'test.zl'>
-(313) array has 1 childs: 
-(313) array (0) child is nodenum:316 ops token: , line:78,col:13 <'test.zl'>
-(316) , has 2 childs: 
-(316) , (0) child is nodenum:315 number token: 11 line:78,col:11 <'test.zl'>
-(316) , (1) child is nodenum:317 number token: 22 line:78,col:14 <'test.zl'>
-(316) , childs end 
-(313) array childs end 
-(312) = childs end 
-(312) = has nextnode: nodenum:321 ops token: = line:79,col:6 <'test.zl'>
-(321) = has 2 childs: 
-(321) = (0) child is nodenum:320 identifier token: test line:79,col:1 <'test.zl'>
-(321) = (1) child is nodenum:322 funcall token: array line:79,col:8 <'test.zl'>
-(322) array has 1 childs: 
-(322) array (0) child is nodenum:331 ops token: , line:79,col:37 <'test.zl'>
-(331) , has 2 childs: 
-(331) , (0) child is nodenum:329 ops token: , line:79,col:35 <'test.zl'>
-(329) , has 2 childs: 
-(329) , (0) child is nodenum:327 ops token: , line:79,col:29 <'test.zl'>
-(327) , has 2 childs: 
-(327) , (0) child is nodenum:325 ops token: , line:79,col:27 <'test.zl'>
-(325) , has 2 childs: 
-(325) , (0) child is nodenum:324 string token: 'hello world' line:79,col:14 <'test.zl'>
-(325) , (1) child is nodenum:326 number token: 3 line:79,col:28 <'test.zl'>
-(325) , childs end 
-(327) , (1) child is nodenum:328 float token: 11.45 line:79,col:30 <'test.zl'>
-(327) , childs end 
-(329) , (1) child is nodenum:330 identifier token: c line:79,col:36 <'test.zl'>
-(329) , childs end 
-(331) , (1) child is nodenum:332 string token: 'haha end' line:79,col:38 <'test.zl'>
-(331) , childs end 
-(322) array childs end 
-(321) = childs end 
-(321) = has nextnode: nodenum:335 reserve token: for line:80,col:1 <'test.zl'>
-(335) for has 4 childs: 
-(335) for (0) child is nodenum:338 ops token: = line:80,col:6 <'test.zl'>
-(338) = has 2 childs: 
-(338) = (0) child is nodenum:337 identifier token: i line:80,col:5 <'test.zl'>
-(338) = (1) child is nodenum:339 number token: 0 line:80,col:7 <'test.zl'>
-(338) = childs end 
-(335) for (1) child is nodenum:342 ops token: < line:80,col:10 <'test.zl'>
-(342) < has 2 childs: 
-(342) < (0) child is nodenum:341 identifier token: i line:80,col:9 <'test.zl'>
-(342) < (1) child is nodenum:343 number token: 4 line:80,col:11 <'test.zl'>
-(342) < childs end 
-(335) for (2) child is nodenum:346 ops token: ++ line:80,col:14 <'test.zl'>
-(346) ++ has 1 childs: 
-(346) ++ (0) child is nodenum:345 identifier token: i line:80,col:13 <'test.zl'>
-(346) ++ childs end 
-(335) for (3) child is nodenum:348 reserve token: print line:81,col:2 <'test.zl'>
+(8) class has nextnode: nodenum:235 reserve token: fun line:57,col:1 <'test.zl'>
+(235) fun has 3 childs: 
+(235) fun (0) child is nodenum:236 identifier token: init line:57,col:5 <'test.zl'>
+(235) fun (1) child is nodenum:-1 NULL node 
+(235) fun (2) child is nodenum:239 reserve token: print line:58,col:2 <'test.zl'>
+(239) print has 1 childs: 
+(239) print (0) child is nodenum:240 string token: 'global init' line:58,col:8 <'test.zl'>
+(239) print childs end 
+(235) fun childs end 
+(235) fun has nextnode: nodenum:244 ops token: . line:61,col:8 <'test.zl'>
+(244) . has 2 childs: 
+(244) . (0) child is nodenum:243 identifier token: clsTest line:61,col:1 <'test.zl'>
+(244) . (1) child is nodenum:245 funcall token: init line:61,col:9 <'test.zl'>
+(245) init has 1 childs: 
+(245) init (0) child is nodenum:-1 NULL node 
+(245) init childs end 
+(244) . childs end 
+(244) . has nextnode: nodenum:249 funcall token: init line:62,col:1 <'test.zl'>
+(249) init has 1 childs: 
+(249) init (0) child is (-1) (null) childs end 
+(249) init childs end 
+(249) init has nextnode: nodenum:253 class statement token: 'clsTest' line:63,col:1 <'test.zl'>
+(253) clsTest has 1 childs: 
+(253) clsTest (0) child is nodenum:254 identifier token: test line:63,col:9 <'test.zl'>
+(253) clsTest childs end 
+(253) clsTest has nextnode: nodenum:257 ops token: = line:64,col:10 <'test.zl'>
+(257) = has 2 childs: 
+(257) = (0) child is nodenum:256 identifier token: glmytest line:64,col:1 <'test.zl'>
+(257) = (1) child is nodenum:258 number token: 5 line:64,col:12 <'test.zl'>
+(257) = childs end 
+(257) = has nextnode: nodenum:261 ops token: = line:65,col:3 <'test.zl'>
+(261) = has 2 childs: 
+(261) = (0) child is nodenum:260 identifier token: i line:65,col:1 <'test.zl'>
+(261) = (1) child is nodenum:262 number token: 4 line:65,col:5 <'test.zl'>
+(261) = childs end 
+(261) = has nextnode: nodenum:265 ops token: = line:66,col:10 <'test.zl'>
+(265) = has 2 childs: 
+(265) = (0) child is nodenum:264 identifier token: floatnum line:66,col:1 <'test.zl'>
+(265) = (1) child is nodenum:266 float token: 3.677 line:66,col:12 <'test.zl'>
+(265) = childs end 
+(265) = has nextnode: nodenum:271 ops token: = line:67,col:8 <'test.zl'>
+(271) = has 2 childs: 
+(271) = (0) child is nodenum:269 ops token: . line:67,col:5 <'test.zl'>
+(269) . has 2 childs: 
+(269) . (0) child is nodenum:268 identifier token: test line:67,col:1 <'test.zl'>
+(269) . (1) child is nodenum:270 identifier token: a line:67,col:6 <'test.zl'>
+(269) . childs end 
+(271) = (1) child is nodenum:272 number token: 8 line:67,col:10 <'test.zl'>
+(271) = childs end 
+(271) = has nextnode: nodenum:277 ops token: = line:68,col:8 <'test.zl'>
+(277) = has 2 childs: 
+(277) = (0) child is nodenum:275 ops token: . line:68,col:5 <'test.zl'>
+(275) . has 2 childs: 
+(275) . (0) child is nodenum:274 identifier token: test line:68,col:1 <'test.zl'>
+(275) . (1) child is nodenum:276 identifier token: b line:68,col:6 <'test.zl'>
+(275) . childs end 
+(277) = (1) child is nodenum:278 number token: 10 line:68,col:10 <'test.zl'>
+(277) = childs end 
+(277) = has nextnode: nodenum:280 reserve token: print line:69,col:1 <'test.zl'>
+(280) print has 1 childs: 
+(280) print (0) child is nodenum:288 ops token: + line:69,col:43 <'test.zl'>
+(288) + has 2 childs: 
+(288) + (0) child is nodenum:286 ops token: + line:69,col:28 <'test.zl'>
+(286) + has 2 childs: 
+(286) + (0) child is nodenum:282 ops token: + line:69,col:19 <'test.zl'>
+(282) + has 2 childs: 
+(282) + (0) child is nodenum:281 string token: 'test a is ' line:69,col:7 <'test.zl'>
+(282) + (1) child is nodenum:284 ops token: . line:69,col:25 <'test.zl'>
+(284) . has 2 childs: 
+(284) . (0) child is nodenum:283 identifier token: test line:69,col:21 <'test.zl'>
+(284) . (1) child is nodenum:285 identifier token: a line:69,col:26 <'test.zl'>
+(284) . childs end 
+(282) + childs end 
+(286) + (1) child is nodenum:287 string token: ' test.b is ' line:69,col:30 <'test.zl'>
+(286) + childs end 
+(288) + (1) child is nodenum:290 ops token: . line:69,col:49 <'test.zl'>
+(290) . has 2 childs: 
+(290) . (0) child is nodenum:289 identifier token: test line:69,col:45 <'test.zl'>
+(290) . (1) child is nodenum:291 identifier token: b line:69,col:50 <'test.zl'>
+(290) . childs end 
+(288) + childs end 
+(280) print childs end 
+(280) print has nextnode: nodenum:294 ops token: . line:70,col:8 <'test.zl'>
+(294) . has 2 childs: 
+(294) . (0) child is nodenum:293 identifier token: clsTest line:70,col:1 <'test.zl'>
+(294) . (1) child is nodenum:295 funcall token: init line:70,col:9 <'test.zl'>
+(295) init has 1 childs: 
+(295) init (0) child is nodenum:297 identifier token: test line:70,col:14 <'test.zl'>
+(295) init childs end 
+(294) . childs end 
+(294) . has nextnode: nodenum:301 ops token: = line:72,col:3 <'test.zl'>
+(301) = has 2 childs: 
+(301) = (0) child is nodenum:300 identifier token: a line:72,col:1 <'test.zl'>
+(301) = (1) child is nodenum:302 number token: 678 line:72,col:5 <'test.zl'>
+(301) = childs end 
+(301) = has nextnode: nodenum:305 ops token: = line:73,col:3 <'test.zl'>
+(305) = has 2 childs: 
+(305) = (0) child is nodenum:304 identifier token: c line:73,col:1 <'test.zl'>
+(305) = (1) child is nodenum:306 funcall token: array line:73,col:5 <'test.zl'>
+(306) array has 1 childs: 
+(306) array (0) child is nodenum:309 ops token: , line:73,col:13 <'test.zl'>
+(309) , has 2 childs: 
+(309) , (0) child is nodenum:308 number token: 11 line:73,col:11 <'test.zl'>
+(309) , (1) child is nodenum:310 number token: 22 line:73,col:14 <'test.zl'>
+(309) , childs end 
+(306) array childs end 
+(305) = childs end 
+(305) = has nextnode: nodenum:314 ops token: = line:74,col:6 <'test.zl'>
+(314) = has 2 childs: 
+(314) = (0) child is nodenum:313 identifier token: test line:74,col:1 <'test.zl'>
+(314) = (1) child is nodenum:315 funcall token: array line:74,col:8 <'test.zl'>
+(315) array has 1 childs: 
+(315) array (0) child is nodenum:324 ops token: , line:74,col:37 <'test.zl'>
+(324) , has 2 childs: 
+(324) , (0) child is nodenum:322 ops token: , line:74,col:35 <'test.zl'>
+(322) , has 2 childs: 
+(322) , (0) child is nodenum:320 ops token: , line:74,col:29 <'test.zl'>
+(320) , has 2 childs: 
+(320) , (0) child is nodenum:318 ops token: , line:74,col:27 <'test.zl'>
+(318) , has 2 childs: 
+(318) , (0) child is nodenum:317 string token: 'hello world' line:74,col:14 <'test.zl'>
+(318) , (1) child is nodenum:319 number token: 3 line:74,col:28 <'test.zl'>
+(318) , childs end 
+(320) , (1) child is nodenum:321 float token: 11.45 line:74,col:30 <'test.zl'>
+(320) , childs end 
+(322) , (1) child is nodenum:323 identifier token: c line:74,col:36 <'test.zl'>
+(322) , childs end 
+(324) , (1) child is nodenum:325 string token: 'haha end' line:74,col:38 <'test.zl'>
+(324) , childs end 
+(315) array childs end 
+(314) = childs end 
+(314) = has nextnode: nodenum:328 reserve token: for line:75,col:1 <'test.zl'>
+(328) for has 4 childs: 
+(328) for (0) child is nodenum:331 ops token: = line:75,col:6 <'test.zl'>
+(331) = has 2 childs: 
+(331) = (0) child is nodenum:330 identifier token: i line:75,col:5 <'test.zl'>
+(331) = (1) child is nodenum:332 number token: 0 line:75,col:7 <'test.zl'>
+(331) = childs end 
+(328) for (1) child is nodenum:335 ops token: < line:75,col:10 <'test.zl'>
+(335) < has 2 childs: 
+(335) < (0) child is nodenum:334 identifier token: i line:75,col:9 <'test.zl'>
+(335) < (1) child is nodenum:336 number token: 4 line:75,col:11 <'test.zl'>
+(335) < childs end 
+(328) for (2) child is nodenum:339 ops token: ++ line:75,col:14 <'test.zl'>
+(339) ++ has 1 childs: 
+(339) ++ (0) child is nodenum:338 identifier token: i line:75,col:13 <'test.zl'>
+(339) ++ childs end 
+(328) for (3) child is nodenum:341 reserve token: print line:76,col:2 <'test.zl'>
+(341) print has 1 childs: 
+(341) print (0) child is nodenum:342 array token: test line:76,col:8 <'test.zl'>
+(342) test has 1 childs: 
+(342) test (0) child is nodenum:344 identifier token: i line:76,col:13 <'test.zl'>
+(342) test childs end 
+(341) print childs end 
+(328) for childs end 
+(328) for has nextnode: nodenum:348 reserve token: print line:78,col:1 <'test.zl'>
 (348) print has 1 childs: 
-(348) print (0) child is nodenum:349 array token: test line:81,col:8 <'test.zl'>
+(348) print (0) child is nodenum:349 array token: test line:78,col:7 <'test.zl'>
 (349) test has 1 childs: 
-(349) test (0) child is nodenum:351 identifier token: i line:81,col:13 <'test.zl'>
+(349) test (0) child is nodenum:352 ops token: , line:78,col:13 <'test.zl'>
+(352) , has 2 childs: 
+(352) , (0) child is nodenum:351 number token: 3 line:78,col:12 <'test.zl'>
+(352) , (1) child is nodenum:353 number token: 1 line:78,col:14 <'test.zl'>
+(352) , childs end 
 (349) test childs end 
 (348) print childs end 
-(335) for childs end 
-(335) for has nextnode: nodenum:355 reserve token: print line:83,col:1 <'test.zl'>
-(355) print has 1 childs: 
-(355) print (0) child is nodenum:356 array token: test line:83,col:7 <'test.zl'>
-(356) test has 1 childs: 
-(356) test (0) child is nodenum:359 ops token: , line:83,col:13 <'test.zl'>
-(359) , has 2 childs: 
-(359) , (0) child is nodenum:358 number token: 3 line:83,col:12 <'test.zl'>
-(359) , (1) child is nodenum:360 number token: 1 line:83,col:14 <'test.zl'>
-(359) , childs end 
-(356) test childs end 
-(355) print childs end 
-(355) print has nextnode: nodenum:363 funcall token: bltPrintArray line:84,col:1 <'test.zl'>
-(363) bltPrintArray has 1 childs: 
-(363) bltPrintArray (0) child is nodenum:365 identifier token: test line:84,col:15 <'test.zl'>
-(363) bltPrintArray childs end 
-(363) bltPrintArray has nextnode: nodenum:368 funcall token: bltTestAddr line:85,col:1 <'test.zl'>
-(368) bltTestAddr has 1 childs: 
-(368) bltTestAddr (0) child is nodenum:375 ops token: , line:85,col:21 <'test.zl'>
-(375) , has 2 childs: 
-(375) , (0) child is nodenum:370 address token: & line:85,col:13 <'test.zl'>
-(370) & has 1 childs: 
-(370) & (0) child is nodenum:371 array token: test line:85,col:14 <'test.zl'>
-(371) test has 1 childs: 
-(371) test (0) child is nodenum:373 number token: 0 line:85,col:19 <'test.zl'>
-(371) test childs end 
-(370) & childs end 
-(375) , (1) child is nodenum:376 string token: 'test[0] is modify in bltTestAddr haha' line:85,col:22 <'test.zl'>
-(375) , childs end 
-(368) bltTestAddr childs end 
-(368) bltTestAddr has nextnode: nodenum:379 funcall token: bltPrintArray line:86,col:1 <'test.zl'>
-(379) bltPrintArray has 1 childs: 
-(379) bltPrintArray (0) child is nodenum:381 address token: & line:86,col:15 <'test.zl'>
-(381) & has 1 childs: 
-(381) & (0) child is nodenum:382 identifier token: test line:86,col:16 <'test.zl'>
-(381) & childs end 
-(379) bltPrintArray childs end 
-(379) bltPrintArray has nextnode: nodenum:386 ops token: = line:87,col:7 <'test.zl'>
-(386) = has 2 childs: 
-(386) = (0) child is nodenum:385 identifier token: test2 line:87,col:1 <'test.zl'>
-(386) = (1) child is nodenum:387 string token: 'i am test2' line:87,col:9 <'test.zl'>
-(386) = childs end 
-(386) = has nextnode: nodenum:389 reserve token: print line:88,col:1 <'test.zl'>
-(389) print has 1 childs: 
-(389) print (0) child is nodenum:391 ops token: + line:88,col:18 <'test.zl'>
-(391) + has 2 childs: 
-(391) + (0) child is nodenum:390 string token: 'test2 is ' line:88,col:7 <'test.zl'>
-(391) + (1) child is nodenum:392 identifier token: test2 line:88,col:19 <'test.zl'>
-(391) + childs end 
-(389) print childs end 
-(389) print has nextnode: nodenum:394 funcall token: bltTestAddr line:89,col:1 <'test.zl'>
-(394) bltTestAddr has 1 childs: 
-(394) bltTestAddr (0) child is nodenum:398 ops token: , line:89,col:19 <'test.zl'>
-(398) , has 2 childs: 
-(398) , (0) child is nodenum:396 address token: & line:89,col:13 <'test.zl'>
-(396) & has 1 childs: 
-(396) & (0) child is nodenum:397 identifier token: test2 line:89,col:14 <'test.zl'>
-(396) & childs end 
-(398) , (1) child is nodenum:399 string token: 'test2 is modify in bltTestAddr haha' line:89,col:20 <'test.zl'>
-(398) , childs end 
-(394) bltTestAddr childs end 
-(394) bltTestAddr has nextnode: nodenum:402 reserve token: print line:90,col:1 <'test.zl'>
-(402) print has 1 childs: 
-(402) print (0) child is nodenum:404 ops token: + line:90,col:18 <'test.zl'>
-(404) + has 2 childs: 
-(404) + (0) child is nodenum:403 string token: 'test2 is ' line:90,col:7 <'test.zl'>
-(404) + (1) child is nodenum:405 identifier token: test2 line:90,col:19 <'test.zl'>
-(404) + childs end 
-(402) print childs end 
-(402) print has nextnode: nodenum:407 funcall token: bltSetArray line:91,col:1 <'test.zl'>
-(407) bltSetArray has 1 childs: 
-(407) bltSetArray (0) child is nodenum:412 ops token: , line:91,col:35 <'test.zl'>
-(412) , has 2 childs: 
-(412) , (0) child is nodenum:410 ops token: , line:91,col:17 <'test.zl'>
-(410) , has 2 childs: 
-(410) , (0) child is nodenum:409 identifier token: test line:91,col:13 <'test.zl'>
-(410) , (1) child is nodenum:411 string token: 'hello Set Array' line:91,col:18 <'test.zl'>
-(410) , childs end 
-(412) , (1) child is nodenum:413 number token: 44 line:91,col:36 <'test.zl'>
-(412) , childs end 
-(407) bltSetArray childs end 
-(407) bltSetArray has nextnode: nodenum:416 funcall token: bltPrintArray line:92,col:1 <'test.zl'>
-(416) bltPrintArray has 1 childs: 
-(416) bltPrintArray (0) child is nodenum:418 identifier token: test line:92,col:15 <'test.zl'>
-(416) bltPrintArray childs end 
-(416) bltPrintArray has nextnode: nodenum:421 funcall token: bltLoadScript line:93,col:1 <'test.zl'>
-(421) bltLoadScript has 1 childs: 
-(421) bltLoadScript (0) child is nodenum:423 string token: 'test3.zl' line:93,col:15 <'test.zl'>
-(421) bltLoadScript childs end 
-(421) bltLoadScript has nextnode: nodenum:426 reserve token: print line:94,col:1 <'test.zl'>
-(426) print has 1 childs: 
-(426) print (0) child is nodenum:427 string token: 'i am test macro' line:94,col:7 <'test.zl'>
-(426) print childs end 
-(426) print has nextnode: nodenum:429 reserve token: print line:95,col:1 <'test.zl'>
-(429) print has 1 childs: 
-(429) print (0) child is nodenum:430 string token: 'test2 macro' line:95,col:7 <'test.zl'>
-(429) print childs end 
-(429) print has nextnode: nodenum:432 reserve token: print line:96,col:1 <'test.zl'>
-(432) print has 1 childs: 
-(432) print (0) child is nodenum:434 ops token: + line:96,col:28 <'test.zl'>
-(434) + has 2 childs: 
-(434) + (0) child is nodenum:433 string token: 'zengl version is v' line:96,col:7 <'test.zl'>
-(434) + (1) child is nodenum:435 funcall token: bltGetZLVersion line:96,col:30 <'test.zl'>
-(435) bltGetZLVersion has 1 childs: 
-(435) bltGetZLVersion (0) child is nodenum:-1 NULL node 
-(435) bltGetZLVersion childs end 
-(434) + childs end 
-(432) print childs end 
+(348) print has nextnode: nodenum:356 funcall token: bltPrintArray line:79,col:1 <'test.zl'>
+(356) bltPrintArray has 1 childs: 
+(356) bltPrintArray (0) child is nodenum:358 identifier token: test line:79,col:15 <'test.zl'>
+(356) bltPrintArray childs end 
+(356) bltPrintArray has nextnode: nodenum:361 funcall token: bltTestAddr line:80,col:1 <'test.zl'>
+(361) bltTestAddr has 1 childs: 
+(361) bltTestAddr (0) child is nodenum:368 ops token: , line:80,col:21 <'test.zl'>
+(368) , has 2 childs: 
+(368) , (0) child is nodenum:363 address token: & line:80,col:13 <'test.zl'>
+(363) & has 1 childs: 
+(363) & (0) child is nodenum:364 array token: test line:80,col:14 <'test.zl'>
+(364) test has 1 childs: 
+(364) test (0) child is nodenum:366 number token: 0 line:80,col:19 <'test.zl'>
+(364) test childs end 
+(363) & childs end 
+(368) , (1) child is nodenum:369 string token: 'test[0] is modify in bltTestAddr haha' line:80,col:22 <'test.zl'>
+(368) , childs end 
+(361) bltTestAddr childs end 
+(361) bltTestAddr has nextnode: nodenum:372 funcall token: bltPrintArray line:81,col:1 <'test.zl'>
+(372) bltPrintArray has 1 childs: 
+(372) bltPrintArray (0) child is nodenum:374 address token: & line:81,col:15 <'test.zl'>
+(374) & has 1 childs: 
+(374) & (0) child is nodenum:375 identifier token: test line:81,col:16 <'test.zl'>
+(374) & childs end 
+(372) bltPrintArray childs end 
+(372) bltPrintArray has nextnode: nodenum:379 ops token: = line:82,col:7 <'test.zl'>
+(379) = has 2 childs: 
+(379) = (0) child is nodenum:378 identifier token: test2 line:82,col:1 <'test.zl'>
+(379) = (1) child is nodenum:380 string token: 'i am test2' line:82,col:9 <'test.zl'>
+(379) = childs end 
+(379) = has nextnode: nodenum:382 reserve token: print line:83,col:1 <'test.zl'>
+(382) print has 1 childs: 
+(382) print (0) child is nodenum:384 ops token: + line:83,col:18 <'test.zl'>
+(384) + has 2 childs: 
+(384) + (0) child is nodenum:383 string token: 'test2 is ' line:83,col:7 <'test.zl'>
+(384) + (1) child is nodenum:385 identifier token: test2 line:83,col:19 <'test.zl'>
+(384) + childs end 
+(382) print childs end 
+(382) print has nextnode: nodenum:387 funcall token: bltTestAddr line:84,col:1 <'test.zl'>
+(387) bltTestAddr has 1 childs: 
+(387) bltTestAddr (0) child is nodenum:391 ops token: , line:84,col:19 <'test.zl'>
+(391) , has 2 childs: 
+(391) , (0) child is nodenum:389 address token: & line:84,col:13 <'test.zl'>
+(389) & has 1 childs: 
+(389) & (0) child is nodenum:390 identifier token: test2 line:84,col:14 <'test.zl'>
+(389) & childs end 
+(391) , (1) child is nodenum:392 string token: 'test2 is modify in bltTestAddr haha' line:84,col:20 <'test.zl'>
+(391) , childs end 
+(387) bltTestAddr childs end 
+(387) bltTestAddr has nextnode: nodenum:395 reserve token: print line:85,col:1 <'test.zl'>
+(395) print has 1 childs: 
+(395) print (0) child is nodenum:397 ops token: + line:85,col:18 <'test.zl'>
+(397) + has 2 childs: 
+(397) + (0) child is nodenum:396 string token: 'test2 is ' line:85,col:7 <'test.zl'>
+(397) + (1) child is nodenum:398 identifier token: test2 line:85,col:19 <'test.zl'>
+(397) + childs end 
+(395) print childs end 
+(395) print has nextnode: nodenum:400 funcall token: bltSetArray line:86,col:1 <'test.zl'>
+(400) bltSetArray has 1 childs: 
+(400) bltSetArray (0) child is nodenum:405 ops token: , line:86,col:35 <'test.zl'>
+(405) , has 2 childs: 
+(405) , (0) child is nodenum:403 ops token: , line:86,col:17 <'test.zl'>
+(403) , has 2 childs: 
+(403) , (0) child is nodenum:402 identifier token: test line:86,col:13 <'test.zl'>
+(403) , (1) child is nodenum:404 string token: 'hello Set Array' line:86,col:18 <'test.zl'>
+(403) , childs end 
+(405) , (1) child is nodenum:406 number token: 44 line:86,col:36 <'test.zl'>
+(405) , childs end 
+(400) bltSetArray childs end 
+(400) bltSetArray has nextnode: nodenum:409 funcall token: bltPrintArray line:87,col:1 <'test.zl'>
+(409) bltPrintArray has 1 childs: 
+(409) bltPrintArray (0) child is nodenum:411 identifier token: test line:87,col:15 <'test.zl'>
+(409) bltPrintArray childs end 
+(409) bltPrintArray has nextnode: nodenum:414 funcall token: bltLoadScript line:88,col:1 <'test.zl'>
+(414) bltLoadScript has 1 childs: 
+(414) bltLoadScript (0) child is nodenum:416 string token: 'test3.zl' line:88,col:15 <'test.zl'>
+(414) bltLoadScript childs end 
+(414) bltLoadScript has nextnode: nodenum:419 reserve token: print line:89,col:1 <'test.zl'>
+(419) print has 1 childs: 
+(419) print (0) child is nodenum:420 string token: 'i am test macro' line:89,col:7 <'test.zl'>
+(419) print childs end 
+(419) print has nextnode: nodenum:422 reserve token: print line:90,col:1 <'test.zl'>
+(422) print has 1 childs: 
+(422) print (0) child is nodenum:423 string token: 'test2 macro' line:90,col:7 <'test.zl'>
+(422) print childs end 
+(422) print has nextnode: nodenum:425 reserve token: print line:91,col:1 <'test.zl'>
+(425) print has 1 childs: 
+(425) print (0) child is nodenum:427 ops token: + line:91,col:28 <'test.zl'>
+(427) + has 2 childs: 
+(427) + (0) child is nodenum:426 string token: 'zengl version is v' line:91,col:7 <'test.zl'>
+(427) + (1) child is nodenum:428 funcall token: bltGetZLVersion line:91,col:30 <'test.zl'>
+(428) bltGetZLVersion has 1 childs: 
+(428) bltGetZLVersion (0) child is nodenum:-1 NULL node 
+(428) bltGetZLVersion childs end 
+(427) + childs end 
+(425) print childs end 
+(425) print has nextnode: nodenum:433 ops token: . line:92,col:13 <'test.zl'>
+(433) . has 2 childs: 
+(433) . (0) child is nodenum:432 identifier token: clsTestOther line:92,col:1 <'test.zl'>
+(433) . (1) child is nodenum:434 funcall token: testOther line:92,col:14 <'test.zl'>
+(434) testOther has 1 childs: 
+(434) testOther (0) child is (-1) (null) childs end 
+(434) testOther childs end 
+(433) . childs end 
+(433) . has nextnode: nodenum:438 reserve token: class line:94,col:1 <'test.zl'>
+(438) class has 2 childs: 
+(438) class (0) child is nodenum:439 identifier token: clsTestOther line:94,col:7 <'test.zl'>
+(438) class (1) child is nodenum:440 identifier token: m line:95,col:2 <'test.zl'>
+(440) m has nextnode: nodenum:442 identifier token: n line:96,col:2 <'test.zl'>
+(442) n has nextnode: nodenum:444 reserve token: fun line:97,col:2 <'test.zl'>
+(444) fun has 3 childs: 
+(444) fun (0) child is nodenum:445 identifier token: testOther line:97,col:6 <'test.zl'>
+(444) fun (1) child is nodenum:-1 NULL node 
+(444) fun (2) child is nodenum:448 reserve token: print line:98,col:3 <'test.zl'>
+(448) print has 1 childs: 
+(448) print (0) child is nodenum:449 string token: 'i am in testOther' line:98,col:9 <'test.zl'>
+(448) print childs end 
+(448) print has nextnode: nodenum:451 reserve token: print line:99,col:3 <'test.zl'>
+(451) print has 1 childs: 
+(451) print (0) child is nodenum:452 string token: 'hello zengl' line:99,col:9 <'test.zl'>
+(451) print childs end 
+(444) fun childs end 
+(438) class childs end 
 
 
  the symbol table:
-id:0 test [68 9 test.zl] [72 1 test.zl] [73 1 test.zl] [74 21 test.zl] [74 45 test.zl] [75 14 test.zl] [79 1 test.zl] [81 8 test.zl] [83 7 test.zl] [84 15 test.zl] [85 14 test.zl] [86 16 test.zl] [91 13 test.zl] [92 15 test.zl]
-id:1 glmytest [69 1 test.zl]
-id:2 i [70 1 test.zl] [80 5 test.zl] [80 9 test.zl] [80 13 test.zl] [81 13 test.zl]
-id:3 floatnum [71 1 test.zl]
-id:4 a [77 1 test.zl]
-id:5 c [78 1 test.zl] [79 36 test.zl]
-id:6 test2 [87 1 test.zl] [88 19 test.zl] [89 14 test.zl] [90 19 test.zl]
+id:0 test [63 9 test.zl] [67 1 test.zl] [68 1 test.zl] [69 21 test.zl] [69 45 test.zl] [70 14 test.zl] [74 1 test.zl] [76 8 test.zl] [78 7 test.zl] [79 15 test.zl] [80 14 test.zl] [81 16 test.zl] [86 13 test.zl] [87 15 test.zl]
+id:1 glmytest [64 1 test.zl]
+id:2 i [65 1 test.zl] [75 5 test.zl] [75 9 test.zl] [75 13 test.zl] [76 13 test.zl]
+id:3 floatnum [66 1 test.zl]
+id:4 a [72 1 test.zl]
+id:5 c [73 1 test.zl] [74 36 test.zl]
+id:6 test2 [82 1 test.zl] [83 19 test.zl] [84 14 test.zl] [85 19 test.zl]
 class:1 clsTest <nodenum:8> [3 7 test.zl]
-class:2 clsTestOther <nodenum:235> [57 7 test.zl]
+class:2 clsTestOther <nodenum:438> [94 7 test.zl]
 classmember:0 clsTest a [4 2 test.zl]
 classmember:1 clsTest b [5 2 test.zl]
-classmember:0 clsTestOther m [58 2 test.zl]
-classmember:1 clsTestOther n [59 2 test.zl]
-fun:1 init [62 5 test.zl]
+classmember:0 clsTestOther m [95 2 test.zl]
+classmember:1 clsTestOther n [96 2 test.zl]
+fun:1 init [57 5 test.zl]
 classfun:<class:1 clsTest> fun:2 init [6 6 test.zl]
+classfun:<class:2 clsTestOther> fun:3 testOther [97 6 test.zl]
 
 [zenglrun assemble code]:
 0 USE "builtin" [1 line:1,col:5,test2.zl]
@@ -834,239 +856,252 @@ classfun:<class:1 clsTest> fun:2 init [6 6 test.zl]
 194 MOV loc(7) AX [221 line:53,col:9,test.zl]
 195 PRINT AX [220 line:53,col:3,test.zl]
 196 RET [14 line:6,col:2,test.zl]
-197 JMP 201 [242 line:62,col:1,test.zl]
-198 FUNARG 0 [242 line:62,col:1,test.zl]
-199 PRINT "global init" [246 line:63,col:2,test.zl]
-200 RET [242 line:62,col:1,test.zl]
-201 PUSH ARG [252 line:66,col:9,test.zl]
-202 PUSH LOC [252 line:66,col:9,test.zl]
-203 PUSH ARGTMP [252 line:66,col:9,test.zl]
-204 RESET ARGTMP [252 line:66,col:9,test.zl]
-205 PUSH 209 [252 line:66,col:9,test.zl]
-206 MOV ARG ARGTMP [252 line:66,col:9,test.zl]
-207 RESET LOC [252 line:66,col:9,test.zl]
-208 JMP 12 [252 line:66,col:9,test.zl]
-209 PUSH ARG [256 line:67,col:1,test.zl]
-210 PUSH LOC [256 line:67,col:1,test.zl]
-211 PUSH ARGTMP [256 line:67,col:1,test.zl]
-212 RESET ARGTMP [256 line:67,col:1,test.zl]
-213 PUSH 217 [256 line:67,col:1,test.zl]
-214 MOV ARG ARGTMP [256 line:67,col:1,test.zl]
-215 RESET LOC [256 line:67,col:1,test.zl]
-216 JMP 198 [256 line:67,col:1,test.zl]
-217 MOV AX 5 [265 line:69,col:12,test.zl]
-218 MOV (1) AX [263 line:69,col:1,test.zl]
-219 MOV AX 4 [269 line:70,col:5,test.zl]
-220 MOV (2) AX [267 line:70,col:1,test.zl]
-221 MOV AX 3.677 [273 line:71,col:12,test.zl]
-222 MOV (3) AX [271 line:71,col:1,test.zl]
-223 MOV AX 8 [279 line:72,col:10,test.zl]
-224 PUSH AX [276 line:72,col:5,test.zl]
-225 PUSH ARRAY_ITEM [276 line:72,col:5,test.zl]
-226 RESET ARRAY_ITEM [276 line:72,col:5,test.zl]
-227 PUSH 0 [277 line:72,col:6,test.zl]
-228 SET_ARRAY (0) [276 line:72,col:5,test.zl]
-229 MOV AX 10 [285 line:73,col:10,test.zl]
-230 PUSH AX [282 line:73,col:5,test.zl]
-231 PUSH ARRAY_ITEM [282 line:73,col:5,test.zl]
-232 RESET ARRAY_ITEM [282 line:73,col:5,test.zl]
-233 PUSH 1 [283 line:73,col:6,test.zl]
-234 SET_ARRAY (0) [282 line:73,col:5,test.zl]
-235 MOV AX "test a is " [288 line:74,col:7,test.zl]
-236 PUSH AX [291 line:74,col:25,test.zl]
-237 PUSH ARRAY_ITEM [291 line:74,col:25,test.zl]
-238 RESET ARRAY_ITEM [291 line:74,col:25,test.zl]
-239 PUSH 0 [292 line:74,col:26,test.zl]
-240 GET_ARRAY (0) [291 line:74,col:25,test.zl]
-241 MOV BX AX [291 line:74,col:25,test.zl]
-242 POP AX [291 line:74,col:25,test.zl]
-243 PLUS [289 line:74,col:19,test.zl]
-244 MOV BX " test.b is " [294 line:74,col:30,test.zl]
-245 PLUS [293 line:74,col:28,test.zl]
-246 PUSH AX [297 line:74,col:49,test.zl]
-247 PUSH ARRAY_ITEM [297 line:74,col:49,test.zl]
-248 RESET ARRAY_ITEM [297 line:74,col:49,test.zl]
-249 PUSH 1 [298 line:74,col:50,test.zl]
-250 GET_ARRAY (0) [297 line:74,col:49,test.zl]
-251 MOV BX AX [297 line:74,col:49,test.zl]
-252 POP AX [297 line:74,col:49,test.zl]
-253 PLUS [295 line:74,col:43,test.zl]
-254 PRINT AX [287 line:74,col:1,test.zl]
-255 PUSH ARG [302 line:75,col:9,test.zl]
-256 PUSH LOC [302 line:75,col:9,test.zl]
-257 PUSH ARGTMP [302 line:75,col:9,test.zl]
-258 RESET ARGTMP [302 line:75,col:9,test.zl]
-259 MOV AX (0) [304 line:75,col:14,test.zl]
-260 PUSH AX [304 line:75,col:14,test.zl]
-261 PUSH 265 [302 line:75,col:9,test.zl]
-262 MOV ARG ARGTMP [302 line:75,col:9,test.zl]
-263 RESET LOC [302 line:75,col:9,test.zl]
-264 JMP 12 [302 line:75,col:9,test.zl]
-265 MOV AX 678 [309 line:77,col:5,test.zl]
-266 MOV (4) AX [307 line:77,col:1,test.zl]
-267 PUSH ARG [313 line:78,col:5,test.zl]
-268 PUSH LOC [313 line:78,col:5,test.zl]
-269 PUSH ARGTMP [313 line:78,col:5,test.zl]
-270 RESET ARGTMP [313 line:78,col:5,test.zl]
-271 MOV AX 11 [315 line:78,col:11,test.zl]
-272 PUSH AX [315 line:78,col:11,test.zl]
-273 MOV AX 22 [317 line:78,col:14,test.zl]
-274 PUSH AX [317 line:78,col:14,test.zl]
-275 PUSH 279 [313 line:78,col:5,test.zl]
-276 MOV ARG ARGTMP [313 line:78,col:5,test.zl]
-277 RESET LOC [313 line:78,col:5,test.zl]
-278 CALL "array" [313 line:78,col:5,test.zl]
-279 MOV (5) AX [311 line:78,col:1,test.zl]
-280 PUSH ARG [322 line:79,col:8,test.zl]
-281 PUSH LOC [322 line:79,col:8,test.zl]
-282 PUSH ARGTMP [322 line:79,col:8,test.zl]
-283 RESET ARGTMP [322 line:79,col:8,test.zl]
-284 MOV AX "hello world" [324 line:79,col:14,test.zl]
-285 PUSH AX [324 line:79,col:14,test.zl]
-286 MOV AX 3 [326 line:79,col:28,test.zl]
-287 PUSH AX [326 line:79,col:28,test.zl]
-288 MOV AX 11.45 [328 line:79,col:30,test.zl]
-289 PUSH AX [328 line:79,col:30,test.zl]
-290 MOV AX (5) [330 line:79,col:36,test.zl]
-291 PUSH AX [330 line:79,col:36,test.zl]
-292 MOV AX "haha end" [332 line:79,col:38,test.zl]
-293 PUSH AX [332 line:79,col:38,test.zl]
-294 PUSH 298 [322 line:79,col:8,test.zl]
-295 MOV ARG ARGTMP [322 line:79,col:8,test.zl]
-296 RESET LOC [322 line:79,col:8,test.zl]
-297 CALL "array" [322 line:79,col:8,test.zl]
-298 MOV (0) AX [320 line:79,col:1,test.zl]
-299 MOV AX 0 [339 line:80,col:7,test.zl]
-300 MOV (2) AX [337 line:80,col:5,test.zl]
-301 MOV AX (2) [341 line:80,col:9,test.zl]
-302 MOV BX 4 [343 line:80,col:11,test.zl]
-303 LESS [342 line:80,col:10,test.zl]
-304 JE 313 [335 line:80,col:1,test.zl]
-305 PUSH ARRAY_ITEM [349 line:81,col:8,test.zl]
-306 RESET ARRAY_ITEM [349 line:81,col:8,test.zl]
-307 MOV AX (2) [351 line:81,col:13,test.zl]
-308 PUSH AX [351 line:81,col:13,test.zl]
-309 GET_ARRAY (0) [349 line:81,col:8,test.zl]
-310 PRINT AX [348 line:81,col:2,test.zl]
-311 GETADD (2) [346 line:80,col:14,test.zl]
-312 JMP 301 [335 line:80,col:1,test.zl]
-313 PUSH ARRAY_ITEM [356 line:83,col:7,test.zl]
-314 RESET ARRAY_ITEM [356 line:83,col:7,test.zl]
-315 MOV AX 3 [358 line:83,col:12,test.zl]
-316 PUSH AX [358 line:83,col:12,test.zl]
-317 MOV AX 1 [360 line:83,col:14,test.zl]
-318 PUSH AX [360 line:83,col:14,test.zl]
-319 GET_ARRAY (0) [356 line:83,col:7,test.zl]
-320 PRINT AX [355 line:83,col:1,test.zl]
-321 PUSH ARG [363 line:84,col:1,test.zl]
-322 PUSH LOC [363 line:84,col:1,test.zl]
-323 PUSH ARGTMP [363 line:84,col:1,test.zl]
-324 RESET ARGTMP [363 line:84,col:1,test.zl]
-325 MOV AX (0) [365 line:84,col:15,test.zl]
-326 PUSH AX [365 line:84,col:15,test.zl]
-327 PUSH 331 [363 line:84,col:1,test.zl]
-328 MOV ARG ARGTMP [363 line:84,col:1,test.zl]
-329 RESET LOC [363 line:84,col:1,test.zl]
-330 CALL "bltPrintArray" [363 line:84,col:1,test.zl]
-331 PUSH ARG [368 line:85,col:1,test.zl]
-332 PUSH LOC [368 line:85,col:1,test.zl]
-333 PUSH ARGTMP [368 line:85,col:1,test.zl]
-334 RESET ARGTMP [368 line:85,col:1,test.zl]
-335 PUSH ARRAY_ITEM [371 line:85,col:14,test.zl]
-336 RESET ARRAY_ITEM [371 line:85,col:14,test.zl]
-337 MOV AX 0 [373 line:85,col:19,test.zl]
-338 PUSH AX [373 line:85,col:19,test.zl]
-339 GET_ARRAY_ADDR (0) [371 line:85,col:14,test.zl]
-340 PUSH AX [370 line:85,col:13,test.zl]
-341 MOV AX "test[0] is modify in bltTestAddr haha" [376 line:85,col:22,test.zl]
-342 PUSH AX [376 line:85,col:22,test.zl]
-343 PUSH 347 [368 line:85,col:1,test.zl]
-344 MOV ARG ARGTMP [368 line:85,col:1,test.zl]
-345 RESET LOC [368 line:85,col:1,test.zl]
-346 CALL "bltTestAddr" [368 line:85,col:1,test.zl]
-347 PUSH ARG [379 line:86,col:1,test.zl]
-348 PUSH LOC [379 line:86,col:1,test.zl]
-349 PUSH ARGTMP [379 line:86,col:1,test.zl]
-350 RESET ARGTMP [379 line:86,col:1,test.zl]
-351 ADDR (0) [382 line:86,col:16,test.zl]
-352 PUSH AX [381 line:86,col:15,test.zl]
-353 PUSH 357 [379 line:86,col:1,test.zl]
-354 MOV ARG ARGTMP [379 line:86,col:1,test.zl]
-355 RESET LOC [379 line:86,col:1,test.zl]
-356 CALL "bltPrintArray" [379 line:86,col:1,test.zl]
-357 MOV AX "i am test2" [387 line:87,col:9,test.zl]
-358 MOV (6) AX [385 line:87,col:1,test.zl]
-359 MOV AX "test2 is " [390 line:88,col:7,test.zl]
-360 MOV BX (6) [392 line:88,col:19,test.zl]
-361 PLUS [391 line:88,col:18,test.zl]
-362 PRINT AX [389 line:88,col:1,test.zl]
-363 PUSH ARG [394 line:89,col:1,test.zl]
-364 PUSH LOC [394 line:89,col:1,test.zl]
-365 PUSH ARGTMP [394 line:89,col:1,test.zl]
-366 RESET ARGTMP [394 line:89,col:1,test.zl]
-367 ADDR (6) [397 line:89,col:14,test.zl]
-368 PUSH AX [396 line:89,col:13,test.zl]
-369 MOV AX "test2 is modify in bltTestAddr haha" [399 line:89,col:20,test.zl]
-370 PUSH AX [399 line:89,col:20,test.zl]
-371 PUSH 375 [394 line:89,col:1,test.zl]
-372 MOV ARG ARGTMP [394 line:89,col:1,test.zl]
-373 RESET LOC [394 line:89,col:1,test.zl]
-374 CALL "bltTestAddr" [394 line:89,col:1,test.zl]
-375 MOV AX "test2 is " [403 line:90,col:7,test.zl]
-376 MOV BX (6) [405 line:90,col:19,test.zl]
-377 PLUS [404 line:90,col:18,test.zl]
-378 PRINT AX [402 line:90,col:1,test.zl]
-379 PUSH ARG [407 line:91,col:1,test.zl]
-380 PUSH LOC [407 line:91,col:1,test.zl]
-381 PUSH ARGTMP [407 line:91,col:1,test.zl]
-382 RESET ARGTMP [407 line:91,col:1,test.zl]
-383 MOV AX (0) [409 line:91,col:13,test.zl]
-384 PUSH AX [409 line:91,col:13,test.zl]
-385 MOV AX "hello Set Array" [411 line:91,col:18,test.zl]
-386 PUSH AX [411 line:91,col:18,test.zl]
-387 MOV AX 44 [413 line:91,col:36,test.zl]
-388 PUSH AX [413 line:91,col:36,test.zl]
-389 PUSH 393 [407 line:91,col:1,test.zl]
-390 MOV ARG ARGTMP [407 line:91,col:1,test.zl]
-391 RESET LOC [407 line:91,col:1,test.zl]
-392 CALL "bltSetArray" [407 line:91,col:1,test.zl]
-393 PUSH ARG [416 line:92,col:1,test.zl]
-394 PUSH LOC [416 line:92,col:1,test.zl]
-395 PUSH ARGTMP [416 line:92,col:1,test.zl]
-396 RESET ARGTMP [416 line:92,col:1,test.zl]
-397 MOV AX (0) [418 line:92,col:15,test.zl]
-398 PUSH AX [418 line:92,col:15,test.zl]
-399 PUSH 403 [416 line:92,col:1,test.zl]
-400 MOV ARG ARGTMP [416 line:92,col:1,test.zl]
-401 RESET LOC [416 line:92,col:1,test.zl]
-402 CALL "bltPrintArray" [416 line:92,col:1,test.zl]
-403 PUSH ARG [421 line:93,col:1,test.zl]
-404 PUSH LOC [421 line:93,col:1,test.zl]
-405 PUSH ARGTMP [421 line:93,col:1,test.zl]
-406 RESET ARGTMP [421 line:93,col:1,test.zl]
-407 MOV AX "test3.zl" [423 line:93,col:15,test.zl]
-408 PUSH AX [423 line:93,col:15,test.zl]
-409 PUSH 413 [421 line:93,col:1,test.zl]
-410 MOV ARG ARGTMP [421 line:93,col:1,test.zl]
-411 RESET LOC [421 line:93,col:1,test.zl]
-412 CALL "bltLoadScript" [421 line:93,col:1,test.zl]
-413 PRINT "i am test macro" [426 line:94,col:1,test.zl]
-414 PRINT "test2 macro" [429 line:95,col:1,test.zl]
-415 MOV AX "zengl version is v" [433 line:96,col:7,test.zl]
-416 PUSH AX [435 line:96,col:30,test.zl]
-417 PUSH ARG [435 line:96,col:30,test.zl]
-418 PUSH LOC [435 line:96,col:30,test.zl]
-419 PUSH ARGTMP [435 line:96,col:30,test.zl]
-420 RESET ARGTMP [435 line:96,col:30,test.zl]
-421 PUSH 425 [435 line:96,col:30,test.zl]
-422 MOV ARG ARGTMP [435 line:96,col:30,test.zl]
-423 RESET LOC [435 line:96,col:30,test.zl]
-424 CALL "bltGetZLVersion" [435 line:96,col:30,test.zl]
-425 MOV BX AX [435 line:96,col:30,test.zl]
-426 POP AX [435 line:96,col:30,test.zl]
-427 PLUS [434 line:96,col:28,test.zl]
-428 PRINT AX [432 line:96,col:1,test.zl]
-429 END [438 line:96,col:47,test.zl]
+197 JMP 201 [235 line:57,col:1,test.zl]
+198 FUNARG 0 [235 line:57,col:1,test.zl]
+199 PRINT "global init" [239 line:58,col:2,test.zl]
+200 RET [235 line:57,col:1,test.zl]
+201 PUSH ARG [245 line:61,col:9,test.zl]
+202 PUSH LOC [245 line:61,col:9,test.zl]
+203 PUSH ARGTMP [245 line:61,col:9,test.zl]
+204 RESET ARGTMP [245 line:61,col:9,test.zl]
+205 PUSH 209 [245 line:61,col:9,test.zl]
+206 MOV ARG ARGTMP [245 line:61,col:9,test.zl]
+207 RESET LOC [245 line:61,col:9,test.zl]
+208 JMP 12 [245 line:61,col:9,test.zl]
+209 PUSH ARG [249 line:62,col:1,test.zl]
+210 PUSH LOC [249 line:62,col:1,test.zl]
+211 PUSH ARGTMP [249 line:62,col:1,test.zl]
+212 RESET ARGTMP [249 line:62,col:1,test.zl]
+213 PUSH 217 [249 line:62,col:1,test.zl]
+214 MOV ARG ARGTMP [249 line:62,col:1,test.zl]
+215 RESET LOC [249 line:62,col:1,test.zl]
+216 JMP 198 [249 line:62,col:1,test.zl]
+217 MOV AX 5 [258 line:64,col:12,test.zl]
+218 MOV (1) AX [256 line:64,col:1,test.zl]
+219 MOV AX 4 [262 line:65,col:5,test.zl]
+220 MOV (2) AX [260 line:65,col:1,test.zl]
+221 MOV AX 3.677 [266 line:66,col:12,test.zl]
+222 MOV (3) AX [264 line:66,col:1,test.zl]
+223 MOV AX 8 [272 line:67,col:10,test.zl]
+224 PUSH AX [269 line:67,col:5,test.zl]
+225 PUSH ARRAY_ITEM [269 line:67,col:5,test.zl]
+226 RESET ARRAY_ITEM [269 line:67,col:5,test.zl]
+227 PUSH 0 [270 line:67,col:6,test.zl]
+228 SET_ARRAY (0) [269 line:67,col:5,test.zl]
+229 MOV AX 10 [278 line:68,col:10,test.zl]
+230 PUSH AX [275 line:68,col:5,test.zl]
+231 PUSH ARRAY_ITEM [275 line:68,col:5,test.zl]
+232 RESET ARRAY_ITEM [275 line:68,col:5,test.zl]
+233 PUSH 1 [276 line:68,col:6,test.zl]
+234 SET_ARRAY (0) [275 line:68,col:5,test.zl]
+235 MOV AX "test a is " [281 line:69,col:7,test.zl]
+236 PUSH AX [284 line:69,col:25,test.zl]
+237 PUSH ARRAY_ITEM [284 line:69,col:25,test.zl]
+238 RESET ARRAY_ITEM [284 line:69,col:25,test.zl]
+239 PUSH 0 [285 line:69,col:26,test.zl]
+240 GET_ARRAY (0) [284 line:69,col:25,test.zl]
+241 MOV BX AX [284 line:69,col:25,test.zl]
+242 POP AX [284 line:69,col:25,test.zl]
+243 PLUS [282 line:69,col:19,test.zl]
+244 MOV BX " test.b is " [287 line:69,col:30,test.zl]
+245 PLUS [286 line:69,col:28,test.zl]
+246 PUSH AX [290 line:69,col:49,test.zl]
+247 PUSH ARRAY_ITEM [290 line:69,col:49,test.zl]
+248 RESET ARRAY_ITEM [290 line:69,col:49,test.zl]
+249 PUSH 1 [291 line:69,col:50,test.zl]
+250 GET_ARRAY (0) [290 line:69,col:49,test.zl]
+251 MOV BX AX [290 line:69,col:49,test.zl]
+252 POP AX [290 line:69,col:49,test.zl]
+253 PLUS [288 line:69,col:43,test.zl]
+254 PRINT AX [280 line:69,col:1,test.zl]
+255 PUSH ARG [295 line:70,col:9,test.zl]
+256 PUSH LOC [295 line:70,col:9,test.zl]
+257 PUSH ARGTMP [295 line:70,col:9,test.zl]
+258 RESET ARGTMP [295 line:70,col:9,test.zl]
+259 MOV AX (0) [297 line:70,col:14,test.zl]
+260 PUSH AX [297 line:70,col:14,test.zl]
+261 PUSH 265 [295 line:70,col:9,test.zl]
+262 MOV ARG ARGTMP [295 line:70,col:9,test.zl]
+263 RESET LOC [295 line:70,col:9,test.zl]
+264 JMP 12 [295 line:70,col:9,test.zl]
+265 MOV AX 678 [302 line:72,col:5,test.zl]
+266 MOV (4) AX [300 line:72,col:1,test.zl]
+267 PUSH ARG [306 line:73,col:5,test.zl]
+268 PUSH LOC [306 line:73,col:5,test.zl]
+269 PUSH ARGTMP [306 line:73,col:5,test.zl]
+270 RESET ARGTMP [306 line:73,col:5,test.zl]
+271 MOV AX 11 [308 line:73,col:11,test.zl]
+272 PUSH AX [308 line:73,col:11,test.zl]
+273 MOV AX 22 [310 line:73,col:14,test.zl]
+274 PUSH AX [310 line:73,col:14,test.zl]
+275 PUSH 279 [306 line:73,col:5,test.zl]
+276 MOV ARG ARGTMP [306 line:73,col:5,test.zl]
+277 RESET LOC [306 line:73,col:5,test.zl]
+278 CALL "array" [306 line:73,col:5,test.zl]
+279 MOV (5) AX [304 line:73,col:1,test.zl]
+280 PUSH ARG [315 line:74,col:8,test.zl]
+281 PUSH LOC [315 line:74,col:8,test.zl]
+282 PUSH ARGTMP [315 line:74,col:8,test.zl]
+283 RESET ARGTMP [315 line:74,col:8,test.zl]
+284 MOV AX "hello world" [317 line:74,col:14,test.zl]
+285 PUSH AX [317 line:74,col:14,test.zl]
+286 MOV AX 3 [319 line:74,col:28,test.zl]
+287 PUSH AX [319 line:74,col:28,test.zl]
+288 MOV AX 11.45 [321 line:74,col:30,test.zl]
+289 PUSH AX [321 line:74,col:30,test.zl]
+290 MOV AX (5) [323 line:74,col:36,test.zl]
+291 PUSH AX [323 line:74,col:36,test.zl]
+292 MOV AX "haha end" [325 line:74,col:38,test.zl]
+293 PUSH AX [325 line:74,col:38,test.zl]
+294 PUSH 298 [315 line:74,col:8,test.zl]
+295 MOV ARG ARGTMP [315 line:74,col:8,test.zl]
+296 RESET LOC [315 line:74,col:8,test.zl]
+297 CALL "array" [315 line:74,col:8,test.zl]
+298 MOV (0) AX [313 line:74,col:1,test.zl]
+299 MOV AX 0 [332 line:75,col:7,test.zl]
+300 MOV (2) AX [330 line:75,col:5,test.zl]
+301 MOV AX (2) [334 line:75,col:9,test.zl]
+302 MOV BX 4 [336 line:75,col:11,test.zl]
+303 LESS [335 line:75,col:10,test.zl]
+304 JE 313 [328 line:75,col:1,test.zl]
+305 PUSH ARRAY_ITEM [342 line:76,col:8,test.zl]
+306 RESET ARRAY_ITEM [342 line:76,col:8,test.zl]
+307 MOV AX (2) [344 line:76,col:13,test.zl]
+308 PUSH AX [344 line:76,col:13,test.zl]
+309 GET_ARRAY (0) [342 line:76,col:8,test.zl]
+310 PRINT AX [341 line:76,col:2,test.zl]
+311 GETADD (2) [339 line:75,col:14,test.zl]
+312 JMP 301 [328 line:75,col:1,test.zl]
+313 PUSH ARRAY_ITEM [349 line:78,col:7,test.zl]
+314 RESET ARRAY_ITEM [349 line:78,col:7,test.zl]
+315 MOV AX 3 [351 line:78,col:12,test.zl]
+316 PUSH AX [351 line:78,col:12,test.zl]
+317 MOV AX 1 [353 line:78,col:14,test.zl]
+318 PUSH AX [353 line:78,col:14,test.zl]
+319 GET_ARRAY (0) [349 line:78,col:7,test.zl]
+320 PRINT AX [348 line:78,col:1,test.zl]
+321 PUSH ARG [356 line:79,col:1,test.zl]
+322 PUSH LOC [356 line:79,col:1,test.zl]
+323 PUSH ARGTMP [356 line:79,col:1,test.zl]
+324 RESET ARGTMP [356 line:79,col:1,test.zl]
+325 MOV AX (0) [358 line:79,col:15,test.zl]
+326 PUSH AX [358 line:79,col:15,test.zl]
+327 PUSH 331 [356 line:79,col:1,test.zl]
+328 MOV ARG ARGTMP [356 line:79,col:1,test.zl]
+329 RESET LOC [356 line:79,col:1,test.zl]
+330 CALL "bltPrintArray" [356 line:79,col:1,test.zl]
+331 PUSH ARG [361 line:80,col:1,test.zl]
+332 PUSH LOC [361 line:80,col:1,test.zl]
+333 PUSH ARGTMP [361 line:80,col:1,test.zl]
+334 RESET ARGTMP [361 line:80,col:1,test.zl]
+335 PUSH ARRAY_ITEM [364 line:80,col:14,test.zl]
+336 RESET ARRAY_ITEM [364 line:80,col:14,test.zl]
+337 MOV AX 0 [366 line:80,col:19,test.zl]
+338 PUSH AX [366 line:80,col:19,test.zl]
+339 GET_ARRAY_ADDR (0) [364 line:80,col:14,test.zl]
+340 PUSH AX [363 line:80,col:13,test.zl]
+341 MOV AX "test[0] is modify in bltTestAddr haha" [369 line:80,col:22,test.zl]
+342 PUSH AX [369 line:80,col:22,test.zl]
+343 PUSH 347 [361 line:80,col:1,test.zl]
+344 MOV ARG ARGTMP [361 line:80,col:1,test.zl]
+345 RESET LOC [361 line:80,col:1,test.zl]
+346 CALL "bltTestAddr" [361 line:80,col:1,test.zl]
+347 PUSH ARG [372 line:81,col:1,test.zl]
+348 PUSH LOC [372 line:81,col:1,test.zl]
+349 PUSH ARGTMP [372 line:81,col:1,test.zl]
+350 RESET ARGTMP [372 line:81,col:1,test.zl]
+351 ADDR (0) [375 line:81,col:16,test.zl]
+352 PUSH AX [374 line:81,col:15,test.zl]
+353 PUSH 357 [372 line:81,col:1,test.zl]
+354 MOV ARG ARGTMP [372 line:81,col:1,test.zl]
+355 RESET LOC [372 line:81,col:1,test.zl]
+356 CALL "bltPrintArray" [372 line:81,col:1,test.zl]
+357 MOV AX "i am test2" [380 line:82,col:9,test.zl]
+358 MOV (6) AX [378 line:82,col:1,test.zl]
+359 MOV AX "test2 is " [383 line:83,col:7,test.zl]
+360 MOV BX (6) [385 line:83,col:19,test.zl]
+361 PLUS [384 line:83,col:18,test.zl]
+362 PRINT AX [382 line:83,col:1,test.zl]
+363 PUSH ARG [387 line:84,col:1,test.zl]
+364 PUSH LOC [387 line:84,col:1,test.zl]
+365 PUSH ARGTMP [387 line:84,col:1,test.zl]
+366 RESET ARGTMP [387 line:84,col:1,test.zl]
+367 ADDR (6) [390 line:84,col:14,test.zl]
+368 PUSH AX [389 line:84,col:13,test.zl]
+369 MOV AX "test2 is modify in bltTestAddr haha" [392 line:84,col:20,test.zl]
+370 PUSH AX [392 line:84,col:20,test.zl]
+371 PUSH 375 [387 line:84,col:1,test.zl]
+372 MOV ARG ARGTMP [387 line:84,col:1,test.zl]
+373 RESET LOC [387 line:84,col:1,test.zl]
+374 CALL "bltTestAddr" [387 line:84,col:1,test.zl]
+375 MOV AX "test2 is " [396 line:85,col:7,test.zl]
+376 MOV BX (6) [398 line:85,col:19,test.zl]
+377 PLUS [397 line:85,col:18,test.zl]
+378 PRINT AX [395 line:85,col:1,test.zl]
+379 PUSH ARG [400 line:86,col:1,test.zl]
+380 PUSH LOC [400 line:86,col:1,test.zl]
+381 PUSH ARGTMP [400 line:86,col:1,test.zl]
+382 RESET ARGTMP [400 line:86,col:1,test.zl]
+383 MOV AX (0) [402 line:86,col:13,test.zl]
+384 PUSH AX [402 line:86,col:13,test.zl]
+385 MOV AX "hello Set Array" [404 line:86,col:18,test.zl]
+386 PUSH AX [404 line:86,col:18,test.zl]
+387 MOV AX 44 [406 line:86,col:36,test.zl]
+388 PUSH AX [406 line:86,col:36,test.zl]
+389 PUSH 393 [400 line:86,col:1,test.zl]
+390 MOV ARG ARGTMP [400 line:86,col:1,test.zl]
+391 RESET LOC [400 line:86,col:1,test.zl]
+392 CALL "bltSetArray" [400 line:86,col:1,test.zl]
+393 PUSH ARG [409 line:87,col:1,test.zl]
+394 PUSH LOC [409 line:87,col:1,test.zl]
+395 PUSH ARGTMP [409 line:87,col:1,test.zl]
+396 RESET ARGTMP [409 line:87,col:1,test.zl]
+397 MOV AX (0) [411 line:87,col:15,test.zl]
+398 PUSH AX [411 line:87,col:15,test.zl]
+399 PUSH 403 [409 line:87,col:1,test.zl]
+400 MOV ARG ARGTMP [409 line:87,col:1,test.zl]
+401 RESET LOC [409 line:87,col:1,test.zl]
+402 CALL "bltPrintArray" [409 line:87,col:1,test.zl]
+403 PUSH ARG [414 line:88,col:1,test.zl]
+404 PUSH LOC [414 line:88,col:1,test.zl]
+405 PUSH ARGTMP [414 line:88,col:1,test.zl]
+406 RESET ARGTMP [414 line:88,col:1,test.zl]
+407 MOV AX "test3.zl" [416 line:88,col:15,test.zl]
+408 PUSH AX [416 line:88,col:15,test.zl]
+409 PUSH 413 [414 line:88,col:1,test.zl]
+410 MOV ARG ARGTMP [414 line:88,col:1,test.zl]
+411 RESET LOC [414 line:88,col:1,test.zl]
+412 CALL "bltLoadScript" [414 line:88,col:1,test.zl]
+413 PRINT "i am test macro" [419 line:89,col:1,test.zl]
+414 PRINT "test2 macro" [422 line:90,col:1,test.zl]
+415 MOV AX "zengl version is v" [426 line:91,col:7,test.zl]
+416 PUSH AX [428 line:91,col:30,test.zl]
+417 PUSH ARG [428 line:91,col:30,test.zl]
+418 PUSH LOC [428 line:91,col:30,test.zl]
+419 PUSH ARGTMP [428 line:91,col:30,test.zl]
+420 RESET ARGTMP [428 line:91,col:30,test.zl]
+421 PUSH 425 [428 line:91,col:30,test.zl]
+422 MOV ARG ARGTMP [428 line:91,col:30,test.zl]
+423 RESET LOC [428 line:91,col:30,test.zl]
+424 CALL "bltGetZLVersion" [428 line:91,col:30,test.zl]
+425 MOV BX AX [428 line:91,col:30,test.zl]
+426 POP AX [428 line:91,col:30,test.zl]
+427 PLUS [427 line:91,col:28,test.zl]
+428 PRINT AX [425 line:91,col:1,test.zl]
+429 PUSH ARG [434 line:92,col:14,test.zl]
+430 PUSH LOC [434 line:92,col:14,test.zl]
+431 PUSH ARGTMP [434 line:92,col:14,test.zl]
+432 RESET ARGTMP [434 line:92,col:14,test.zl]
+433 PUSH 437 [434 line:92,col:14,test.zl]
+434 MOV ARG ARGTMP [434 line:92,col:14,test.zl]
+435 RESET LOC [434 line:92,col:14,test.zl]
+436 JMP 438 [434 line:92,col:14,test.zl]
+437 JMP 442 [444 line:97,col:2,test.zl]
+438 FUNARG 0 [444 line:97,col:2,test.zl]
+439 PRINT "i am in testOther" [448 line:98,col:3,test.zl]
+440 PRINT "hello zengl" [451 line:99,col:3,test.zl]
+441 RET [444 line:97,col:2,test.zl]
+442 END [455 line:101,col:1,test.zl]
 
  compile time:0 s totalsize: 93.7626953125 Kbyte
 nodenum:0 reserve token: use line:1,col:1 <'test3.zl'>

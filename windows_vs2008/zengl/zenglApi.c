@@ -229,6 +229,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 				0, //total_time
 				ZL_FALSE, //isinRunning
 				ZL_FALSE, //isDestroyed
+				ZL_FALSE, //isUserWantStop
 				ZL_FALSE, //is_inMemBlkSetVal
 			{0}, //jumpBuffer
 			{0}, //mempool
@@ -1237,4 +1238,18 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT
 		(*mblk_size) = tmpMemBlock->size;
 	if(mblk_count != ZL_NULL)
 		(*mblk_count) = tmpMemBlock->count;
+}
+
+/*API接口，用户可以通过此接口在中途停止脚本*/
+ZL_EXPORT ZL_EXP_VOID zenglApi_Stop(ZL_EXP_VOID * VM_ARG)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	if(VM_ARG == ZL_NULL)
+		return;
+	if(run->isDestroyed)
+		return;
+	if(run->isinRunning)
+	{
+		run->isUserWantStop = ZL_TRUE;
+	}
 }

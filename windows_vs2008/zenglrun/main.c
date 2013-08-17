@@ -345,6 +345,9 @@ void main(int argc,char * argv[])
 	if(argc < 2)
 	{
 		printf("usage: %s <filename> ... (用法错误，应该是程序名加文件名加选项参数的形式，文件名通常是以.zlc结尾，也可以是.zl结尾)\n",argv[0]);
+		#ifdef ZL_EXP_OS_IN_WINDOWS
+			system("pause");
+		#endif
 		exit(-1);
 	}
 
@@ -381,6 +384,9 @@ void main(int argc,char * argv[])
 	if(argc < 2)
 	{
 		printf("usage: %s <filename> ... (用法错误，应该是程序名加文件名加选项参数的形式，文件名通常是以.zlc结尾，也可以是.zl结尾)\n",argv[0]);
+		#ifdef ZL_EXP_OS_IN_WINDOWS
+			system("pause");
+		#endif
 		exit(-1);
 	}
 

@@ -103,4 +103,7 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,
 /*获取内存块的size容量等信息*/
 ZL_EXPORT ZL_EXP_VOID zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT * mblk_size,ZL_EXP_INT * mblk_count);
 
+/*API接口，用户可以通过此接口在中途停止脚本*/
+ZL_EXPORT ZL_EXP_VOID zenglApi_Stop(ZL_EXP_VOID * VM_ARG);
+
 #endif/* _ZENGL_EXPORT_FUNCTIONS_H_ */

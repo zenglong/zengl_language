@@ -1148,7 +1148,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 				else
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 						ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->SymFunTable.funs[tmpFunID].LDAdr); //对应汇编指令 类似 "JMP adr%d" 如果找到函数的信息，说明是用户自定义的脚本函数，则跳转到目标函数的可执行代码入口处。
+						ZL_R_DT_LDFUNID,tmpFunID); //对应汇编指令 类似 "JMP funid%d" 如果找到函数的信息，说明是用户自定义的脚本函数，则跳转到目标函数的可执行代码入口处。这里使用的是函数ID，在链接替换时，先由函数ID得到函数伪地址，再由伪地址得到真实汇编位置，这样函数就可以定义在脚本的任意合法位置，如果直接使用伪地址，那么函数就只能定义在函数调用之前
 				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL,ZL_TRUE); //FUNCALL生成完毕，可以将之前的压栈弹出。
 				state = ZL_ST_DOWN;
 			}

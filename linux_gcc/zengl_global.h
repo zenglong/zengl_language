@@ -833,6 +833,7 @@ typedef enum _ZENGL_RUN_INST_OP_DATA_TYPE{
 	ZL_R_DT_ARGMEM,	//函数参数内存地址操作数
 	ZL_R_DT_LOCMEM,	//函数中的局部变量内存地址操作数
 	ZL_R_DT_LDADDR,	//供ld链接器使用的伪地址，链接器动态数组的伪地址
+	ZL_R_DT_LDFUNID, //如果是函数调用，则存放的是函数的ID而非伪地址，在替换地址时，先函数ID得到伪地址，再由伪地址得到真实的汇编地址，这样函数就可以定义在脚本的任意合法位置，如果直接使用伪地址，那么函数就只能定义在函数调用之前
 }ZENGL_RUN_INST_OP_DATA_TYPE; //指令操作数类型
 
 typedef enum _ZENGL_RUN_REG_TYPE{
@@ -1232,6 +1233,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_CLOCK_T total_time; //执行结束时的总时间，毫秒为单位
 	ZL_BOOL isinRunning; //判断解释器是否正在运行中
 	ZL_BOOL isDestroyed; //判断内存池资源是否被释放掉了
+	ZL_BOOL isUserWantStop; //用户是否需要中途停止脚本
 	ZL_BOOL is_inMemBlkSetVal; //判断是否处于对数组元素进行设置的状态，此状态下即使是引用也直接读取出来，例如test[a] = &b;就会将b的引用读取并设置到test[a]中。
 	jmp_buf jumpBuffer; //解释器出错时统一跳转的位置
 	ZENGL_RUN_MEM_POOL_TYPE mempool; //解释器的内存池

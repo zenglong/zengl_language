@@ -1,4 +1,4 @@
-#define ZL_EXP_OS_IN_LINUX //用于告诉zengl嵌入式脚本语言当前的执行环境是linux系统，linux系统也可以不定义ZL_EXP_OS_IN_LINUX，因为默认就是linux模式
+#define ZL_EXP_OS_IN_LINUX //用于告诉zengl嵌入式脚本语言当前的执行环境是linux系统，防止出现编译错误，linux系统也可以不定义该宏，因为默认就使用的是linux模式，如果是windows系统则必须定义ZL_EXP_OS_IN_WINDOWS，原因见zengl_exportPublicDefs.h头文件
 #include "zengl_exportfuns.h"
 #include <stdio.h>
 #include <stdlib.h>
