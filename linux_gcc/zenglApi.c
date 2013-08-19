@@ -247,6 +247,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			{0}, //HashTable
 			{0}, //moduleTable
 			{0}, //ModFunTable
+			{0}, //ExtraDataTable
 			/*定义在zenglrun_func.c中的相关函数*/
 			zenglrun_init,
 			zenglrun_memAlloc,
@@ -273,6 +274,8 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zenglrun_initModFunTable,
 			zenglrun_LookupModuleTable,
 			zenglrun_LookupModFunTable,
+			zenglrun_initExtraDataTable,
+			zenglrun_InsertExtraDataTable,
 			/*定义在zenglrun_main.c中的相关函数*/
 			zenglrun_AddInst,
 			zenglrun_initInstList,
@@ -349,8 +352,6 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Load(ZL_EXP_CHAR * script_file,ZENGL_EXPORT_VM_MAI
 	retcode = VM.compile.main((ZL_VOID * )&VM,script_file,vm_main_args);
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
-		if(VM.vm_main_args->userdef_module_init != ZL_NULL)
-			VM.vm_main_args->userdef_module_init((ZL_VOID * )&VM); //调用用户自定义的模块初始化函数
 		retcode = VM.run.main((ZL_VOID * )&VM);
 	}
 	else
@@ -401,8 +402,6 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Run(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file
 	retcode = VM->compile.main(VM_ARG,script_file,VM->vm_main_args);
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
-		if(VM->vm_main_args->userdef_module_init != ZL_NULL)
-			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
 		retcode = VM->run.main(VM_ARG);
 	}
 	VM->end_time = ZENGL_SYS_TIME_CLOCK();
@@ -554,8 +553,6 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 	retcode = VM->compile.main(VM_ARG,script_file,VM->vm_main_args);
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
-		if(VM->vm_main_args->userdef_module_init != ZL_NULL)
-			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
 		tmpmem.val.dword = VM->run.inst_list.count - 1;
 		VM->run.VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_INT,-1,tmpmem,ZL_TRUE);
 		ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword = VM->run.vstack_list.count;
@@ -773,6 +770,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 */
 ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_VM_API_MOD_INIT_FUNC module_init_function)
 {
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZL_INT h = run->Hash(VM_ARG,moduleName) + ZL_R_HASH_SIZE * ZL_R_HASH_TYPE_MODULE_TABLE;
 	ZL_INT tmpindex = run->HashTable[h];
@@ -780,6 +778,23 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 	if(run->mempool.isInit == ZL_FALSE)
 	{
 		run->init(VM_ARG);
+	}
+	if(run->isinRunning == ZL_FALSE)
+	{
+		ZL_INT retcode;
+		if((retcode = ZENGL_SYS_JMP_SETJMP(run->jumpBuffer)) == 0)
+			;
+		else if(retcode == 1)
+		{
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return 0;
+		}
+		else if(retcode == -1)
+		{
+			VM->isRunError = ZL_TRUE;
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return -1;
+		}
 	}
 	while(tmpindex != 0 && run->moduleTable.modules[tmpindex].isvalid == ZL_TRUE && 
 		ZENGL_SYS_STRCMP(moduleName,run->InstDataStringPoolGetPtr(VM_ARG,run->moduleTable.modules[tmpindex].strIndex)) != 0)
@@ -801,8 +816,9 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 /*
 	API接口，用户通过此接口可以自定义某模块中的函数处理句柄
 */
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle)
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle)
 {
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZL_INT h = run->Hash(VM_ARG,functionName) + ZL_R_HASH_SIZE * ZL_R_HASH_TYPE_MOD_FUN_TABLE;
 	ZL_INT tmpindex = run->HashTable[h];
@@ -810,6 +826,23 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT m
 	if(run->mempool.isInit == ZL_FALSE)
 	{
 		run->init(VM_ARG);
+	}
+	if(run->isinRunning == ZL_FALSE)
+	{
+		ZL_INT retcode;
+		if((retcode = ZENGL_SYS_JMP_SETJMP(run->jumpBuffer)) == 0)
+			;
+		else if(retcode == 1)
+		{
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return 0;
+		}
+		else if(retcode == -1)
+		{
+			VM->isRunError = ZL_TRUE;
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return -1;
+		}
 	}
 	while(tmpindex != 0 && run->ModFunTable.mod_funs[tmpindex].isvalid == ZL_TRUE && 
 		ZENGL_SYS_STRCMP(functionName,run->InstDataStringPoolGetPtr(VM_ARG,run->ModFunTable.mod_funs[tmpindex].strIndex)) != 0)
@@ -819,7 +852,7 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT m
 		tmpindex = run->HashTable[h];
 		run->HashTable[h] = run->InsertModFunTable(VM_ARG,moduleID,functionName,handle);
 		run->ModFunTable.mod_funs[run->HashTable[h]].next = tmpindex;
-		return ;
+		return 0;
 	}
 	else if(run->ModFunTable.mod_funs[tmpindex].isvalid == ZL_FALSE)
 		run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_TABLE_FIND_INVALID_INDEX);
@@ -828,6 +861,7 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT m
 		ZL_CHAR * moduleName = run->InstDataStringPoolGetPtr(VM_ARG,run->moduleTable.modules[run->ModFunTable.mod_funs[tmpindex].moduleID].strIndex);
 		run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_HAS_BEEN_SET_HANDLE_IN_OTHER_MOD_BEFORE,functionName,moduleName,functionName,moduleName);
 	}
+	return -1;
 }
 
 /*
@@ -1252,4 +1286,69 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_Stop(ZL_EXP_VOID * VM_ARG)
 	{
 		run->isUserWantStop = ZL_TRUE;
 	}
+}
+
+/*API接口，用户可以通过此接口设置一些额外数据的指针*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName,ZL_EXP_VOID * point)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT h = run->Hash(VM_ARG,extraDataName) + ZL_R_HASH_SIZE * ZL_R_HASH_TYPE_EXTRA_DATA_TABLE;
+	ZL_INT tmpindex = run->HashTable[h];
+	if(run->mempool.isInit == ZL_FALSE)
+	{
+		run->init(VM_ARG);
+	}
+	if(run->isinRunning == ZL_FALSE)
+	{
+		ZL_INT retcode;
+		if((retcode = ZENGL_SYS_JMP_SETJMP(run->jumpBuffer)) == 0)
+			;
+		else if(retcode == 1)
+		{
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return 0;
+		}
+		else if(retcode == -1)
+		{
+			VM->isRunError = ZL_TRUE;
+			ZENGL_SYS_MEM_SET(run->jumpBuffer,0,sizeof(run->jumpBuffer));
+			return -1;
+		}
+	}
+	while(tmpindex != 0 && run->ExtraDataTable.extras[tmpindex].isvalid == ZL_TRUE && 
+		ZENGL_SYS_STRCMP(extraDataName,run->InstDataStringPoolGetPtr(VM_ARG,run->ExtraDataTable.extras[tmpindex].strIndex)) != 0)
+		tmpindex = run->ExtraDataTable.extras[tmpindex].next;
+	if(tmpindex == 0)
+	{
+		tmpindex = run->HashTable[h];
+		run->HashTable[h] = run->InsertExtraDataTable(VM_ARG,extraDataName,point);
+		run->ExtraDataTable.extras[run->HashTable[h]].next = tmpindex;
+		return 0;
+	}
+	else if(run->ExtraDataTable.extras[tmpindex].isvalid == ZL_FALSE)
+		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_TABLE_INVALID_INDEX);
+	else
+	{
+		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_NAME_EXIST,extraDataName,extraDataName);
+	}
+}
+
+/*API接口，用户可以通过此接口得到额外数据*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_GetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT h = run->Hash(VM_ARG,extraDataName) + ZL_R_HASH_SIZE * ZL_R_HASH_TYPE_EXTRA_DATA_TABLE;
+	ZL_INT tmpindex = run->HashTable[h];
+
+	while(tmpindex != 0 && run->ExtraDataTable.extras[tmpindex].isvalid == ZL_TRUE && 
+		ZENGL_SYS_STRCMP(extraDataName,run->InstDataStringPoolGetPtr(VM_ARG,run->ExtraDataTable.extras[tmpindex].strIndex)) != 0)
+		tmpindex = run->ExtraDataTable.extras[tmpindex].next;
+	if(tmpindex == 0)
+		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_NAME_INVALID,extraDataName,extraDataName);
+	else if(run->ExtraDataTable.extras[tmpindex].isvalid == ZL_FALSE)
+		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_TABLE_INVALID_INDEX);
+	else
+		return run->ExtraDataTable.extras[tmpindex].point;
+	return ZL_NULL;
 }

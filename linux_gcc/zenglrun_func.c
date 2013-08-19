@@ -286,6 +286,11 @@ ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 		{
 			ZENGL_SYS_ARG_START(arg,errorno);
 			run->makeInfoString(VM_ARG,&run->errorFullString , VM->errorString[VM->errorno] , arg);
+			if(run->isinRunning == ZL_FALSE) //当用户在虚拟机执行前，通过API接口设置一些虚拟机参数时，如果发生错误，那么此时的run->isinRunning就是ZL_FALSE状态，此时直接跳到结束位置
+			{
+				ZENGL_SYS_ARG_END(arg);
+				goto zenglapi_goto_end;
+			}
 			if((VM->vm_main_args->flags & ZL_EXP_CP_AF_IN_DEBUG_MODE) != 0) //用户自定义的调试模式下，打印出节点和行列号信息
 			{
 				error_nodenum = run->inst_list.insts[ZL_R_REG_PC].nodenum;
@@ -336,6 +341,7 @@ ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 			run->infoFullString.str = run->errorFullString.str = run->printFullString.str = ZL_NULL;
 		}
 		run->isinRunning = ZL_FALSE;
+zenglapi_goto_end: //API接口出错时，直接跳转到这里结束
 		if(VM->errorno == ZL_NO_ERR_SUCCESS)
 			ZENGL_SYS_JMP_LONGJMP_TO(run->jumpBuffer,1);
 		else
@@ -769,5 +775,44 @@ ZL_INT zenglrun_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName)
 		run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_TABLE_FIND_INVALID_INDEX);
 	else
 		return tmpindex;
+	return -1;
+}
+
+/*初始化用户额外数据动态数组*/
+ZL_VOID zenglrun_initExtraDataTable(ZL_VOID * VM_ARG)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	if(run->ExtraDataTable.isInit)
+		return;
+	run->ExtraDataTable.size = ZL_R_EXTRA_DATA_TABLE_SIZE;
+	run->ExtraDataTable.count = 1;
+	run->ExtraDataTable.extras = run->memAlloc(VM_ARG,run->ExtraDataTable.size * sizeof(ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER),&run->ExtraDataTable.mempool_index);
+	if(run->ExtraDataTable.extras == ZL_NULL)
+		run->exit(VM_ARG,ZL_ERR_VM_API_INIT_EXTRA_DATA_TABLE_FAILED);
+	ZENGL_SYS_MEM_SET(run->ExtraDataTable.extras,0,run->ExtraDataTable.size * sizeof(ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER));
+	run->ExtraDataTable.isInit = ZL_TRUE;
+}
+
+/*将数据插入到额外数据动态数组中*/
+ZL_INT zenglrun_InsertExtraDataTable(ZL_VOID * VM_ARG,ZL_CHAR * extraDataName,ZL_VOID * point)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT index;
+	if(!run->ExtraDataTable.isInit)
+		run->initExtraDataTable(VM_ARG);
+	index = run->ExtraDataTable.count;
+	if(extraDataName == ZL_NULL || point == ZL_NULL)
+		run->exit(VM_ARG,ZL_ERR_VM_API_INVALID_EXTRA_DATA_NAME_OR_POINT);
+	if(run->ExtraDataTable.extras[index].isvalid == ZL_FALSE)
+	{
+		run->ExtraDataTable.extras[index].strIndex = run->InstDataStringPoolAdd(VM_ARG,extraDataName);
+		run->ExtraDataTable.extras[index].point = point;
+		run->ExtraDataTable.extras[index].next = 0;
+		run->ExtraDataTable.extras[index].isvalid = ZL_TRUE;
+		run->ExtraDataTable.count++;
+		return index;
+	}
+	else
+		run->exit(VM_ARG,ZL_ERR_VM_API_CAN_NOT_FIND_NOT_VALID_INDEX_IN_EXTRA_DATA_TABLE);
 	return -1;
 }

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="zenglrun"
-	ProjectGUID="{6E13B5D7-BCD2-419A-B947-B31705CD648B}"
+	ProjectGUID="{95ACDDF3-CE99-49EE-8E93-925487CBA80D}"
 	RootNamespace="zenglrun"
 	TargetFrameworkVersion="196613"
 	>

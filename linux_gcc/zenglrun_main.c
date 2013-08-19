@@ -519,7 +519,10 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 			}
 		} //for(j=1;j<=2;j++)
 		nodenum = run->inst_list.insts[i].nodenum;
-		run->info(VM_ARG,"[%d line:%d,col:%d,%s]\n",nodenum,nodes[nodenum].line_no,nodes[nodenum].col_no,nodes[nodenum].filename);
+		if(nodenum == -1)
+			run->info(VM_ARG,"[%d]\n",nodenum);
+		else
+			run->info(VM_ARG,"[%d line:%d,col:%d,%s]\n",nodenum,nodes[nodenum].line_no,nodes[nodenum].col_no,nodes[nodenum].filename);
 	} //for(i=0;i<run->inst_list.count;i++)
 }
 
@@ -2543,12 +2546,15 @@ ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg)
 /*解释器的入口函数*/
 ZL_INT zenglrun_main(ZL_VOID * VM_ARG)
 {
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZL_INT retcode;
 	run->isinRunning = ZL_TRUE;
 	run->start_time = ZENGL_SYS_TIME_CLOCK();
 	if((retcode = ZENGL_SYS_JMP_SETJMP(run->jumpBuffer))==0)
 	{
+		if(VM->vm_main_args->userdef_module_init != ZL_NULL)
+			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
 		run->RunInsts(VM_ARG);
 		run->exit(VM_ARG,ZL_NO_ERR_SUCCESS);
 	}

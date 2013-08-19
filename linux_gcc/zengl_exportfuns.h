@@ -68,7 +68,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_VM_API_MOD_INIT_FUNC module_init_function);
 
 /*API接口，用户通过此接口可以自定义某模块中的函数处理句柄*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle);
 
 /*API接口，获取脚本中模块函数调用时的参数信息
   argnum 为参数位置，从1开始，1代表第一个参数，2代表第二个参数，以此类推*/
@@ -105,5 +105,11 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT
 
 /*API接口，用户可以通过此接口在中途停止脚本*/
 ZL_EXPORT ZL_EXP_VOID zenglApi_Stop(ZL_EXP_VOID * VM_ARG);
+
+/*API接口，用户可以通过此接口设置一些额外数据的指针*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName,ZL_EXP_VOID * point);
+
+/*API接口，用户可以通过此接口得到额外数据*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_GetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName);
 
 #endif/* _ZENGL_EXPORT_FUNCTIONS_H_ */

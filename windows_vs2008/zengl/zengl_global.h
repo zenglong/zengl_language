@@ -723,8 +723,9 @@ typedef struct _ZENGL_AST_SCAN_STACKLIST_TYPE{
 #define ZL_R_REGLIST_SIZE 8		//寄存器的数目包括默认初始值
 #define ZL_R_MODULE_TABLE_SIZE 20 //模块动态数组初始化和动态扩容的大小
 #define ZL_R_MOD_FUN_TABLE_SIZE 50 //模块函数动态数组初始化和动态扩容的大小
+#define ZL_R_EXTRA_DATA_TABLE_SIZE 10 //用户额外数据动态数组初始化和动态扩容的大小
 #define ZL_R_HASH_SIZE 211 //解释器相关的hash表数组的大小。
-#define ZL_R_HASH_TOTAL_SIZE 422 //解释器目前有2个动态数组，所以一共422项
+#define ZL_R_HASH_TOTAL_SIZE 633 //解释器目前有3个动态数组，所以一共633项
 #define ZL_R_HASH_SHIFT 4 //解释器hash表索引时的计算因子
 #define ZENGL_RUN_REG(regnum) run->reg_list[regnum] //寄存器宏
 #define ZENGL_RUN_REGVAL(regnum) run->reg_list[regnum].val //寄存器里值的简写宏
@@ -878,6 +879,7 @@ typedef enum _ZENGL_RUN_VMEM_OP_TYPE{
 typedef enum _ZENGL_RUN_HASH_TYPES{
 	ZL_R_HASH_TYPE_MODULE_TABLE = 0,	//解释器模块动态数组所在hash表区域
 	ZL_R_HASH_TYPE_MOD_FUN_TABLE = 1,	//解释器模块函数动态数组对应hash表区域
+	ZL_R_HASH_TYPE_EXTRA_DATA_TABLE = 2,//用户为解释器提供的额外数据构成的动态数组所对应的hash表区域
 }ZENGL_RUN_HASH_TYPES;
 
 typedef struct _ZENGL_RUN_MEM_POOL_POINT_TYPE{
@@ -1012,6 +1014,21 @@ typedef struct _ZENGL_RUN_MOD_FUN_TABLE{
 	ZL_INT mempool_index; //下面的mod_funs指针在内存池中的索引
 	ZENGL_RUN_MOD_FUN_TABLE_MEMBER * mod_funs;
 }ZENGL_RUN_MOD_FUN_TABLE; //模块函数动态数组的定义
+
+typedef struct _ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER{
+	ZL_BOOL isvalid;
+	ZL_INT strIndex; //额外数据名称在字符串池中的索引
+	ZL_VOID * point; //额外数据指针
+	ZL_INT next;
+}ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER; //用户额外数据动态数组中成员的定义
+
+typedef struct _ZENGL_RUN_EXTRA_DATA_TABLE{
+	ZL_BOOL isInit;
+	ZL_INT size;
+	ZL_INT count;
+	ZL_INT mempool_index;
+	ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER * extras;
+}ZENGL_RUN_EXTRA_DATA_TABLE; //用户额外数据动态数组的定义
 
 /********************************************************************************
 		上面是和虚拟机解释器相关的结构体和枚举等定义
@@ -1251,6 +1268,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_INT HashTable[ZL_R_HASH_TOTAL_SIZE]; //hash表中存放了各种动态数组元素的索引值。
 	ZENGL_RUN_MODULE_TABLE moduleTable; //模块动态数组，里面存放了各种脚本模块的初始化函数等信息
 	ZENGL_RUN_MOD_FUN_TABLE ModFunTable; //模块函数动态数组，里面存放了各种脚本模块函数的处理句柄等信息
+	ZENGL_RUN_EXTRA_DATA_TABLE ExtraDataTable; //用户给解释器提供的额外数据构成的动态数组
 
 	/*定义在zenglrun_func.c中的相关函数*/
 	ZL_VOID (* init)(ZL_VOID * VM_ARG); //解释器初始化 对应 zenglrun_init
@@ -1278,6 +1296,8 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* initModFunTable)(ZL_VOID * VM_ARG); //模块函数动态数组初始化 对应 zenglrun_initModFunTable
 	ZL_INT (* LookupModuleTable)(ZL_VOID * VM_ARG,ZL_CHAR * moduleName); //查找某模块的信息，返回该模块在模块动态数组中的索引 对应 zenglrun_LookupModuleTable
 	ZL_INT (* LookupModFunTable)(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //查找某模块函数的信息，返回该模块函数在动态数组中的索引 对应 zenglrun_LookupModFunTable
+	ZL_VOID (* initExtraDataTable)(ZL_VOID * VM_ARG); //初始化用户额外数据动态数组 对应 zenglrun_initExtraDataTable
+	ZL_INT (* InsertExtraDataTable)(ZL_VOID * VM_ARG,ZL_CHAR * extraDataName,ZL_VOID * point); //将数据插入到额外数据动态数组中 对应 zenglrun_InsertExtraDataTable
 	/*定义在zenglrun_main.c中的相关函数*/
 	ZL_VOID (* AddInst)(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INST_TYPE type, 
 						 ZENGL_RUN_INST_OP_DATA_TYPE dest_type , ZL_DOUBLE dest_val ,
@@ -1531,6 +1551,8 @@ ZL_INT zenglrun_InsertModFunTable(ZL_VOID * VM_ARG,ZL_INT moduleID,ZL_CHAR * fun
 ZL_VOID zenglrun_initModFunTable(ZL_VOID * VM_ARG); //模块函数动态数组初始化
 ZL_INT zenglrun_LookupModuleTable(ZL_VOID * VM_ARG,ZL_CHAR * moduleName); //查找某模块的信息，返回该模块在模块动态数组中的索引
 ZL_INT zenglrun_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //查找某模块函数的信息，返回该模块函数在动态数组中的索引
+ZL_VOID zenglrun_initExtraDataTable(ZL_VOID * VM_ARG); //初始化用户额外数据动态数组
+ZL_INT zenglrun_InsertExtraDataTable(ZL_VOID * VM_ARG,ZL_CHAR * extraDataName,ZL_VOID * point); //将数据插入到额外数据动态数组中
 
 //下面是定义在zenglrun_main.c中的函数
 ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INST_TYPE type, 

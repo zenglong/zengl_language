@@ -1,3 +1,9 @@
+  zengl v1.2.2 Beta20130819，增加zenglApi_SetExtraData以及zenglApi_GetExtraData的API接口，通过这两个接口可以从用户端向虚拟机传递指针数据。修复AST某些解析中关于-1空节点的访问异常的BUG，修复API函数退出时出现的访问异常及长跳转错误。
+
+  作者：zenglong
+  时间：2013年8月19日
+  官网：www.zengl.com
+
   zengl v1.2.1的版本，该版本修复v1.2.0中的函数调用的BUG，v1.2.0中当函数定义在函数调用之后时，函数调用就找不到正确的函数入口地址，该版本通过增加ZL_R_DT_LDFUNID指令操作数类型来解决此BUG，函数调用时会先在指令中存放函数ID，在链接替换时再将函数ID替换为伪地址，最后再将伪地址替换为汇编的真实位置。另外增加一个API接口函数:zenglApi_Stop,用户可以通过此接口在中途停止脚本。最后将所有代码转为unix换行符，以适应github
 
   作者：zenglong

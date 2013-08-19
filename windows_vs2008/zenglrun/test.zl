@@ -59,6 +59,9 @@ fun init()
 endfun
 
 clsTest.init();
+print bltGetExtraData('name');
+print bltGetExtraData('val');
+//print bltGetExtraData('val2');
 init();
 clsTest test;
 glmytest = 5;

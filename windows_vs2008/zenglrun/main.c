@@ -6,6 +6,7 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <stdarg.h>
 
 #define STRNULL '\0'
 
@@ -297,6 +298,20 @@ ZL_EXP_VOID main_builtin_get_zl_version(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,version,0,0);
 }
 
+/*bltGetExtraData模块函数，获取用户额外数据*/
+ZL_EXP_VOID main_builtin_get_extraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZL_EXP_CHAR * extraName;
+	if(argcount != 1)
+		zenglApi_Exit(VM_ARG,"bltGetExtraData函数必须有一个参数");
+	zenglApi_GetFunArg(VM_ARG,1,&arg); //获取第一个参数为脚本名
+	if(arg.type != ZL_EXP_FAT_STR)
+		zenglApi_Exit(VM_ARG,"bltGetExtraData函数第一个参数必须是字符串，表示额外数据名称");
+	extraName = arg.val.str;
+	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,(ZL_EXP_CHAR *)zenglApi_GetExtraData(VM_ARG,extraName),0,0);
+}
+
 /*sdl模块函数*/
 ZL_EXP_VOID main_sdl_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
@@ -315,6 +330,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);
 }
 
 ZL_EXP_VOID main_sdl_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
@@ -328,10 +344,23 @@ ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG)
 	zenglApi_SetModInitHandle(VM_ARG,"sdl",main_sdl_module_init);
 }
 
+void main_exit(void * VM,char * err_format,...)
+{
+	va_list arg;
+	va_start(arg,err_format);
+	vprintf(err_format,arg);
+	va_end(arg);
+	zenglApi_Close(VM);
+	#ifdef ZL_EXP_OS_IN_WINDOWS
+		system("pause");
+	#endif
+	exit(-1);
+}
+
 /**
 	用户程序执行入口。
 */
-void main(int argc,char * argv[])
+/*void main(int argc,char * argv[])
 {
 	int len = 0;
 	ZENGL_EXPORT_VM_MAIN_ARGS vm_main_args = {main_userdef_info , 
@@ -367,12 +396,12 @@ void main(int argc,char * argv[])
 	#ifdef ZL_EXP_OS_IN_WINDOWS
 		system("pause");
 	#endif
-}
+}*/
 
 /**
 	用户程序执行入口。
 */
-/*void main(int argc,char * argv[])
+void main(int argc,char * argv[])
 {
 	int len = 0;
 	int testint;
@@ -397,76 +426,58 @@ void main(int argc,char * argv[])
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_COMPILE_INFO,main_userdef_info);
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_RUN_INFO,main_userdef_run_info);
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_RUN_PRINT,main_userdef_run_print);
-	//zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_MODULE_INIT,main_userdef_module_init);
-	builtinID = zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
-	sdlID = zenglApi_SetModInitHandle(VM,"sdl",main_sdl_module_init);
-	zenglApi_SetModFunHandle(VM,builtinID,"bltTest",main_builtin_printf);
+	//zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_MODULE_INIT,main_userdef_module_init); //也可以在此处设置模块初始化句柄
+	if((builtinID = zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init)) == -1)
+		main_exit(VM,"设置use模块句柄失败:%s",zenglApi_GetErrorString(VM));
+
+	if((sdlID = zenglApi_SetModInitHandle(VM,"sdl",main_sdl_module_init)) == -1)
+		main_exit(VM,"设置use模块句柄失败:%s",zenglApi_GetErrorString(VM));
+
+	if(zenglApi_SetModFunHandle(VM,builtinID,"bltTest",main_builtin_printf) == -1)
+		main_exit(VM,"设置模块函数失败:%s",zenglApi_GetErrorString(VM));
+
+	if(zenglApi_SetExtraData(VM,"name","my name is zengl") == -1)
+		main_exit(VM,"设置额外数据失败:%s",zenglApi_GetErrorString(VM));
+
+	if(zenglApi_SetExtraData(VM,"val","my val is zengl too") == -1)
+		main_exit(VM,"设置额外数据失败:%s",zenglApi_GetErrorString(VM));
+
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
-	{
-		printf("错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
+
 	if((teststr = zenglApi_GetValueAsString(VM,"glmytest")) == ZL_EXP_NULL)
-	{
-		printf("获取变量glmytest失败：%s\n",zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"获取变量glmytest失败：%s\n",zenglApi_GetErrorString(VM));
+
 	if(zenglApi_GetValueAsInt(VM,"i",&testint) == -1)
-	{
-		printf("获取变量i失败：%s\n",zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"获取变量i失败：%s\n",zenglApi_GetErrorString(VM));
+
 	if(zenglApi_GetValueAsDouble(VM,"floatnum",&testdouble) == -1)
-	{
-		printf("获取变量floatnum失败：%s\n",zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"获取变量floatnum失败：%s\n",zenglApi_GetErrorString(VM));
+
 	printf("the value of glmytest in test.zl is %s , i is %d , floatnum is %.16g\n",teststr,testint,testdouble);
+
 	zenglApi_Reset(VM);
+
 	builtinID = zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
 	//zenglApi_SetModFunHandle(VM,0,"printf",main_builtin_printf);
 	if(zenglApi_Run(VM,"test2.zl") == -1) //编译执行zengl脚本
-	{
-		printf("错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));
+
 	zenglApi_Reset(VM);
+
 	zenglApi_Push(VM,ZL_EXP_FAT_INT,0,1415,0);
+
 	zenglApi_Push(VM,ZL_EXP_FAT_STR,"test second arg",0,0);
+
 	if(zenglApi_Call(VM,argv[1],"init","clsTest") == -1) //编译执行zengl脚本函数
-	{
-		printf("错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
-		zenglApi_Close(VM);
-		#ifdef ZL_EXP_OS_IN_WINDOWS
-			system("pause");
-		#endif
-		exit(-1);
-	}
+		main_exit(VM,"错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
+
 	zenglApi_Close(VM);
+
 	fclose(debuglog);
 	printf("compile finished(编译结束)\n");
 
 	#ifdef ZL_EXP_OS_IN_WINDOWS
 		system("pause");
 	#endif
-}*/
+}

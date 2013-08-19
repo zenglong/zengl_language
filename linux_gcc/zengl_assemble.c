@@ -935,7 +935,12 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 			if(nodes[nodenum].childs.count >= 2)
 			{
 				chnum = nodes[nodenum].childs.childnum;
-				if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //操作因子或表达式都可以作为判断表达式。
+				if(chnum[0] == -1)
+				{
+					compile->parser_curnode = nodenum;
+					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_IF_HAVE_NO_EXPRESS);
+				}
+				else if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //操作因子或表达式都可以作为判断表达式。
 				{
 					compile->AsmGenCodes(VM_ARG,chnum[0]); //生成if第一个判断表达式里的汇编代码
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
@@ -1113,13 +1118,15 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 					ZL_R_IT_RESET,ZL_R_DT_NONE,0,
 					ZL_R_DT_REG,ZL_R_RT_ARGTMP); //对应汇编指令 "RESET ARGTMP" ARGTMP临时的ARG参数寄存器，如果在这一步就直接RESET ARG的话，下面在PUSH 参数时，因为参数可能是个表达式，而表达式里很可能要用到当前的ARG参数寄存器，所以先RESET ARGTMP寄存器，让ARGTMP寄存器记录下当前的虚拟堆栈中位置，等参数生成完后，再将ARGTMP 赋值给ARG寄存器。
 				chnum = nodes[nodenum].childs.childnum;
-				if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //函数调用的参数部分要么是单个的标识符之类的操作因子，要么是逗号分隔开的表达式，所以直接AsmGenCodes生成该节点的汇编代码即可，AsmGenCodes函数里自然会对逗号进行处理。
+				if(chnum[0] == -1) //如果函数调用的参数为空如test()语句，则子节点为-1，此时跳过代码的生成
+					;
+				else if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //函数调用的参数部分要么是单个的标识符之类的操作因子，要么是逗号分隔开的表达式，所以直接AsmGenCodes生成该节点的汇编代码即可，AsmGenCodes函数里自然会对逗号进行处理。
 				{
 					compile->AsmGCStackPush(VM_ARG,0,ZL_ASM_STACK_ENUM_FUN_CLASSID);
 					compile->AsmGenCodes(VM_ARG,chnum[0]);
 					compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
 				}
-				else if(chnum[0] != -1)
+				else
 					compile->exit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_TOKEN,
 						nodes[chnum[0]].line_no,
 						nodes[chnum[0]].col_no,
@@ -1170,13 +1177,15 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 						ZL_R_IT_RESET,ZL_R_DT_NONE,0,
 						ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "RESET ARRAY_ITEM" 设置当前的ARRAY_ITEM寄存器为当前的栈顶。
 				chnum = nodes[nodenum].childs.childnum;
-				if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0]))
+				if(chnum[0] == -1) //等于-1时表示空节点，如test[]
+					;
+				else if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 				{
 					compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_NONE,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE); //防止AsmGenCodes在生成表达式时，受到表达式内部嵌套的影响
 					compile->AsmGenCodes(VM_ARG,chnum[0]);
 					compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE);
 				}
-				else if(chnum[0] != -1) //等于-1时表示空节点，如test[]
+				else
 				{
 					compile->parser_curnode = nodenum;
 					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
@@ -1279,46 +1288,51 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 			if(nodes[nodenum].childs.count == 1) //return关键字后面跟的是要返回的值，如果是变量标识符或数字或字符串，就直接将变量,数字,字符串的值赋值给AX寄存器作为返回值，如果是表达式就计算出表达式的值，因为表达式的结果默认就在AX中，所以可以直接作为返回值。最后以RET指令跳出脚本函数。
 			{
 				chnum = nodes[nodenum].childs.childnum;
-				switch(nodes[chnum[0]].toktype) //以下为对第一个子节点的判断并输出相应的汇编代码，结果储存在AX寄存器中。
+				if(chnum[0] == -1) //当子节点为-1，如return;语句，return后没有表达式，所以子节点为-1，就需要在此处跳过，否则下面数组访问-1的索引就会出现内存错误。
+					;
+				else
 				{
-				case ZL_TK_ID:
-					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
-					break;
-				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
-					break;
-				case ZL_TK_FLOAT:
-					inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
-					break;
-				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
-					break;
-				default:
-					if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
-						compile->AsmGenCodes(VM_ARG,chnum[0]);
-					else if(chnum[0] != -1)
+					switch(nodes[chnum[0]].toktype) //以下为对第一个子节点的判断并输出相应的汇编代码，结果储存在AX寄存器中。
 					{
-						compile->parser_curnode = nodenum;
-						compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-							compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
-							nodes[chnum[0]].line_no,
-							nodes[chnum[0]].col_no,
-							nodes[chnum[0]].filename);
-					}
-					break;
-				} //switch(nodes[chnum[0]].toktype)
+					case ZL_TK_ID:
+						inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
+						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+										inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+						break;
+					case ZL_TK_NUM:
+						inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+										ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+						break;
+					case ZL_TK_FLOAT:
+						inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+										ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+						break;
+					case ZL_TK_STR:
+						inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+										ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+						break;
+					default:
+						if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
+							compile->AsmGenCodes(VM_ARG,chnum[0]);
+						else if(chnum[0] != -1)
+						{
+							compile->parser_curnode = nodenum;
+							compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+								compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
+								nodes[chnum[0]].line_no,
+								nodes[chnum[0]].col_no,
+								nodes[chnum[0]].filename);
+						}
+						break;
+					} //switch(nodes[chnum[0]].toktype)
+				} //else
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 						ZL_R_IT_RET,ZL_R_DT_NONE,0,
 						ZL_R_DT_NONE,0); //对应汇编指令 "RET"
@@ -1911,7 +1925,12 @@ ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_
 	if(nodes[nodenum].childs.count == 1)  //生成elif对应的判断表达式的汇编指令
 	{
 		chnum = nodes[nodenum].childs.childnum;
-		if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //单纯的变量，数字，字符串之类的操作因子或者表达式都可以作为if...elif的判断表达式
+		if(chnum[0] == -1)
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_IF_HAVE_NO_EXPRESS);
+		}
+		else if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) //单纯的变量，数字，字符串之类的操作因子或者表达式都可以作为if...elif的判断表达式
 		{
 			compile->AsmGenCodes(VM_ARG,chnum[0]);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
