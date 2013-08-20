@@ -1,3 +1,9 @@
+  zengl v1.2.2 Beta20130820，修复zenglrun_func.c中模块动态数组，模块函数动态数组，用户额外数据动态数组在添加数据时不会动态扩容的BUG
+
+  作者：zenglong
+  时间：2013年8月20日
+  官网：www.zengl.com
+
   zengl v1.2.2 Beta20130819，增加zenglApi_SetExtraData以及zenglApi_GetExtraData的API接口，通过这两个接口可以从用户端向虚拟机传递指针数据。修复AST某些解析中关于-1空节点的访问异常的BUG，修复API函数退出时出现的访问异常及长跳转错误。
 
   作者：zenglong

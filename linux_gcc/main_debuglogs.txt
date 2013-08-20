@@ -1203,10 +1203,10 @@ nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
 10 CALL "printf" [3 line:2,col:1,test2.zl]
 11 END [7 line:2,col:35,test2.zl]
 
- compile time:0 s totalsize: 23.6796875 Kbyte
+ compile time:0.01 s totalsize: 23.6796875 Kbyte
 
  run time:0 s totalsize: 25.6796875 Kbyte
- VM time:0 s totalsize: 49.359375 Kbyte
+ VM time:0.01 s totalsize: 49.359375 Kbyte
 nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
 (0) use has 1 childs: 
 (0) use (0) child is nodenum:1 identifier token: builtin line:1,col:5 <'test2.zl'>
@@ -2348,7 +2348,7 @@ classfun:<class:2 clsTestOther> fun:3 testOther [100 6 test.zl]
 463 RET [456 line:100,col:2,test.zl]
 464 END [467 line:104,col:1,test.zl]
 
- compile time:0.01 s totalsize: 85.4111328125 Kbyte
+ compile time:0 s totalsize: 85.4111328125 Kbyte
 
  run time:0 s totalsize: 26.7470703125 Kbyte
  VM time:0.01 s totalsize: 112.158203125 Kbyte

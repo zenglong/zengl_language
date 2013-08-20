@@ -661,6 +661,14 @@ ZL_INT zenglrun_InsertModuleTable(ZL_VOID * VM_ARG,ZL_CHAR * moduleName,ZL_VM_AP
 	ZL_INT index;
 	if(!run->moduleTable.isInit)
 		run->initModuleTable(VM_ARG);
+	if(run->moduleTable.count == run->moduleTable.size)
+	{
+		run->moduleTable.size += ZL_R_MODULE_TABLE_SIZE;
+		run->moduleTable.modules = run->memReAlloc(VM_ARG,run->moduleTable.modules,
+			run->moduleTable.size * sizeof(ZENGL_RUN_MODULE_TABLE_MEMBER),&run->moduleTable.mempool_index);
+		ZENGL_SYS_MEM_SET(run->moduleTable.modules + (run->moduleTable.size - ZL_R_MODULE_TABLE_SIZE),0,
+			ZL_R_MODULE_TABLE_SIZE * sizeof(ZENGL_RUN_MODULE_TABLE_MEMBER));
+	}
 	index = run->moduleTable.count;
 	if(run->moduleTable.modules[index].isvalid == ZL_FALSE)
 	{
@@ -703,6 +711,14 @@ ZL_INT zenglrun_InsertModFunTable(ZL_VOID * VM_ARG,ZL_INT moduleID,ZL_CHAR * fun
 	ZL_INT index;
 	if(!run->ModFunTable.isInit)
 		run->initModFunTable(VM_ARG);
+	if(run->ModFunTable.count == run->ModFunTable.size)
+	{
+		run->ModFunTable.size += ZL_R_MOD_FUN_TABLE_SIZE;
+		run->ModFunTable.mod_funs = run->memReAlloc(VM_ARG,run->ModFunTable.mod_funs,
+			run->ModFunTable.size * sizeof(ZENGL_RUN_MOD_FUN_TABLE_MEMBER),&run->ModFunTable.mempool_index);
+		ZENGL_SYS_MEM_SET(run->ModFunTable.mod_funs + (run->ModFunTable.size - ZL_R_MOD_FUN_TABLE_SIZE),0,
+			ZL_R_MOD_FUN_TABLE_SIZE * sizeof(ZENGL_RUN_MOD_FUN_TABLE_MEMBER));
+	}
 	index = run->ModFunTable.count;
 	if(run->ModFunTable.mod_funs[index].isvalid == ZL_FALSE)
 	{
@@ -800,6 +816,14 @@ ZL_INT zenglrun_InsertExtraDataTable(ZL_VOID * VM_ARG,ZL_CHAR * extraDataName,ZL
 	ZL_INT index;
 	if(!run->ExtraDataTable.isInit)
 		run->initExtraDataTable(VM_ARG);
+	if(run->ExtraDataTable.count == run->ExtraDataTable.size)
+	{
+		run->ExtraDataTable.size += ZL_R_EXTRA_DATA_TABLE_SIZE;
+		run->ExtraDataTable.extras = run->memReAlloc(VM_ARG,run->ExtraDataTable.extras,
+			run->ExtraDataTable.size * sizeof(ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER),&run->ExtraDataTable.mempool_index);
+		ZENGL_SYS_MEM_SET(run->ExtraDataTable.extras + (run->ExtraDataTable.size - ZL_R_EXTRA_DATA_TABLE_SIZE),0,
+			ZL_R_EXTRA_DATA_TABLE_SIZE * sizeof(ZENGL_RUN_EXTRA_DATA_TABLE_MEMBER));
+	}
 	index = run->ExtraDataTable.count;
 	if(extraDataName == ZL_NULL || point == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_VM_API_INVALID_EXTRA_DATA_NAME_OR_POINT);

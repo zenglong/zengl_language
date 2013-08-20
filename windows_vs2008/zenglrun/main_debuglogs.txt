@@ -1139,7 +1139,7 @@ classfun:<class:2 clsTestOther> fun:3 testOther [100 6 test.zl]
 463 RET [456 line:100,col:2,test.zl]
 464 END [467 line:104,col:1,test.zl]
 
- compile time:0 s totalsize: 93.6845703125 Kbyte
+ compile time:0.047 s totalsize: 93.6845703125 Kbyte
 nodenum:0 reserve token: use line:1,col:1 <'test3.zl'>
 (0) use has 1 childs: 
 (0) use (0) child is nodenum:1 identifier token: builtin line:1,col:5 <'test3.zl'>
@@ -1173,8 +1173,8 @@ nodenum:0 reserve token: use line:1,col:1 <'test3.zl'>
  run time:0 s totalsize: 32.8984375 Kbyte
  VM time:0 s totalsize: 60.6015625 Kbyte
 
- run time:0.031 s totalsize: 55.0166015625 Kbyte
- VM time:0.031 s totalsize: 148.748046875 Kbyte
+ run time:0.016 s totalsize: 55.0166015625 Kbyte
+ VM time:0.079 s totalsize: 148.748046875 Kbyte
 nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
 (0) use has 1 childs: 
 (0) use (0) child is nodenum:1 identifier token: builtin line:1,col:5 <'test2.zl'>
@@ -1206,7 +1206,7 @@ nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
  compile time:0 s totalsize: 23.6796875 Kbyte
 
  run time:0 s totalsize: 29.5234375 Kbyte
- VM time:0.093 s totalsize: 53.203125 Kbyte
+ VM time:0.25 s totalsize: 53.203125 Kbyte
 nodenum:0 reserve token: use line:1,col:1 <'test2.zl'>
 (0) use has 1 childs: 
 (0) use (0) child is nodenum:1 identifier token: builtin line:1,col:5 <'test2.zl'>
@@ -2348,7 +2348,7 @@ classfun:<class:2 clsTestOther> fun:3 testOther [100 6 test.zl]
 463 RET [456 line:100,col:2,test.zl]
 464 END [467 line:104,col:1,test.zl]
 
- compile time:0.016 s totalsize: 85.4111328125 Kbyte
+ compile time:0.015 s totalsize: 85.4111328125 Kbyte
 
  run time:0 s totalsize: 30.4736328125 Kbyte
- VM time:0.109 s totalsize: 115.884765625 Kbyte
+ VM time:0.265 s totalsize: 115.884765625 Kbyte
