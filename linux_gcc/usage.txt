@@ -1,3 +1,9 @@
+  zengl v1.2.2 Release发布版，经过采集器的嵌入式测试后由Beta版转为Release发布版，vs2008增加了Release发布模式的配置，详情见官网
+
+  作者：zenglong
+  时间：2013年8月24日
+  官网：www.zengl.com
+
   zengl v1.2.2 Beta20130820，修复zenglrun_func.c中模块动态数组，模块函数动态数组，用户额外数据动态数组在添加数据时不会动态扩容的BUG
 
   作者：zenglong

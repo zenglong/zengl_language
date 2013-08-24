@@ -7,7 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zenglrun", "zenglrun\zenglr
 	ProjectSection(ProjectDependencies) = postProject
 		{451B0CCF-2888-467E-923D-658708CEF0EE} = {451B0CCF-2888-467E-923D-658708CEF0EE}
 	EndProjectSection
-EndProject
+EndProject 
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
