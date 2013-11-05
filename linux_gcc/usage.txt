@@ -1,3 +1,17 @@
+  zengl v1.2.4 , 该版本使用异或算法添加了简单的脚本加密功能，这种算法开销小，但是安全性低，所以只能作为一种简单的脚本伪装。
+  
+  另外添加了单目负号运算符，以前没有负号运算符时，是使用减法运算符来表示负号，但是减法运算符毕竟是双目运算符，实现起来问题比较多(实际上之前的版本负号根本没起作用)，所以就为负号添加了专门的token和语法解析，负号具有和"!"取反运算符一样的优先级。
+  
+  该版本新增了几个API接口函数，如zenglApi_SetErrThenStop，这个API接口，用于在用户自定义的模块函数中设置出错信息，然后设置虚拟机停止执行，比zenglApi_Exit好的地方在于，不会长跳转直接结束，而是返回由用户决定退出的时机，有效防止外部C++调用出现内存泄漏或访问异常等，异或加密运算的API接口是zenglApi_SetSourceXorKey，在zenglApi_Run或zenglApi_Call执行前，可以将xor异或密钥通过此接口传递给虚拟机，虚拟机就会对脚本进行异或解密，异或密钥长度没有限制，所以尽量将异或密钥设置得长些，且密钥里的字符最好是随机的，当然你可以根据此思路进行扩展加密方式，或者使用第三方的加密函数，不过，过于复杂的加密方式可能会降低程序的执行性能，如果是重要的数据还是不要放在脚本里。
+
+  zenglApi_AllocMemForString , zenglApi_AllocMem 接口可以在虚拟机内部为用户分配一段内存，然后由用户决定用这段内存做些什么，在用完后，最好用zenglApi_FreeMem接口将分配的内存给释放掉，当然在zenglApi_Close关闭虚拟机时也会自动释放这些内存，不过手动释放可以防止内存越滚越大。
+
+  该版本还修复了访问类成员的BUG，之前的版本在访问类成员中的成员时会出现找不到类成员的BUG，这是由于zengl_symbol.c在递归查找类成员信息时所用的类ID信息不对造成的，再此版本中进行修复。
+
+  作者：zenglong
+  时间：2013年11月5日
+  官网：www.zengl.com
+
   zengl v1.2.2 Release发布版，经过采集器的嵌入式测试后由Beta版转为Release发布版，vs2008增加了Release发布模式的配置，详情见官网
 
   作者：zenglong
@@ -64,10 +78,14 @@
   时间：2013年8月14日
   官网：www.zengl.com
 
-先运行make clean 将原来生成的libzengl.so main.o和zengl删除
+先运行make clean 将原来生成的libzengl.so main.o encrypt.o和zengl 以及 encrypt删除
 
 再运行make
 
-生成libzengl.so main.o 和 zengl
+生成libzengl.so main.o encrypt.o 和 zengl 以及 encrypt
 
 接着运行./zengl test.zl即可测试main.c程序(该程序是测试zengl用的，在这里生成的zengl核心文件只有libzengl.so动态链接库)
+
+要测试脚本加密程序，可以运行 ./encrypt test.zl encrypt_script/test.zl "xorkey_334566_hello_world"
+
+上面的encrypt命令中test.zl是源文件名，encrypt_script/test.zl是异或运算后的输出文件名对应的路径，最后一个参数是异或运算的密钥，这里的密钥是和main.c里一致的。

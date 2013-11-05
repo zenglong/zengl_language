@@ -1,4 +1,5 @@
 inc 'test2.zl';
+use sdl;
 def TEST_MACRO 'i am test macro';
 class clsTest
 	a;
@@ -52,6 +53,11 @@ class clsTest
 		dowhile(obj.a > 4)
 		print m = obj.a * obj.b / 2;
 	endfun
+
+	fun OutIn(arg1,arg2)
+		print 'arg1 is ' + arg1;
+		print 'arg2 is ' + arg2;
+	endfun
 endcls
 
 fun init()
@@ -93,6 +99,7 @@ print TEST_MACRO;
 print TEST2_MACRO;
 print 'zengl version is v' + bltGetZLVersion();
 clsTestOther.testOther();
+sdlInit(xdf,'dfsf',123);
 
 class clsTestOther
 	m;
@@ -102,3 +109,18 @@ class clsTestOther
 		print 'hello zengl';
 	endfun
 endclass
+
+
+def MTRUE -000114;
+def STR_TEST "23hello world";
+
+r = 4 + MTRUE;
+if(r == -110)
+	print 'r is -110';
+else
+	print 'r not -110';
+endif
+
+print r - -10;
+
+print 'STR_TEST is ' + STR_TEST;

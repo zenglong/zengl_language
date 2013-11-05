@@ -45,7 +45,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: compile LineCols alloc failure (编译器异常：LineCols行列号动态数组分配内存初始化失败)\n", //ZL_ERR_CP_LINECOL_MALLOC_FAILED
 	"\n err: compile can't find non-valid index in def_table (编译器异常：添加宏定义时，无法在动态数组中找到没被占用的索引)\n", //ZL_ERR_CP_DEF_TABLE_NO_NONVALID_INDEX
 	"\n err: def_table's tmpindex is not valid when insert_HashTableForDef (编译器异常：在函数insert_HashTableForDef中，tmpindex不是有效的索引)\n", //ZL_ERR_CP_DEF_TABLE_INVALID_INDEX
-	"\n syntax error: the same def in %d:%d <'%s'> and %d:%d <'%s'> (语法错误：存在相同的def宏定义，请根据行列号进行检查)\n", //ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND
+	"\n syntax error: the same def '%s' in %d:%d <'%s'> and %d:%d <'%s'> (语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查)\n", //ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND
 	"\n syntax error: def must with id type! line:%d col:%d <'%s'> (语法错误：def关键字后面必须是有效的id标识符)\n", //ZL_ERR_CP_DEF_MUST_WITH_ID
 	"\n syntax error: def must end with semi! line:%d col:%d <'%s'> (语法错误：def定义宏必须以分号结束)\n", //ZL_ERR_CP_DEF_NO_END_SEMI
 	"\n syntax error: def const must be int num,float num or string! line:%d col:%d <'%s'> (语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串)\n", //ZL_ERR_CP_DEF_INVALID_VALUE_TYPE
@@ -64,31 +64,31 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	" parser err exit \n", //ZL_ERR_CP_PARSER_ERROR_EXIT
 	"\n syntax parser error: parser_curnode out of end (语法分析错误：语法树当前扫描节点parser_curnode超出语法树范围)", //ZL_ERR_CP_PARSER_CURNODE_OUT_OF_END
 	"\n err: compile parser oplevel stacklist alloc failure (编译器异常：优先级比较堆栈分配内存初始化失败)\n", //ZL_ERR_CP_PARSER_OPLVL_STACKLIST_MALLOC_FAILED
-	"\n syntax error: id must with operate(except '!' or '&') or left bracket or left middle bracket or ')' or ']' or semi (语法错误：id变量标识符后面必须是操作运算符(除了取反和引用运算符)或者左括号或者左中括号或右括号或右中括号或分号)\n", //ZL_ERR_CP_SYNTAX_ID_INVALID_NEXT_NODE
+	"\n syntax error: id must with operate(except '!' or '&') or left bracket or left middle bracket or ')' or ']' or semi (语法错误：id变量标识符后面必须是操作运算符(除了取反，引用和负号运算符)或者左括号或者左中括号或右括号或右中括号或分号)\n", //ZL_ERR_CP_SYNTAX_ID_INVALID_NEXT_NODE
 	"\n syntax error: invalid next node (语法错误：当前节点后面是无效节点，可能是缺少分号导致的)\n", //ZL_ERR_CP_SYNTAX_INVALID_NEXT_NODE
-	"\n syntax error: +,-,*,/, .... must with id or float or num or string or ++,-- or ! or '(' , if token is '=' can also with '&' (语法错误：表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或左括号，如果是赋值语句，后面还可接引用运算符)\n", //ZL_ERR_CP_SYNTAX_EXPRESS_OP_INVALID_NEXT_NODE
+	"\n syntax error: +,-,*,/, .... must with id or float or num or string or ++,-- or ! or '(' , if token is '=' can also with '&' (语法错误：表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或负号或左括号，如果是赋值语句，后面还可接引用运算符)\n", //ZL_ERR_CP_SYNTAX_EXPRESS_OP_INVALID_NEXT_NODE
 	"\n syntax error: can't start with %s (语法错误：开头不可以用'%s')\n", //ZL_ERR_CP_SYNTAX_START_INVALID_TOKEN
 	"\n err: compile AST_TreeScanStackList alloc failure (编译器异常：语法树的扫描堆栈分配内存初始化失败)\n", //ZL_ERR_CP_AST_SCAN_STACK_MALLOC_FAILED
 	"\n err: compile AST_TreeScanStackList have no element (编译器异常：语法树的扫描堆栈为空)\n", //ZL_ERR_CP_AST_SCAN_STACK_HAS_NOTHING
-	"\n syntax error: num,float,string must with operate(except assign or dot or '!' or '&') or ')' or ']' or semi (语法错误：数字,浮点数,字符串后面必须是除了赋值，点，取反，引用之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_NUM_FLOAT_STR_INVALID_NEXT_NODE
+	"\n syntax error: num,float,string must with operate(except assign or dot or '!' or '&') or ')' or ']' or semi (语法错误：数字,浮点数,字符串后面必须是除了赋值，点，取反，引用，负号之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_NUM_FLOAT_STR_INVALID_NEXT_NODE
 	"\n syntax error: %d:%d <'%s'> invalid token '%s' (语法错误：无效的Token)\n", //ZL_ERR_CP_SYNTAX_INVALID_TOKEN
 	"\n syntax error: '&' must with id (语法错误：引用运算符后面必须是变量之类标识符)\n", //ZL_ERR_CP_SYNTAX_ADDRESS_INVALID_NEXT_NODE
-	"\n syntax error: invalid token after ++,-- (语法错误：加加减减运算符后面遇到无效的符号，当加加减减在左侧时，后面只能是加加减减，操作因子，取反或左括号，在右侧时，只能是除了赋值，点，取反，引用运算符之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_PPMM_INVALID_NEXT_NODE
-	"\n syntax error: '(' must with id or float or num or string or ++,-- or ! or '(' or ')' or '&' (语法错误：左括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或者左括号，或者右括号，还可以接引用运算符)\n", //ZL_ERR_CP_SYNTAX_LBRACKET_INVALID_NEXT_NODE
-	"\n syntax error: ')' must with operate(except assign or dot or '!' or '&') or ')' or ']' or semi (语法错误：右括号后面必须是除了赋值，点，取反，引用之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_RBRACKET_INVALID_NEXT_NODE
+	"\n syntax error: invalid token after ++,-- (语法错误：加加减减运算符后面遇到无效的符号，当加加减减在左侧时，后面只能是加加减减，操作因子，取反，负号或左括号，在右侧时，只能是除了赋值，点，取反，引用，负号运算符之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_PPMM_INVALID_NEXT_NODE
+	"\n syntax error: '(' must with id or float or num or string or ++,-- or ! or '(' or ')' or '&' (语法错误：左括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或负号，或者左括号，或者右括号，还可以接引用运算符)\n", //ZL_ERR_CP_SYNTAX_LBRACKET_INVALID_NEXT_NODE
+	"\n syntax error: ')' must with operate(except assign or dot or '!' or '&') or ')' or ']' or semi (语法错误：右括号后面必须是除了赋值，点，取反，负号，引用之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_RBRACKET_INVALID_NEXT_NODE
 	"\n syntax error: bracket can't empty except funcall (语法错误：普通的括号表达式不能为空，除非是函数的参数括号，因为函数可以没有参数)\n", //ZL_ERR_CP_SYNTAX_BRACKET_EMPTY
 	"\n syntax error: ')' have no '(' (语法错误：右括号没有对应的左括号)\n", //ZL_ERR_CP_SYNTAX_RBRACKET_NO_LBRACKET
 	"\n syntax error: '(' have no ')' (语法错误：左括号没有对应的右括号)\n", //ZL_ERR_CP_SYNTAX_LBRACKET_NO_RBRACKET
 	"\n syntax error: unknown state in parser express , may be can't analysis token (语法错误：在parser生成语法树的express函数中遇到无效的状态机，可能是还无法解析的token)\n", //ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_UNKNOWN_STATE
-	"\n syntax error: '[' must with id or float or num or string or ++,-- or ! or '(' or ']' (语法错误：右中括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或者左括号，或者右中括号)\n", //ZL_ERR_CP_SYNTAX_LMBRACKET_INVALID_NEXT_NODE
+	"\n syntax error: '[' must with id or float or num or string or ++,-- or ! or '(' or ']' (语法错误：左中括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或负号，或者左括号，或者右中括号)\n", //ZL_ERR_CP_SYNTAX_LMBRACKET_INVALID_NEXT_NODE
 	"\n syntax error: invalid array item (语法错误：无效的数组元素格式，数组元素必须是test[a]这样的变量标识符加左中括号加表达式加右中括号的格式，其中表达式可以为空)\n", //ZL_ERR_CP_SYNTAX_INVALID_ARRAY_ITEM
 	"\n syntax error: ']' have no '[' (语法错误：右中括号没有对应的左括号)\n", //ZL_ERR_CP_SYNTAX_RMBRACKET_NO_LMBRACKET
 	"\n syntax error: '[' have no ']' (语法错误：左中括号没有对应的右中括号)\n", //ZL_ERR_CP_SYNTAX_LMBRACKET_NO_RMBRACKET
-	"\n syntax error: ']' must with operate(except '!' or '&') or ')' or ']' or semi (语法错误：右中括号后面必须是除了取反，引用之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_RMBRACKET_INVALID_NEXT_NODE
+	"\n syntax error: ']' must with operate(except '!' or '&') or ')' or ']' or semi (语法错误：右中括号后面必须是除了取反，负号，引用之外的操作运算符或者右括号或者右中括号或者分号)\n", //ZL_ERR_CP_SYNTAX_RMBRACKET_INVALID_NEXT_NODE
 	"\n syntax error: ',' must with id or float or num or string or ++,-- or ! or '(' or '&' (语法错误：逗号运算符后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或者左括号，或者引用运算符)\n", //ZL_ERR_CP_SYNTAX_COMMA_INVALID_NEXT_NODE
 	"\n syntax error: '.' must with id (语法错误：点运算符后面必须是id变量标识符)\n", //ZL_ERR_CP_SYNTAX_DOT_INVALID_NEXT_NODE
-	"\n syntax error: ':' must with id or float or num or string or ++,-- or ! or '(' or '&' (语法错误：冒号运算符后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或者左括号，或者引用运算符)\n", //ZL_ERR_CP_SYNTAX_COLON_INVALID_NEXT_NODE
-	"\n syntax error: '?' must with id or float or num or string or ++,-- or ! or '(' or '&' (语法错误：问号运算符后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或者左括号，或者引用运算符)\n", //ZL_ERR_CP_SYNTAX_QUESTION_MARK_INVALID_NEXT_NODE
+	"\n syntax error: ':' must with id or float or num or string or ++,-- or ! or '(' or '&' (语法错误：冒号运算符后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或负号，或者左括号，或者引用运算符)\n", //ZL_ERR_CP_SYNTAX_COLON_INVALID_NEXT_NODE
+	"\n syntax error: '?' must with id or float or num or string or ++,-- or ! or '(' or '&' (语法错误：问号运算符后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或负号，或者左括号，或者引用运算符)\n", //ZL_ERR_CP_SYNTAX_QUESTION_MARK_INVALID_NEXT_NODE
 	"\n syntax error: '?' have no match colon in the right (语法错误：问号右侧没有相匹配的冒号，一个问号必须和一个冒号相对应)\n", //ZL_ERR_CP_SYNTAX_QUESTION_NO_COLON_RIGHT
 	"\n err: compile parser err, zengl_CheckQstColonValid function can only detect question token (编译异常：zengl_CheckQstColonValid只能针对问号运算符进行检测)\n", //ZL_ERR_CP_CHECK_QUESTION_VALID_FUNC_INVALID_TOKEN
 	"\n syntax error: ':' have no match '?' in the left (语法错误：冒号左侧没有相匹配的问号，一个冒号必须和一个问号相对应)\n", //ZL_ERR_CP_SYNTAX_COLON_NO_QUESTION_LEFT

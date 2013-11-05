@@ -1,0 +1,3 @@
+use builtin;
+printf('i am in test2.zl,haha \n');
+def TEST2_MACRO 'test2 macro';

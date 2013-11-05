@@ -74,15 +74,20 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_LOGIC;
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_LOGIC;
 			break;
-		case ZL_TK_REVERSE:
-		case ZL_TK_ADDRESS:
-			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_LOGIC;
-			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_REVERSE;
-			break;
 		case ZL_TK_PLUS:
 		case ZL_TK_MINIS:
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_PLUS_MINIS;
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_PLUS_MINIS;
+			if(compile->AST_nodes.nodes[compile->AST_nodes.count].toktype == ZL_TK_PLUS ||
+			   !compile->CheckIsNegative(VM_ARG))
+			{
+				break;
+			}
+			compile->AST_nodes.nodes[compile->AST_nodes.count].toktype = ZL_TK_NEGATIVE; //将减号转为负号单目运算符，并使用和下面的REVERSE一样的优先级
+		case ZL_TK_REVERSE:
+		case ZL_TK_ADDRESS:
+			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_LOGIC;
+			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_REVERSE;
 			break;
 		case ZL_TK_PLUS_PLUS:
 		case ZL_TK_MINIS_MINIS:
@@ -1742,6 +1747,9 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			case ZL_TK_MINIS:
 				compile->exp_struct.state = ZL_ST_INMINIS;
 				break;
+			case ZL_TK_NEGATIVE:
+				compile->exp_struct.state = ZL_ST_PARSER_INNEGATIVE;
+				break;
 			case ZL_TK_TIMES_ASSIGN:
 				compile->exp_struct.state = ZL_ST_PARSER_INTIMES_ASSIGN;
 				break;
@@ -1824,6 +1832,7 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			compile->detectCurnodeSyntax(VM_ARG);
 			compile->OpLevelForTwo(VM_ARG);
 			break;
+		case ZL_ST_PARSER_INNEGATIVE:
 		case ZL_ST_PARSER_INADDRESS:
 		case ZL_ST_PARSER_INREVERSE:
 			compile->detectCurnodeSyntax(VM_ARG);
@@ -1993,6 +2002,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
+			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
@@ -2002,7 +2012,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			 nextNodeTKCG == ZL_TKCG_OP_QUESTION ||
 			 nextNodeTkType == ZL_TK_RBRACKET ||
 			 nextNodeTkType == ZL_TK_RMBRACKET ||
-			 nextNodeTkType == ZL_TK_SEMI)) //数字,浮点数,字符串后面必须是除了赋值，点，取反，引用之外的操作运算符或者右括号或者右中括号或者分号
+			 nextNodeTkType == ZL_TK_SEMI)) //数字,浮点数,字符串后面必须是除了赋值，点，取反，引用，负号之外的操作运算符或者右括号或者右中括号或者分号
 			return;
 		else if(nextNodeNum != -1)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_NUM_FLOAT_STR_INVALID_NEXT_NODE);
@@ -2010,13 +2020,13 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_NEXT_NODE);
 		break;
 	case ZL_ST_INID:
-		if((ZENGL_AST_ISTOKCATEXOP(nextNodeNum) && nextNodeTkType != ZL_TK_REVERSE && nextNodeTkType != ZL_TK_ADDRESS) || 
+		if((ZENGL_AST_ISTOKCATEXOP(nextNodeNum) && nextNodeTkType != ZL_TK_REVERSE && nextNodeTkType != ZL_TK_ADDRESS && nextNodeTkType != ZL_TK_NEGATIVE) || 
 			(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTkType == ZL_TK_LBRACKET ||
 			 nextNodeTkType == ZL_TK_LMBRACKET ||
 			 nextNodeTkType == ZL_TK_RBRACKET ||
 			 nextNodeTkType == ZL_TK_RMBRACKET ||
-			 nextNodeTkType == ZL_TK_SEMI))) //变量标识符后面必须是操作运算符(除了取反和引用运算符)或者左括号或者左中括号或右括号或右中括号或分号
+			 nextNodeTkType == ZL_TK_SEMI))) //变量标识符后面必须是操作运算符(除了取反，引用和负号运算符)或者左括号或者左中括号或右括号或右中括号或分号
 			return;
 		else if(nextNodeNum != -1)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ID_INVALID_NEXT_NODE);
@@ -2047,7 +2057,8 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
-			 nextNodeTkType == ZL_TK_LBRACKET)) //表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或左括号
+			 nextNodeTkType == ZL_TK_NEGATIVE ||
+			 nextNodeTkType == ZL_TK_LBRACKET)) //表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或负号或左括号
 			 return;
 		else if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 				compile->exp_struct.state == ZL_ST_INASSIGN &&
@@ -2074,12 +2085,14 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			(nextNodeTKCG == ZL_TKCG_OP_PP_MM || 
 			 nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
-			 nextNodeTkType == ZL_TK_LBRACKET)) //当加加减减在左侧时，后面只能是加加减减，操作因子，取反或左括号
+			 nextNodeTkType == ZL_TK_NEGATIVE ||
+			 nextNodeTkType == ZL_TK_LBRACKET)) //当加加减减在左侧时，后面只能是加加减减，操作因子，取反，负号或左括号
 			 return;
 		else if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 				nodes[compile->parser_curnode].leftOrRight == ZL_OP_POS_IN_RIGHT && 
 				nextNodeTkType != ZL_TK_REVERSE && 
 				nextNodeTkType != ZL_TK_ADDRESS && 
+				nextNodeTkType != ZL_TK_NEGATIVE && 
 				(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 				 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 				 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
@@ -2089,7 +2102,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 				 nextNodeTKCG == ZL_TKCG_OP_QUESTION ||
 				 nextNodeTkType == ZL_TK_RBRACKET ||
 				 nextNodeTkType == ZL_TK_RMBRACKET ||
-				 nextNodeTkType == ZL_TK_SEMI)) //在右侧时，只能是除了赋值，点，取反，引用运算符之外的操作运算符或者右括号或者右中括号或分号
+				 nextNodeTkType == ZL_TK_SEMI)) //在右侧时，只能是除了赋值，点，取反，引用，负号运算符之外的操作运算符或者右括号或者右中括号或分号
 			 return;
 		else if(nextNodeNum != -1)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_PPMM_INVALID_NEXT_NODE);
@@ -2101,6 +2114,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
+			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
 			 nextNodeTkType == ZL_TK_RBRACKET ||
 			 nextNodeTkType == ZL_TK_ADDRESS)) //左括号后面的语法条件
@@ -2121,6 +2135,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
+			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
 			 nextNodeTkType == ZL_TK_RMBRACKET)) //左中括号后面的语法条件
 		    return;
@@ -2133,6 +2148,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
+			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
@@ -2142,7 +2158,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			 nextNodeTKCG == ZL_TKCG_OP_QUESTION ||
 			 nextNodeTkType == ZL_TK_RBRACKET ||
 			 nextNodeTkType == ZL_TK_RMBRACKET ||
-			 nextNodeTkType == ZL_TK_SEMI)) //右括号后面必须是除了赋值，点，取反，引用运算符之外的操作运算符或者右括号或者右中括号或分号
+			 nextNodeTkType == ZL_TK_SEMI)) //右括号后面必须是除了赋值，点，取反，负号，引用运算符之外的操作运算符或者右括号或者右中括号或分号
 			return;
 		else if(nextNodeNum != -1)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_RBRACKET_INVALID_NEXT_NODE);
@@ -2153,6 +2169,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
+			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
@@ -2164,7 +2181,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			 nextNodeTKCG == ZL_TKCG_OP_DOT ||
 			 nextNodeTkType == ZL_TK_RBRACKET ||
 			 nextNodeTkType == ZL_TK_RMBRACKET ||
-			 nextNodeTkType == ZL_TK_SEMI)) //右中括号后面必须是除了取反，引用运算符之外的操作运算符或者右括号或者右中括号或分号
+			 nextNodeTkType == ZL_TK_SEMI)) //右中括号后面必须是除了取反，负号，引用运算符之外的操作运算符或者右括号或者右中括号或分号
 		    return;
 		else if(nextNodeNum != -1)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_RMBRACKET_INVALID_NEXT_NODE);
@@ -2178,6 +2195,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
+			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
 			 nextNodeTkType == ZL_TK_ADDRESS)) //逗号,问号,冒号后面的语法条件
 			return;
@@ -2727,4 +2745,48 @@ ZL_VOID zengl_ASTAddNodeChild(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child)
 	}
 	if(child >= 0 && child <= compile->AST_nodes.count-1)
 		nodes[child].parentnode = parent;
+}
+
+/*初步判断当前的减号是否是负号*/
+ZL_BOOL zengl_CheckIsNegative(ZL_VOID * VM_ARG)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	if(nodes[compile->AST_nodes.count].toktype != ZL_TK_MINIS)
+		return ZL_FALSE;
+	else if(compile->AST_nodes.count == 0)
+		return ZL_TRUE;
+	switch(nodes[compile->AST_nodes.count - 1].toktype)
+	{
+	case ZL_TK_SEMI:
+	case ZL_TK_LBRACKET:
+	case ZL_TK_LMBRACKET:
+		return ZL_TRUE;
+		break;
+	case ZL_TK_RESERVE:
+		switch(nodes[compile->AST_nodes.count - 1].reserve)
+		{
+		case ZL_RSV_RETURN:
+		case ZL_RSV_PRINT:
+			return ZL_TRUE;
+			break;
+		}
+		break;
+	default:
+		switch(nodes[compile->AST_nodes.count - 1].tokcategory)
+		{
+		case ZL_TKCG_OP_PLUS_MINIS:
+		case ZL_TKCG_OP_ASSIGN:
+		case ZL_TKCG_OP_TIM_DIV:
+		case ZL_TKCG_OP_RELATION:
+		case ZL_TKCG_OP_LOGIC:
+		case ZL_TKCG_OP_COMMA:
+		case ZL_TKCG_OP_QUESTION:
+		case ZL_TKCG_OP_PP_MM:
+			return ZL_TRUE;
+			break;
+		}
+		break;
+	}
+	return ZL_FALSE;
 }

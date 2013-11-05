@@ -1278,7 +1278,8 @@ ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 						ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
 						ZL_R_DT_NUM,compile->SymClassMemberTable.members[classMemberIndex].index); //对应汇编指令 类似 "PUSH %d" 取得类成员的索引，并压入栈
-					classid = compile->SymClassMemberTable.members[classMemberIndex].classid; //使用该类成员的类id，为获取后面的成员的索引做准备
+					//classid = compile->SymClassMemberTable.members[classMemberIndex].classid; //使用该类成员的类id，为获取后面的成员的索引做准备
+					classid = compile->SymClassMemberTable.members[classMemberIndex].cls_stmt_classid; //应该使用声明该成员时所使用的类ID信息，而非该成员所在的类结构，因为该成员的成员是声明类里的成员！
 					if(nodes[nodenum].toktype == ZL_TK_ARRAY_ITEM) //如果该类成员是一个数组元素如上例：test.test2[3].name.val中test2就是一个数组，则将数组里的索引3也压入栈，该操作在AsmGenCodes函数里自动完成
 					{
 						ZL_INT * chnum = nodes[nodenum].childs.childnum;

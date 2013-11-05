@@ -82,29 +82,37 @@ ZL_VOID zengl_freeall(ZL_VOID * VM_ARG)
 ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 {
 	ZL_CHAR ch = ZL_STRNULL;
-	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZL_UCHAR tmpch;
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
 	ZENGL_SOURCE_TYPE * source = &(compile->source);
-start:
+
 	if(source->file == ZL_NULL)
 	{
-		source->file = ZENGL_SYS_FILE_OPEN(source->filename,"r");
+		source->file = ZENGL_SYS_FILE_OPEN(source->filename,"rb"); //一定要是rb否则二进制加密脚本解析会出错
 		if(source->file == ZL_NULL)
 			compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_OPEN ,source->filename);
 	}
-	if(source->needread || source->cur >= ZL_FILE_BUF_SIZE)
+	if(source->needread || source->cur >= source->buf_read_len)
 	{
-		if(ZENGL_SYS_FILE_GETS(source->buf,ZL_FILE_BUF_SIZE,source->file) == ZL_NULL)
+		if((source->buf_read_len = ZENGL_SYS_FILE_READ(source->buf,sizeof(ZL_UCHAR),ZL_FILE_BUF_SIZE,source->file)) == 0)
+		{
 			if(ZENGL_SYS_FILE_EOF(source->file))
 				return ZL_FILE_EOF;
 			else
 				compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_GETS ,source->filename);
+		}
 		source->needread = ZL_FALSE;
 		source->cur = 0;
 	}
-	if((ch = source->buf[source->cur++]) == ZL_STRNULL)
+	if(VM->xor_encrypt.xor_key_len == 0)
+		ch = (ZL_CHAR)source->buf[source->cur++];
+	else
 	{
-		source->needread = ZL_TRUE;
-		goto start;
+		tmpch = source->buf[source->cur++];
+		ch = (ZL_CHAR)(tmpch ^ (ZL_UCHAR)VM->xor_encrypt.xor_key_str[VM->xor_encrypt.xor_key_cur]);
+		if((++VM->xor_encrypt.xor_key_cur) >= VM->xor_encrypt.xor_key_len)
+			VM->xor_encrypt.xor_key_cur = 0;
 	}
 	compile->col_no++;
 	return ch;
@@ -515,6 +523,10 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				state = ZL_ST_START;
 				compile->freeTokenStr(VM_ARG);
 			}
+			else if(ch == '*') //在多行注释里的星号直接continue，这样多行注释才不会出错
+			{
+				continue;
+			}
 			else if(ch == '\n')	//遇到换行符，对应修改行列号，同时说明前面的*号是普通字符而非结束符，继续进入ZL_ST_INMULTI_COMMENT状态
 			{
 				compile->line_no++;
@@ -547,7 +559,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 	{
 		token = compile->lookupReserve(VM_ARG,token);
 
-		if(token == ZL_TK_ID)
+		if(token == ZL_TK_ID && !compile->is_inDefRsv) //def后面的常量名不做解析，其他情况下都可以做解析
 		{
 			token = compile->ReplaceDefConst(VM_ARG,token);
 		}
@@ -694,8 +706,14 @@ ZL_VOID zengl_freeonce(ZL_VOID * VM_ARG,ZL_VOID * point)
 /*将源脚本字符扫描游标回退一格，同时将列号减一*/
 ZL_VOID zengl_ungetchar(ZL_VOID * VM_ARG)
 {
-	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
 	compile->source.cur > 0 ? compile->source.cur-- : compile->source.cur;
+	if(VM->xor_encrypt.xor_key_len > 0)
+	{
+		VM->xor_encrypt.xor_key_cur > 0 ? VM->xor_encrypt.xor_key_cur-- : 
+			(VM->xor_encrypt.xor_key_cur = VM->xor_encrypt.xor_key_len - 1);
+	}
 	compile->col_no > 0 ? compile->col_no-- : compile->col_no;
 }
 
@@ -707,12 +725,23 @@ ZL_VOID zengl_convertStrToDec(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZL_INT i,len;
-	ZL_UINT idec=0;
+	ZL_INT idec=0;
 	ZL_CHAR buf[100];
-	for(i = 0;compile->tokenInfo.str[i]>='0' && compile->tokenInfo.str[i]<='9';i++)
+	ZL_CHAR tmpch;
+	ZL_BOOL isNegative = ZL_FALSE;
+
+	for(i = 0; ;i++)
 	{
-		idec = 10 * idec + (compile->tokenInfo.str[i] - '0');
+		tmpch = compile->tokenInfo.str[i];
+		if(tmpch >= '0' && tmpch <= '9')
+			idec = 10 * idec + (tmpch - '0');
+		else if(i == 0 && tmpch == '-')
+			isNegative = ZL_TRUE;
+		else
+			break;
 	}
+	if(isNegative == ZL_TRUE) 
+		idec = -idec;
 	ZENGL_SYS_SPRINTF(buf,"%d",idec);
 	len = ZENGL_SYS_STRLEN(buf);
 	compile->freeTokenStr(VM_ARG);
@@ -736,12 +765,21 @@ ZL_VOID zengl_convertOctalToDec(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZL_INT i,mid=0,len;
-	ZL_UINT idec=0;
+	ZL_INT idec=0;
 	ZL_CHAR * str,buf[100];
-	if(compile->tokenInfo.count <= 2)
+	ZL_BOOL isNegative = ZL_FALSE;
+	if(compile->tokenInfo.count <= 2 ||
+	   (compile->tokenInfo.count == 3 && compile->tokenInfo.str[0] == '-'))
 		compile->exit(VM_ARG, ZL_ERR_CP_INVALID_OCTAL,
 		compile->tokenInfo.start_line,compile->tokenInfo.start_col,compile->tokenInfo.filename);
-	str = compile->tokenInfo.str + 2;
+
+	if(compile->tokenInfo.str[0] == '-')
+	{
+		str = compile->tokenInfo.str + 3;
+		isNegative = ZL_TRUE;
+	}
+	else
+		str = compile->tokenInfo.str + 2;
 	len = ZENGL_SYS_STRLEN(str);
 	for(i=0;i < len;i++)
 	{
@@ -754,6 +792,8 @@ ZL_VOID zengl_convertOctalToDec(ZL_VOID * VM_ARG)
 		mid <<= ((len - i - 1)*3);
 		idec |= mid;
 	}
+	if(isNegative == ZL_TRUE)
+		idec = -idec;
 	ZENGL_SYS_SPRINTF(buf,"%d",idec);
 	len = ZENGL_SYS_STRLEN(buf);
 	compile->freeTokenStr(VM_ARG);
@@ -768,12 +808,21 @@ ZL_VOID zengl_convertHexToDec(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZL_INT i,mid=0,len;
-	ZL_UINT idec=0;
+	ZL_INT idec=0;
 	ZL_CHAR * str,buf[100];
-	if(compile->tokenInfo.count <= 2)
+	ZL_BOOL isNegative = ZL_FALSE;
+	if(compile->tokenInfo.count <= 2 ||
+	   (compile->tokenInfo.count == 3 && compile->tokenInfo.str[0] == '-'))
 		compile->exit(VM_ARG, ZL_ERR_CP_INVALID_HEX,
 		compile->tokenInfo.start_line,compile->tokenInfo.start_col,compile->tokenInfo.filename);
-	str = compile->tokenInfo.str + 2;
+
+	if(compile->tokenInfo.str[0] == '-')
+	{
+		str = compile->tokenInfo.str + 3;
+		isNegative = ZL_TRUE;
+	}
+	else
+		str = compile->tokenInfo.str + 2;
 	len = ZENGL_SYS_STRLEN(str);
 	for(i=0;i < len;i++)
 	{
@@ -790,6 +839,8 @@ ZL_VOID zengl_convertHexToDec(ZL_VOID * VM_ARG)
 		mid <<= ((len - i - 1)<<2);	 //(len-i-1)<<2相当于(len-i-1)*4
 		idec |= mid;
 	}
+	if(isNegative == ZL_TRUE)
+		idec = -idec;
 	ZENGL_SYS_SPRINTF(buf,"%d",idec);
 	len = ZENGL_SYS_STRLEN(buf);
 	compile->freeTokenStr(VM_ARG);
@@ -945,10 +996,13 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	ZENGL_TOKENTYPE token;
 	ZL_INT nameIndex, valIndex;
 	ZL_INT temp_line,temp_col;
+	ZL_INT def_start_line,def_start_col; //def定义的起始行列号，以def关键字的行列号为准
 	compile->freeTokenStr(VM_ARG);
-	temp_line = compile->tokenInfo.start_line;
-	temp_col = compile->tokenInfo.start_col;
+	def_start_line = temp_line = compile->tokenInfo.start_line;
+	def_start_col = temp_col = compile->tokenInfo.start_col;
+	compile->is_inDefRsv = ZL_TRUE;
 	token = compile->getToken(VM_ARG);
+	compile->is_inDefRsv = ZL_FALSE;
 	if(token != ZL_TK_ID)
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_MUST_WITH_ID,
 		temp_line,temp_col,compile->tokenInfo.filename);
@@ -963,7 +1017,7 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	{
 		valIndex =  compile->DefPoolAddString(VM_ARG,compile->tokenInfo.str);
 		compile->insert_HashTableForDef(VM_ARG,nameIndex,token,valIndex,
-			compile->tokenInfo.start_line,compile->tokenInfo.start_col);
+			def_start_line,def_start_col);
 		compile->freeTokenStr(VM_ARG);
 		temp_line = compile->tokenInfo.start_line;
 		temp_col = compile->tokenInfo.start_col;
@@ -1056,10 +1110,13 @@ ZL_VOID zengl_insert_HashTableForDef(ZL_VOID * VM_ARG , ZL_INT nameIndex, ZENGL_
 	else
 	{
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND,
+			name,
 			compile->LineCols.lines[compile->def_table.defs[tmpindex].linecols].lineno,
 			compile->LineCols.lines[compile->def_table.defs[tmpindex].linecols].colno,
 			compile->LineCols.lines[compile->def_table.defs[tmpindex].linecols].filename,
-			line,col,compile->source.filename);
+			line,col,compile->source.filename,
+			name
+			);
 	}
 }
 
@@ -1132,7 +1189,8 @@ ZL_VOID zengl_initDefTable(ZL_VOID * VM_ARG)
 */
 ZL_VOID zengl_include_file(ZL_VOID * VM_ARG)
 {
-	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
 	ZENGL_TOKENTYPE token;
 	ZL_CHAR * newfilename;
 	compile->freeTokenStr(VM_ARG);
@@ -1145,10 +1203,12 @@ ZL_VOID zengl_include_file(ZL_VOID * VM_ARG)
 		if(token != ZL_TK_SEMI)
 			compile->exit(VM_ARG,ZL_ERR_CP_INC_NO_END_SEMI,
 			compile->tokenInfo.start_line,compile->tokenInfo.start_col,compile->tokenInfo.filename);
+		compile->source.xor_cur = VM->xor_encrypt.xor_key_cur;
 		compile->push_FileStack(VM_ARG,&compile->source,compile->line_no,compile->col_no);
 		compile->source.file = ZL_NULL;	 //file文件指针字段设为NULL，这样扫描器就会重新去打开新的文件。
 		compile->source.needread = ZL_TRUE;
 		compile->source.cur = 0;
+		compile->source.xor_cur = VM->xor_encrypt.xor_key_cur = 0;
 		compile->source.filename = newfilename; //设置新的扫描文件。
 		compile->line_no = 1;  //重置扫描的行列号为第1行第0列。
 		compile->col_no = 0;
@@ -1456,6 +1516,7 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 				else if(compile->FileStackList.count > 0) //如果文件堆栈中还有元素，说明当前处于被加载文件中，将堆栈中保存的文件信息弹出，恢复原文件的扫描
 				{
 					compile->pop_FileStack(VM_ARG,&compile->source);
+					VM->xor_encrypt.xor_key_cur = compile->source.xor_cur;
 					compile->freeTokenStr(VM_ARG);
 					continue;
 				}

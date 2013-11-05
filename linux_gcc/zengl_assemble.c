@@ -103,6 +103,9 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 			case ZL_TK_OR:
 				state = ZL_ST_ASM_CODE_INAND_OR;
 				break;
+			case ZL_TK_NEGATIVE: //负号单目运算符
+				state = ZL_ST_ASM_CODE_INNEGATIVE;
+				break;
 			case ZL_TK_REVERSE: //取反运算符
 				state = ZL_ST_ASM_CODE_INREVERSE;
 				break;
@@ -517,7 +520,14 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 				}
 				state = ZL_ST_DOWN; //加减乘除等操作的代码生成完毕，state设为ZL_ST_DOWN，接着退出循环，完成一次AsmGenCodes操作。
 			}
-			else if(nodes[nodenum].childs.count == 1 && nodes[nodenum].toktype == ZL_TK_MINIS) //当减号用作负号表示负数的时候，此时减号就只有一个子节点。
+			else
+			{
+				compile->parser_curnode = nodenum;
+				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+			}
+			break; //case ZL_ST_ASM_CODE_INPLUS_MINIS: //加减运算符汇编输出
+		case ZL_ST_ASM_CODE_INNEGATIVE: //负号单目运算符的汇编输出
+			if(nodes[nodenum].childs.count == 1)
 			{
 				chnum = nodes[nodenum].childs.childnum; //获取子节点的索引数组
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
@@ -579,12 +589,12 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 						ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS" 
 				state = ZL_ST_DOWN; 
 			}
-			else  //除了负号以外，如果没有两个子节点则说明语法错误。
+			else
 			{
 				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_ONE_CHILD);
 			}
-			break; //case ZL_ST_ASM_CODE_INPLUS_MINIS: //加减运算符汇编输出
+			break;
 		case ZL_ST_ASM_CODE_INCOMMA: //逗号运算符和c语言的逗号运算符作用是一样的，都是从左往右，依次执行表达式，并以最后一个表达式的结果作为返回结果。
 			if(nodes[nodenum].childs.count == 2)
 			{
@@ -1082,11 +1092,13 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 				compile->gencode_struct.localID = 0;
 				compile->SymScanFunLocal(VM_ARG,chnum[2]); //根据第三个子节点扫描函数体内的局部变量和global关键字修饰的全局变量(SymScanFunLocal在扫描时如遇到global关键字就会调用SymScanFunGlobal来处理全局变量)，并对每个局部变量生成一个PUSH_LOC的汇编代码，这样就为每个局部变量分配了一个栈空间。
 				i = chnum[2];
+				compile->AsmGCStackPush(VM_ARG,0,ZL_ASM_STACK_ENUM_FUN_CLASSID); //防止外层的类ID信息影响到fun函数体内部的funcall函数调用，没有这条代码，则fun里的普通的funcall也都变成类函数调用了！
 				while(i > 0) //循环生成fun函数体里的每个表达式的汇编代码。
 				{
 					compile->AsmGenCodes(VM_ARG,i);
 					i = nodes[i].nextnode;
 				}
+				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE); //将前面压入的0的classid弹出去
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 						ZL_R_IT_RET,ZL_R_DT_NONE,0,
 						ZL_R_DT_NONE,0); //对应汇编指令 "RET"

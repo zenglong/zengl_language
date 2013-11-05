@@ -2556,7 +2556,10 @@ ZL_INT zenglrun_main(ZL_VOID * VM_ARG)
 		if(VM->vm_main_args->userdef_module_init != ZL_NULL)
 			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
 		run->RunInsts(VM_ARG);
-		run->exit(VM_ARG,ZL_NO_ERR_SUCCESS);
+		if(VM->isUseApiSetErrThenStop == ZL_TRUE) //如果通过zenglApi_SetErrThenStop接口来停止虚拟机的，就通过exit_forApiSetErrThenStop来退出
+			run->exit_forApiSetErrThenStop(VM_ARG);
+		else
+			run->exit(VM_ARG,ZL_NO_ERR_SUCCESS);
 	}
 	if(retcode == 1)
 		return 0;

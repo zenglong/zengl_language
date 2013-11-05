@@ -349,6 +349,46 @@ zenglapi_goto_end: //API接口出错时，直接跳转到这里结束
 	}
 }
 
+/*专门为zenglApi_SetErrThenStop这个API接口定制的退出函数*/
+ZL_VOID zenglrun_exit_forApiSetErrThenStop(ZL_VOID * VM_ARG)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
+	ZENGL_RUN_TYPE * run = &VM->run;
+	ZL_INT isNeedDebugInfo = ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO;
+
+	if((VM->vm_main_args->flags & ZL_EXP_CP_AF_IN_DEBUG_MODE) != 0) //用户自定义的调试模式下，打印出节点和行列号信息
+	{
+		if(!compile->isDestroyed && VM->isinApiRun == ZL_FALSE)
+		{
+			compile->memFreeAll(VM_ARG);
+			compile->infoFullString.str = compile->errorFullString.str = ZL_NULL;
+			compile->isDestroyed = ZL_TRUE;
+		}
+	}
+	
+	run->end_time = ZENGL_SYS_TIME_CLOCK();
+	run->total_time = run->end_time - run->start_time;
+	VM->isRunError = ZL_TRUE;
+	if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
+	{
+		VM->end_time = ZENGL_SYS_TIME_CLOCK();
+		VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
+		run->info(VM_ARG,"\n run time:%.16g s totalsize: %.16g Kbyte\n VM time:%.16g s totalsize: %.16g Kbyte\n",(ZL_DOUBLE)run->total_time / CLOCKS_PER_SEC,
+		(ZL_FLOAT)run->totalsize / 1024,
+		(ZL_DOUBLE)VM->total_time / CLOCKS_PER_SEC,
+		(ZL_FLOAT)VM->totalsize / 1024); //for debug
+	}
+	if(VM->isinApiRun == ZL_FALSE)
+	{
+		run->memFreeAll(VM_ARG);
+		run->isDestroyed = ZL_TRUE;
+		run->infoFullString.str = run->errorFullString.str = run->printFullString.str = ZL_NULL;
+	}
+	run->isinRunning = ZL_FALSE;
+	ZENGL_SYS_JMP_LONGJMP_TO(run->jumpBuffer,-1);
+}
+
 /*
 	当解释器出错退出时，打印出当前汇编代码对应的AST节点的行列号文件名信息
 */

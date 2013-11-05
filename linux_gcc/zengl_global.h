@@ -54,6 +54,7 @@
 #define ZL_NULL 0 //指针为0的宏定义
 #define ZL_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #define ZL_CHAR char
+#define ZL_UCHAR unsigned char
 #define ZL_INT int
 #define ZL_WCHAR_T wchar_t
 #define ZL_FLOAT float
@@ -75,6 +76,7 @@ typedef clock_t ZL_CLOCK_T;
 #define ZENGL_SYS_VPRINTF vprintf //可以通过函数的arglist来打印可选参数列表的函数
 #define ZENGL_SYS_FILE_OPEN fopen //打开文件函数
 #define ZENGL_SYS_FILE_GETS fgets //读取文件内容到缓存中的函数
+#define ZENGL_SYS_FILE_READ fread //读取文件内容到缓存中，主要用于读取二进制文件
 #define ZENGL_SYS_FILE_EOF feof //读取文件内容到缓存中的函数
 #define ZENGL_SYS_FILE_CLOSE fclose //关闭文件句柄
 #define ZENGL_SYS_MEM_ALLOC malloc //内存分配函数
@@ -130,6 +132,7 @@ typedef enum _ZENGL_TOKENTYPE{
 	ZL_TK_MINIS_MINIS,		//--运算符token
 	ZL_TK_MINIS_ASSIGN,		//-=运算符token
 	ZL_TK_MINIS,			//减法运算符token
+	ZL_TK_NEGATIVE,			//负号单目运算符token
 	ZL_TK_TIMES_ASSIGN,		//*=运算符token
 	ZL_TK_TIMES,			//乘法运算符token
 	ZL_TK_DIVIDE_ASSIGN,	// "/=" 除赋值token
@@ -200,6 +203,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_PARSER_INCOLON,		//在zengl_parser.c中添加的冒号运算符token状态
 	ZL_ST_PARSER_INQUESTION_MARK,//在zengl_parser.c中添加的问号运算符token状态
 	ZL_ST_PARSER_INDOT,			//在zengl_parser.c中添加的点运算符token状态
+	ZL_ST_PARSER_INNEGATIVE,	//在zengl_parser.c中添加的负号单目运算符token状态
 	ZL_ST_PARSER_STMT_INIF,		//用于生成if关键字语句AST的状态机
 	ZL_ST_PARSER_STMT_INFOR,	//用于生成for关键字语句AST的状态机
 	ZL_ST_PARSER_STMT_INFUN,	//用于生成fun关键字语句AST的状态机
@@ -234,6 +238,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INDOWHILE,	//用于生成do...dowhile循环结构的汇编指令
 	ZL_ST_ASM_CODE_INCOLON,		//用于生成冒号运算符的汇编指令
 	ZL_ST_ASM_CODE_INQUESTION,	//用于生成问号运算符的汇编指令
+	ZL_ST_ASM_CODE_INNEGATIVE,	//用于生成负号单目运算符的汇编指令
 }ZENGL_STATES;
 /*在switch case里要用到的各种状态的枚举定义结束*/
 
@@ -269,7 +274,9 @@ typedef struct _ZENGL_INFO_STRING_TYPE{
 typedef struct{
 	ZL_CHAR *filename;
 	FILE *file;
-	ZL_CHAR buf[ZL_FILE_BUF_SIZE];
+	ZL_UCHAR buf[ZL_FILE_BUF_SIZE];
+	ZL_INT buf_read_len;
+	ZL_INT xor_cur;
 	ZL_INT cur;
 	ZL_BOOL needread;
 }ZENGL_SOURCE_TYPE;  //脚本源文件类型定义，里面包含要操作的脚本文件的文件指针，文件名等成员。
@@ -1036,6 +1043,21 @@ typedef struct _ZENGL_RUN_EXTRA_DATA_TABLE{
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/********************************************************************************
+		下面是和虚拟机XOR异或加密运算相关的结构体和枚举等定义
+********************************************************************************/
+
+typedef struct _ZENGL_VM_XOR_ENCRYPT{
+	ZL_CHAR * xor_key_str;
+	ZL_INT xor_key_len;
+	ZL_INT xor_key_cur;
+}ZENGL_VM_XOR_ENCRYPT;
+
+/********************************************************************************
+		上面是和虚拟机解释器XOR异或加密运算相关的结构体和枚举等定义
+********************************************************************************/
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*zengl编译器结构体定义*/
 typedef struct _ZENGL_COMPILE_TYPE
@@ -1048,6 +1070,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT line_no; //扫描器扫描到的行号
 	ZL_INT col_no;  //扫描器扫描到的列号
 	ZL_BOOL is_inConvChr; //用于解析字符串中的'\'斜杠转义字符的
+	ZL_BOOL is_inDefRsv;  //用于判断是否在def关键字后面，def后面的常量名不做DEF解析(因为解析后就不知道原常量名是什么了，产生的错误提示信息就会有误)，只对def后面的常量值做DEF解析
 	ZL_INT basesize; //编译器结构体的基础大小
 	ZL_INT totalsize; //编译器分配的内存池的大小和内存池中分配的内存的大小总和
 	ZL_CLOCK_T start_time; //编译器开始执行时的时间，毫秒为单位
@@ -1232,6 +1255,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* OpLevelForColon)(ZL_VOID * VM_ARG); //使用优先级堆栈处理冒号运算符 对应 zengl_OpLevelForColon
 	ZL_VOID (* CheckQstColonValid)(ZL_VOID * VM_ARG); //检测问号冒号是否一一匹配 对应 zengl_CheckQstColonValid
 	ZL_VOID (* ASTAddNodeChild)(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //将child对应的节点加入到parent节点的子节点中 对应 zengl_ASTAddNodeChild
+	ZL_BOOL (* CheckIsNegative)(ZL_VOID * VM_ARG); //初步判断当前的减号是否是负号 对应 zengl_CheckIsNegative
 
 	/*下面是用户自定义的函数*/
 	ZL_INT (* userdef_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
@@ -1276,6 +1300,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID * (* memReAlloc)(ZL_VOID * VM_ARG , ZL_VOID * point , ZL_INT size, ZL_INT * index); //调整point指针的大小为size，同时设置index为该指针在内存池中的索引。对应 zenglrun_memReAlloc
 	ZL_VOID * (* memReUsePtr)(ZL_VOID * VM_ARG,ZL_VOID * point,ZL_INT size,ZL_INT * index); //根据需求的size大小，对内存池的指针进行调整大小等重利用操作 对应 zenglrun_memReUsePtr
 	ZL_VOID (* exit)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //解释器退出函数 对应 zenglrun_exit
+	ZL_VOID (* exit_forApiSetErrThenStop)(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数 对应 zenglrun_exit_forApiSetErrThenStop
 	ZL_VOID (* ExitPrintSourceInfo)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //当解释器出错退出时，打印出当前汇编代码对应的AST节点的行列号文件名信息 对应 zenglrun_ExitPrintSourceInfo
 	ZL_VOID (* memFreeAll)(ZL_VOID * VM_ARG); //解释器释放内存池资源 对应 zenglrun_memFreeAll
 	ZL_CHAR * (* makeInfoString)(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist); //生成格式化信息字符串 对应 zenglrun_makeInfoString
@@ -1361,6 +1386,8 @@ typedef struct _ZENGL_VM_TYPE
 	ZL_CLOCK_T total_time; //执行结束时的总时间，毫秒为单位
 	ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args; //用户传递给虚拟机的一些参数
 	ZL_BOOL isinApiRun; //判断是否通过zenglApi_Run运行的虚拟机
+	ZL_BOOL isUseApiSetErrThenStop; //判断用户是否在模块函数中通过调用zenglApi_SetErrThenStop来停止虚拟机的
+	ZENGL_VM_XOR_ENCRYPT xor_encrypt; //异或加密运算相关结构体
 
 	/*虚拟机相关的自定义函数*/
 	ZL_VOID (* init)(ZL_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //虚拟机初始化函数 对应 zenglVM_init
@@ -1524,6 +1551,7 @@ ZL_VOID zengl_OpLevelForQuestion(ZL_VOID * VM_ARG); //使用优先级堆栈处�
 ZL_VOID zengl_OpLevelForColon(ZL_VOID * VM_ARG); //使用优先级堆栈处理冒号运算符
 ZL_VOID zengl_CheckQstColonValid(ZL_VOID * VM_ARG); //检测问号冒号是否一一匹配
 ZL_VOID zengl_ASTAddNodeChild(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //将child对应的节点加入到parent节点的子节点中。
+ZL_BOOL zengl_CheckIsNegative(ZL_VOID * VM_ARG); //初步判断当前的减号是否是负号
 
 //下面是定义在zenglrun_func.c中的函数
 ZL_VOID zenglrun_init(ZL_VOID * VM_ARG); //解释器初始化
@@ -1531,6 +1559,7 @@ ZL_VOID * zenglrun_memAlloc(ZL_VOID * VM_ARG,ZL_INT size,ZL_INT * index); //为�
 ZL_VOID * zenglrun_memReAlloc(ZL_VOID * VM_ARG , ZL_VOID * point , ZL_INT size, ZL_INT * index); //调整point指针的大小为size，同时设置index为该指针在内存池中的索引。
 ZL_VOID * zenglrun_memReUsePtr(ZL_VOID * VM_ARG,ZL_VOID * point,ZL_INT size,ZL_INT * index); //根据需求的size大小，对内存池的指针进行调整大小等重利用操作
 ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //解释器退出函数
+ZL_VOID zenglrun_exit_forApiSetErrThenStop(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数
 ZL_VOID zenglrun_ExitPrintSourceInfo(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //当解释器出错退出时，打印出当前汇编代码对应的AST节点的行列号文件名信息
 ZL_VOID zenglrun_memFreeAll(ZL_VOID * VM_ARG); //解释器释放内存池资源
 ZL_CHAR * zenglrun_makeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist); //生成格式化信息字符串

@@ -36,6 +36,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			1, //line_no
 			0, //col_no
 			ZL_FALSE, //is_inConvChr
+			ZL_FALSE, //is_inDefRsv
 			0, //basesize
 			0, //totalsize
 			0, //start_time
@@ -216,6 +217,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_OpLevelForColon,
 			zengl_CheckQstColonValid,
 			zengl_ASTAddNodeChild,
+			zengl_CheckIsNegative,
 			/*下面是用户自定义的函数*/
 			ZL_NULL,
 			ZL_NULL 
@@ -254,6 +256,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zenglrun_memReAlloc,
 			zenglrun_memReUsePtr,
 			zenglrun_exit,
+			zenglrun_exit_forApiSetErrThenStop,
 			zenglrun_ExitPrintSourceInfo,
 			zenglrun_memFreeAll,
 			zenglrun_makeInfoString,
@@ -327,6 +330,8 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			0, //total_time
 			ZL_NULL, //vm_main_args
 			ZL_FALSE,//isinApiRun
+			ZL_FALSE,//isUseApiSetErrThenStop
+			{0}, //xor_encrypt
 			/*虚拟机相关的函数*/
 			zenglVM_init
 	}; //虚拟机初始化模板
@@ -979,6 +984,42 @@ ZL_EXPORT ZL_EXP_VOID zenglApi_Exit(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr,
 		ZENGL_SYS_JMP_LONGJMP_TO(run->jumpBuffer,-1);
 }
 
+/*API接口，用于在用户自定义的模块函数中设置出错信息，然后设置虚拟机停止执行，比zenglApi_Exit好的地方在于，不会长跳转直接结束，而是返回由用户决定退出的时机，有效防止外部C++调用出现内存泄漏或访问异常*/
+ZL_EXPORT ZL_EXP_VOID zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, ...)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
+	ZENGL_RUN_TYPE * run = &VM->run;
+	ZENGL_SYS_ARG_LIST arg;
+	ZL_INT error_nodenum = 0;
+	VM->errorno = ZL_ERR_VM_API_USER_DEFINED_ERROR;
+
+	/*先设置和打印出错信息*/
+	ZENGL_SYS_ARG_START(arg,errorStr);
+	run->makeInfoString(VM_ARG,&run->errorFullString , VM->errorString[VM->errorno] , arg);
+	run->makeInfoString(VM_ARG,&run->errorFullString , errorStr , arg);
+	if((VM->vm_main_args->flags & ZL_EXP_CP_AF_IN_DEBUG_MODE) != 0) //用户自定义的调试模式下，打印出节点和行列号信息
+	{
+		error_nodenum = run->inst_list.insts[ZL_R_REG_PC].nodenum;
+		run->ExitPrintSourceInfo(VM_ARG,ZL_ERR_RUN_SOURCE_CODE_INFO,
+			compile->getTokenStr(VM_ARG,compile->AST_nodes.nodes,error_nodenum),
+			compile->AST_nodes.nodes[error_nodenum].line_no,
+			compile->AST_nodes.nodes[error_nodenum].col_no,
+			compile->AST_nodes.nodes[error_nodenum].filename);
+	}
+	if(run->userdef_run_error != ZL_NULL)
+		run->userdef_run_error(run->errorFullString.str,run->errorFullString.count);
+	if(VM->isinApiRun == ZL_FALSE)
+		run->freeInfoString(VM_ARG,&run->errorFullString);
+	ZENGL_SYS_ARG_END(arg);
+
+	/*设置虚拟机停止标志*/
+	zenglApi_Stop(VM_ARG);
+
+	/*设置isUseApiSetErrThenStop标志，表示通过此API函数来停止和退出虚拟机的*/
+	VM->isUseApiSetErrThenStop = ZL_TRUE;
+}
+
 /*API接口，设置模块函数的返回值*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetRetVal(ZL_EXP_VOID * VM_ARG,
 										 ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum)
@@ -1351,4 +1392,52 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_GetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR *
 	else
 		return run->ExtraDataTable.extras[tmpindex].point;
 	return ZL_NULL;
+}
+
+/*API接口，用户通过此接口设置脚本源代码的XOR异或运算加密密钥*/
+ZL_EXPORT ZL_EXP_VOID zenglApi_SetSourceXorKey(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * xor_key_str)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	VM->xor_encrypt.xor_key_str = xor_key_str;
+	VM->xor_encrypt.xor_key_len = ZENGL_SYS_STRLEN(xor_key_str);
+	VM->xor_encrypt.xor_key_cur = 0;
+}
+
+/*API接口，用户通过此接口将字符串拷贝到虚拟机中，这样在C++中就可以提前将源字符串资源给手动释放掉，而拷贝到虚拟机中的新分配的资源则会在结束时自动释放掉，
+  防止内存泄漏*/
+ZL_EXPORT ZL_EXP_CHAR * zenglApi_AllocMemForString(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * src_str)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_CHAR * ret_str = ZL_NULL;
+	ZL_INT tmpIndex = 0,src_len = 0;
+	if(src_str == ZL_NULL || VM_ARG == ZL_NULL)
+		return ZL_NULL;
+	src_len = ZENGL_SYS_STRLEN(src_str);
+	if(src_len <= 0)
+		return ZL_NULL;
+	ret_str = (ZL_CHAR *)run->memAlloc(VM_ARG,src_len + 1,&tmpIndex);
+	ZENGL_SYS_STRNCPY(ret_str,src_str,src_len);
+	ret_str[src_len] = ZL_STRNULL;
+	return ret_str;
+}
+
+/*API接口，用户通过此接口在虚拟机中分配一段内存空间*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_AllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT size)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_VOID * retptr = ZL_NULL;
+	ZL_INT tmpIndex = 0;
+	if(size <= 0 || VM_ARG == ZL_NULL)
+		return ZL_NULL;
+	retptr = run->memAlloc(VM_ARG,size,&tmpIndex);
+	return retptr;
+}
+
+/*API接口，将AllocMem分配的资源手动释放掉，防止资源越滚越大*/
+ZL_EXPORT ZL_EXP_VOID zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	if(ptr == ZL_NULL || VM_ARG == ZL_NULL)
+		return ;
+	run->memFreeOnce(VM_ARG,ptr);
 }

@@ -44,7 +44,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_LINECOL_MALLOC_FAILED, //编译器为LineCols行列号动态数组分配内存初始化失败
 	ZL_ERR_CP_DEF_TABLE_NO_NONVALID_INDEX, //编译器异常：添加宏定义时，无法在动态数组中找到没被占用的索引
 	ZL_ERR_CP_DEF_TABLE_INVALID_INDEX, //编译器异常：在函数insert_HashTableForDef中，tmpindex不是有效的索引
-	ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND, //语法错误：存在相同的def宏定义，请根据行列号进行检查
+	ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND, //语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查
 	ZL_ERR_CP_DEF_MUST_WITH_ID, //语法错误：def关键字后面必须是有效的id标识符
 	ZL_ERR_CP_DEF_NO_END_SEMI, //语法错误：def定义宏必须以分号结束
 	ZL_ERR_CP_DEF_INVALID_VALUE_TYPE, //语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串
@@ -63,18 +63,18 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_PARSER_ERROR_EXIT, //parser err exit 在zengl_parser_errorExit函数中末尾连接的错误信息。
 	ZL_ERR_CP_PARSER_CURNODE_OUT_OF_END, //语法分析错误：语法树当前扫描节点parser_curnode超出语法树范围
 	ZL_ERR_CP_PARSER_OPLVL_STACKLIST_MALLOC_FAILED, //编译器异常：优先级比较堆栈分配内存初始化失败
-	ZL_ERR_CP_SYNTAX_ID_INVALID_NEXT_NODE, //语法错误：id变量标识符后面必须是操作运算符或者左括号或者左中括号或分号
+	ZL_ERR_CP_SYNTAX_ID_INVALID_NEXT_NODE, //语法错误：id变量标识符后面必须是操作运算符(除了取反，引用和负号运算符)或者左括号或者左中括号或右括号或右中括号或分号
 	ZL_ERR_CP_SYNTAX_INVALID_NEXT_NODE, //语法错误：无法识别的节点
-	ZL_ERR_CP_SYNTAX_EXPRESS_OP_INVALID_NEXT_NODE, //语法错误：表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或左括号
+	ZL_ERR_CP_SYNTAX_EXPRESS_OP_INVALID_NEXT_NODE, //语法错误：表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或负号或左括号
 	ZL_ERR_CP_SYNTAX_START_INVALID_TOKEN, //语法错误：开头无效的token
 	ZL_ERR_CP_AST_SCAN_STACK_MALLOC_FAILED, //编译器异常：语法树的扫描堆栈分配内存初始化失败
 	ZL_ERR_CP_AST_SCAN_STACK_HAS_NOTHING, //编译器异常：语法树的扫描堆栈为空
-	ZL_ERR_CP_SYNTAX_NUM_FLOAT_STR_INVALID_NEXT_NODE, //语法错误：数字,浮点数,字符串后面必须是除了赋值和点之外的操作运算符或者分号
+	ZL_ERR_CP_SYNTAX_NUM_FLOAT_STR_INVALID_NEXT_NODE, //语法错误：数字,浮点数,字符串后面必须是除了赋值，点，取反，引用，负号之外的操作运算符或者右括号或者右中括号或者分号
 	ZL_ERR_CP_SYNTAX_INVALID_TOKEN, //语法错误：未知的Token，不能识别的符号
 	ZL_ERR_CP_SYNTAX_ADDRESS_INVALID_NEXT_NODE, //语法错误：引用运算符后面必须是变量之类标识符
 	ZL_ERR_CP_SYNTAX_PPMM_INVALID_NEXT_NODE, //语法错误：加加减减运算符后面遇到无效的符号
 	ZL_ERR_CP_SYNTAX_LBRACKET_INVALID_NEXT_NODE, //语法错误：左括号后面必须是id变量标识符 ....
-	ZL_ERR_CP_SYNTAX_RBRACKET_INVALID_NEXT_NODE, //语法错误：右括号后面必须是除了赋值，点，取反，引用之外的操作运算符或者分号
+	ZL_ERR_CP_SYNTAX_RBRACKET_INVALID_NEXT_NODE, //语法错误：右括号后面必须是除了赋值，点，取反，负号，引用之外的操作运算符或者分号
 	ZL_ERR_CP_SYNTAX_BRACKET_EMPTY, //语法错误：普通的括号表达式不能为空，除非是函数的参数括号，因为函数可以没有参数
 	ZL_ERR_CP_SYNTAX_RBRACKET_NO_LBRACKET, //语法错误：右括号没有对应的左括号
 	ZL_ERR_CP_SYNTAX_LBRACKET_NO_RBRACKET, //语法错误：左括号没有对应的右括号
@@ -83,7 +83,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYNTAX_INVALID_ARRAY_ITEM, //语法错误：无效的数组元素格式
 	ZL_ERR_CP_SYNTAX_RMBRACKET_NO_LMBRACKET, //语法错误：右中括号没有对应的左括号
 	ZL_ERR_CP_SYNTAX_LMBRACKET_NO_RMBRACKET, //语法错误：左中括号没有对应的右中括号
-	ZL_ERR_CP_SYNTAX_RMBRACKET_INVALID_NEXT_NODE, //语法错误：右中括号后面必须是除了取反，引用之外的操作运算符或者右括号或者右中括号或者分号
+	ZL_ERR_CP_SYNTAX_RMBRACKET_INVALID_NEXT_NODE, //语法错误：右中括号后面必须是除了取反，负号，引用之外的操作运算符或者右括号或者右中括号或者分号
 	ZL_ERR_CP_SYNTAX_COMMA_INVALID_NEXT_NODE, //语法错误：逗号运算符后面必须是id变量标识符 .....
 	ZL_ERR_CP_SYNTAX_DOT_INVALID_NEXT_NODE, //语法错误：点运算符后面必须是id变量标识符
 	ZL_ERR_CP_SYNTAX_COLON_INVALID_NEXT_NODE, //语法错误：冒号运算符后面必须是id变量标识符 .....
