@@ -89,7 +89,11 @@ typedef clock_t ZL_CLOCK_T;
 #define ZENGL_SYS_CTYPE_IS_HEXDIGIT isxdigit //ctype.h中声明的标准库函数，判断字符是否为十六进制数
 #define ZENGL_SYS_CTYPE_IS_ALNUM isalnum //ctype.h中声明的标准库函数，判断字符是否为字母或数字
 #define ZENGL_SYS_SPRINTF sprintf //将字符串格式化输出到缓存中
-#define ZENGL_SYS_SPRINTF_ARG_NUM vsnprintf //使用va_list和限制了字符数的格式化输出函数
+#ifdef ZL_LANG_IN_VC6
+	#define ZENGL_SYS_SPRINTF_ARG_NUM _vsnprintf //使用va_list和限制了字符数的格式化输出函数，另外VC6编译器下的vsnprintf需要在前面加下划线！
+#else
+	#define ZENGL_SYS_SPRINTF_ARG_NUM vsnprintf //使用va_list和限制了字符数的格式化输出函数
+#endif
 #define ZENGL_SYS_STRLEN strlen //得到字符串长度信息
 #define ZENGL_SYS_STRCMP strcmp //字符串比较函数
 #define ZENGL_SYS_STRNCMP strncmp //字符串比较函数
