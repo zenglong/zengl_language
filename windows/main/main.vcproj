@@ -46,7 +46,7 @@
 				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="4"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4267"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -116,7 +116,7 @@
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4267"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

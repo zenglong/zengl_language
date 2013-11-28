@@ -25,7 +25,7 @@
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
 #define ZL_EXP_MINOR_VERSION 2 //zengl子版本号
-#define ZL_EXP_REVISION 4      //zengl修正版本号
+#define ZL_EXP_REVISION 5      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #define ZL_EXP_CHAR char
 #define ZL_EXP_INT int
@@ -59,6 +59,7 @@ typedef enum _ZENGL_EXPORT_MOD_FUN_ARG_TYPE{
 	ZL_EXP_FAT_ADDR,	 //全局变量的引用
 	ZL_EXP_FAT_ADDR_LOC, //局部变量的引用
 	ZL_EXP_FAT_ADDR_MEMBLK,//内存块的引用
+	ZL_EXP_FAT_INVALID,	 //无效的参数类型,可以用于指示API错误
 }ZENGL_EXPORT_MOD_FUN_ARG_TYPE; //通过API获取的参数类型
 
 #ifdef __cplusplus 

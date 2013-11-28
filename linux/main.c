@@ -1,4 +1,4 @@
-#define ZL_EXP_OS_IN_LINUX //用于告诉zengl嵌入式脚本语言当前的执行环境是linux系统，防止出现编译错误，linux系统也可以不定义该宏，因为默认就使用的是linux模式，如果是windows系统则必须定义ZL_EXP_OS_IN_WINDOWS，原因见zengl_exportPublicDefs.h头文件
+#define ZL_EXP_OS_IN_LINUX //在加载下面的zengl头文件之前，windows系统请定义ZL_EXP_OS_IN_WINDOWS，linux , mac系统请定义ZL_EXP_OS_IN_LINUX
 #include "zengl_exportfuns.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -327,8 +327,13 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 {
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"printf",main_builtin_printf);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"read",main_builtin_read);
-	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltRandom",main_builtin_random);
-	zenglApi_SetModFunHandle(VM_ARG,moduleID,"array",main_builtin_array);
+	//zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltRandom",main_builtin_random); //使用main.c中定义的bltRandom
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltRandom",zenglApiBMF_bltRandom); //使用虚拟机zenglApi_BltModFuns.c中定义的bltRandom
+	//zenglApi_SetModFunHandle(VM_ARG,moduleID,"array",main_builtin_array); //使用main.c中定义的array
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"array",zenglApiBMF_array);  //使用虚拟机zenglApi_BltModFuns.c中定义的array
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltExit",zenglApiBMF_bltExit);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltExit
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltConvToInt",zenglApiBMF_bltConvToInt);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltConvToInt
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltIntToStr",zenglApiBMF_bltIntToStr);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltIntToStr
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltPrintArray",main_builtin_print_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestAddr",main_builtin_test_addr);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
@@ -431,6 +436,83 @@ int main_output_xor_source(char * src_filename,char * dest_filename,char * xor_k
 	return 0;
 }
 
+/*rc4初始化状态盒子*/
+void rc4_init(unsigned char * state, unsigned char * key, int len)
+{
+   int i,j=0,t; 
+   
+   for (i=0; i < 256; ++i) //将盒子里的元素用0到255初始化
+      state[i] = i; 
+   for (i=0; i < 256; ++i) { //将盒子里的元素顺序打乱
+      j = (j + state[i] + key[i % len]) % 256; 
+      t = state[i]; 
+      state[i] = state[j]; 
+      state[j] = t; 
+   }   
+}
+
+int main_output_rc4_source(char * src_filename,char * dest_filename,char * rc4_key_str)
+{
+	FILE * src_pt = ZL_EXP_NULL ,* dest_pt = ZL_EXP_NULL;
+	int src_filesize = 0;
+	unsigned char buf[1024],enc_buf[1024];
+	int buf_len = 0,totalwrite_len = 0;
+	int prev_percent = 0,cur_percent = 0;
+	int cur = 0;
+	unsigned char state[256]; //rc4用于生成密钥流的状态盒子
+	int i,j,t;
+	int rc4_key_len;
+
+	if(rc4_key_str == ZL_EXP_NULL)
+	{
+		printf("rc4_key_str密钥不能为空字符串指针\n");
+		return -1;
+	}
+	rc4_key_len = strlen(rc4_key_str);
+	if(rc4_key_len > 256)
+	{
+		printf("rc4_key_str密钥长度不要超过256个字节\n");
+		return -1;
+	}
+	src_filesize = getFileSize(src_filename);
+	src_pt = fopen(src_filename,"rb");
+	if(src_pt == ZL_EXP_NULL)
+	{
+		printf("rc4加密的源脚本文件无法打开\n");
+		return -1;
+	}
+	dest_pt = fopen(dest_filename,"wb+");
+	if(dest_pt == ZL_EXP_NULL)
+	{
+		printf("rc4加密的目标脚本文件无法打开或无法创建\n");
+		return -1;
+	}
+	rc4_init(state,rc4_key_str,rc4_key_len);
+	i = 0;
+	j = 0;
+	while((buf_len = fread(buf,sizeof(unsigned char),1024,src_pt)) != 0)
+	{
+		for(cur = 0;cur < buf_len;cur++)
+		{
+			i = (i + 1) % 256;
+			j = (j + state[i]) % 256;
+			t = state[i];
+			state[i] = state[j]; 
+			state[j] = t;
+			enc_buf[cur] = state[(state[i] + state[j]) % 256] ^ buf[cur];
+		}
+		fwrite(enc_buf,sizeof(unsigned char),buf_len,dest_pt);
+		totalwrite_len += buf_len;
+		cur_percent = (int)(((float)totalwrite_len / (float)src_filesize) * 100);
+		if(cur_percent != prev_percent)
+			printf("%d%%...",cur_percent);
+	}
+	printf(" rc4 '%s' to '%s' is ok!\n",src_filename,dest_filename);
+	fclose(src_pt);
+	fclose(dest_pt);
+	return 0;
+}
+
 /**
 	用户程序执行入口。
 */
@@ -475,19 +557,22 @@ int main_output_xor_source(char * src_filename,char * dest_filename,char * xor_k
 /**
 	用户程序执行入口。
 */
-void main(int argc,char * argv[])
+int main(int argc,char * argv[])
 {
 	int len = 0;
 	int testint;
+	int * testint_ptr;
 	double testdouble;
 	char * teststr = 0;
-	char * xor_key_str = "xorkey_334566_hello_world"; //异或运算的密钥
+	//char * xor_key_str = "xorkey_334566_hello_world";
+	char * rc4_key_str = "rc4key_334566_hello_world";
+	int rc4_key_len = strlen(rc4_key_str);
 	ZL_EXP_INT builtinID,sdlID;
 	ZL_EXP_VOID * VM;
 
 	if(argc < 2)
 	{
-		printf("usage: %s <filename> ... (用法错误，应该是程序名加文件名加选项参数的形式，文件名通常是以.zlc结尾，也可以是.zl结尾)\n",argv[0]);
+		printf("usage: %s <filename> ... (用法错误，应该是：程序名 + zengl脚本文件名的形式)\n",argv[0]);
 		#ifdef ZL_EXP_OS_IN_WINDOWS
 			system("pause");
 		#endif
@@ -531,6 +616,9 @@ void main(int argc,char * argv[])
 
 	printf("the value of glmytest in test.zl is %s , i is %d , floatnum is %.16g\n",teststr,testint,testdouble);
 
+	if((testint_ptr = zenglApi_GetExtraDataEx(VM,"ZL_SYS_ExtraData_RandomSeed")) != ZL_EXP_NULL)
+		printf("the value of random_seed in bltRandom is %d\n",(*testint_ptr));
+
 	zenglApi_Reset(VM);
 
 	builtinID = zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
@@ -544,10 +632,10 @@ void main(int argc,char * argv[])
 
 	zenglApi_Push(VM,ZL_EXP_FAT_STR,"test second arg",0,0);
 
-	zenglApi_SetSourceXorKey(VM,xor_key_str);
+	//zenglApi_SetSourceXorKey(VM,xor_key_str);
+	zenglApi_SetSourceRC4Key(VM,rc4_key_str,rc4_key_len);
 
-	if(zenglApi_Call(VM,"encrypt_script/test.zl","OutIn","clsTest") == -1) //编译执行zengl脚本函数
-	//if(zenglApi_Call(VM,argv[1],"init","clsTest") == -1) //编译执行zengl脚本函数
+	if(zenglApi_Call(VM,"encrypt_script/test.zl","OutIn","clsTest") == -1) //编译执行zengl脚本里的类函数
 		main_exit(VM,"错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
 
 	zenglApi_Close(VM);
@@ -555,15 +643,24 @@ void main(int argc,char * argv[])
 	fclose(debuglog);
 	printf("compile finished(编译结束)\n");
 
-	/*下面是脚本加密和还原的测试*/
-	main_output_xor_source("test.zl","encrypt_script/test.zl",xor_key_str);
+	/*下面是脚本普通异或加密和还原的测试*/
+	/*main_output_xor_source("test.zl","encrypt_script/test.zl",xor_key_str);
 	main_output_xor_source("encrypt_script/test.zl","encrypt_script/test_src.zl",xor_key_str);
 	main_output_xor_source("test2.zl","encrypt_script/test2.zl",xor_key_str);
 	main_output_xor_source("encrypt_script/test2.zl","encrypt_script/test2_src.zl",xor_key_str);
 	main_output_xor_source("test3.zl","encrypt_script/test3.zl",xor_key_str);
-	main_output_xor_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",xor_key_str);
+	main_output_xor_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",xor_key_str);*/
+	/*下面是脚本RC4加密和还原的测试*/
+	main_output_rc4_source("test.zl","encrypt_script/test.zl",rc4_key_str);
+	main_output_rc4_source("encrypt_script/test.zl","encrypt_script/test_src.zl",rc4_key_str);
+	main_output_rc4_source("test2.zl","encrypt_script/test2.zl",rc4_key_str);
+	main_output_rc4_source("encrypt_script/test2.zl","encrypt_script/test2_src.zl",rc4_key_str);
+	main_output_rc4_source("test3.zl","encrypt_script/test3.zl",rc4_key_str);
+	main_output_rc4_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",rc4_key_str);
 
 	#ifdef ZL_EXP_OS_IN_WINDOWS
 		system("pause");
 	#endif
+	
+	return 0;
 }

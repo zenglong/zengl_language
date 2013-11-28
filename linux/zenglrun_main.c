@@ -69,7 +69,7 @@ ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INS
 			break;
 		case ZL_R_DT_STR:
 			tmpint = (ZL_INT)dest_val;
-			run->inst_list.insts[run->inst_list.count].dest.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )tmpint);
+			run->inst_list.insts[run->inst_list.count].dest.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)tmpint)); //64位下需先转为long，再转为指针
 			break;
 		default:
 			run->inst_list.insts[run->inst_list.count].dest.val.num = (ZL_INT)dest_val;
@@ -94,7 +94,7 @@ ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INS
 			break;
 		case ZL_R_DT_STR:
 			tmpint = (ZL_INT)src_val;
-			run->inst_list.insts[run->inst_list.count].src.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )tmpint);
+			run->inst_list.insts[run->inst_list.count].src.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)tmpint)); //64位下需先转为long，再转为指针
 			break;
 		default:
 			run->inst_list.insts[run->inst_list.count].src.val.num = (ZL_INT)src_val;
@@ -531,10 +531,12 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 */
 ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 {
-	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run = &VM->run;
 	ZENGL_RUN_RUNTIME_OP_DATA src; //临时变量，用于存放源操作数等。
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT tmpmem;  //临时的虚拟内存变量。
 	ZL_CHAR tmpchar[30]; //临时字符串数组
+	ZENGL_API_STATES origState;
 	while(ZL_R_CUR_INST.type != ZL_R_IT_END && run->isUserWantStop == ZL_FALSE) //根据PC寄存器的值来读取对应的汇编指令，如果当前指令不是END指令且用户没有要求停止脚本，就继续运行。
 	{
 		if(ZL_R_CUR_INST.isvalid == ZL_FALSE || 
@@ -795,14 +797,14 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 				{
 				case ZL_R_RDT_INT: //加法指令，AX 为字符串，BX为整数，将整数转为字符串，再添加到AX字符串的末尾
 					ZENGL_SYS_SPRINTF(tmpchar,"%d",ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword);
-					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = run->strcat(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar);
+					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = (run->strcat)(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar);
 					break;
 				case ZL_R_RDT_FLOAT: //加法指令，AX 为字符串，BX为浮点数，将浮点数转为字符串，再添加到AX字符串的末尾
 					ZENGL_SYS_SPRINTF(tmpchar,"%.16g",ZENGL_RUN_REGVAL(ZL_R_RT_BX).qword);
-					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = run->strcat(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar);
+					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = (run->strcat)(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar);
 					break;
 				case ZL_R_RDT_STR: //加法指令，AX 为字符串，BX也为字符串，将BX字符串添加到AX字符串的末尾
-					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = run->strcat(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,
+					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = (run->strcat)(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,
 																&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
 					break;
 				}
@@ -1178,7 +1180,12 @@ run_ret:
 				ZL_CHAR * moduleName = run->InstDataStringPoolGetPtr(VM_ARG,ZL_R_CUR_INST.src.val.str_Index);
 				ZL_INT moduleIndex = run->LookupModuleTable(VM_ARG,moduleName);
 				if(run->moduleTable.modules[moduleIndex].init_func != ZL_NULL)
+				{
+					origState = VM->ApiState;
+					VM->ApiState = ZL_API_ST_MOD_INIT_HANDLE;
 					run->moduleTable.modules[moduleIndex].init_func(VM_ARG,run->moduleTable.modules[moduleIndex].ID);
+					VM->ApiState = origState;
+				}
 			}
 			break; //case ZL_R_IT_USE: //USE指令 调用用户自定义的模块初始化函数
 		case ZL_R_IT_CALL: //CALL指令 调用用户自定义的模块函数
@@ -1193,7 +1200,10 @@ run_ret:
 					if(run->ModFunTable.mod_funs[ModFunIndex].handle != ZL_NULL)
 					{
 						ZL_INT argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
+						origState = VM->ApiState;
+						VM->ApiState = ZL_API_ST_MOD_FUN_HANDLE; //设置API调用状态处于模块函数中，如果不设置则大部分API接口都会直接返回-1，这样程序执行就会乱了套
 						run->ModFunTable.mod_funs[ModFunIndex].handle(VM_ARG,argcount);
+						VM->ApiState = origState;
 					}
 					else
 						run->exit(VM_ARG,ZL_ERR_RUN_FUNCTION_IS_INVALID,functionName,ZL_R_REG_PC,functionName);
@@ -1206,7 +1216,10 @@ run_ret:
 					if(run->ModFunTable.mod_funs[ModFunIndex].handle != ZL_NULL)
 					{
 						ZL_INT argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
+						origState = VM->ApiState;
+						VM->ApiState = ZL_API_ST_MOD_FUN_HANDLE; //设置API调用状态处于模块函数中，如果不设置则大部分API接口都会直接返回-1，这样程序执行就会乱了套
 						run->ModFunTable.mod_funs[ModFunIndex].handle(VM_ARG,argcount);
+						VM->ApiState = origState;
 					}
 				}
 				goto run_ret;
@@ -2549,12 +2562,18 @@ ZL_INT zenglrun_main(ZL_VOID * VM_ARG)
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZL_INT retcode;
+	ZENGL_API_STATES origState;
 	run->isinRunning = ZL_TRUE;
 	run->start_time = ZENGL_SYS_TIME_CLOCK();
 	if((retcode = ZENGL_SYS_JMP_SETJMP(run->jumpBuffer))==0)
 	{
 		if(VM->vm_main_args->userdef_module_init != ZL_NULL)
+		{
+			origState = VM->ApiState;
+			VM->ApiState = ZL_API_ST_MODULES_INIT;
 			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
+			VM->ApiState = origState;
+		}
 		run->RunInsts(VM_ARG);
 		if(VM->isUseApiSetErrThenStop == ZL_TRUE) //如果通过zenglApi_SetErrThenStop接口来停止虚拟机的，就通过exit_forApiSetErrThenStop来退出
 			run->exit_forApiSetErrThenStop(VM_ARG);

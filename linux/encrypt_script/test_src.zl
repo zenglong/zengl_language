@@ -124,3 +124,14 @@ endif
 print r - -10;
 
 print 'STR_TEST is ' + STR_TEST;
+
+c = bltConvToInt('36') + 17;
+
+print '36 + 17 is ' + c;
+
+if(c == 53)
+	print 'i will Exit use bltExit function , bltRandom :' + bltRandom() + " bltRandom : " + bltRandom() +" bltIntToStr(315,0,'0'):"+ bltIntToStr(315,0,'0');
+	bltExit();
+endif
+
+print 'i can\'t go to here...';

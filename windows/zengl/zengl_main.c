@@ -83,8 +83,9 @@ ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 {
 	ZL_CHAR ch = ZL_STRNULL;
 	ZL_UCHAR tmpch;
-	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
-	ZENGL_COMPILE_TYPE * compile = &VM->compile;
+	ZL_INT i,j,t;
+	ZL_BYTE * state;
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_SOURCE_TYPE * source = &(compile->source);
 
 	if(source->file == ZL_NULL)
@@ -105,14 +106,29 @@ ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 		source->needread = ZL_FALSE;
 		source->cur = 0;
 	}
-	if(VM->xor_encrypt.xor_key_len == 0)
-		ch = (ZL_CHAR)source->buf[source->cur++];
-	else
+	switch(source->encrypt.type)
 	{
+	case ZL_ENC_TYPE_XOR: //XOR普通异或加密方式
 		tmpch = source->buf[source->cur++];
-		ch = (ZL_CHAR)(tmpch ^ (ZL_UCHAR)VM->xor_encrypt.xor_key_str[VM->xor_encrypt.xor_key_cur]);
-		if((++VM->xor_encrypt.xor_key_cur) >= VM->xor_encrypt.xor_key_len)
-			VM->xor_encrypt.xor_key_cur = 0;
+		ch = (ZL_CHAR)(tmpch ^ (ZL_UCHAR)source->encrypt.xor.xor_key_str[source->encrypt.xor.xor_key_cur]);
+		if((++source->encrypt.xor.xor_key_cur) >= source->encrypt.xor.xor_key_len)
+			source->encrypt.xor.xor_key_cur = 0;
+		break;
+	case ZL_ENC_TYPE_RC4: //RC4加密方式
+		i = source->encrypt.rc4.i;
+		j = source->encrypt.rc4.j;
+		state = source->encrypt.rc4.state;
+		source->encrypt.rc4.i = i = (i + 1) & 0xFF;
+		source->encrypt.rc4.j = j = (j + state[i]) & 0xFF;
+		t = state[i];
+		state[i] = state[j]; 
+		state[j] = t;
+		ch = state[(state[i] + state[j]) & 0xFF] ^ source->buf[source->cur++];
+		break;
+	case ZL_ENC_TYPE_NONE: //没有加密的情况下直接返回字符
+	default:
+		ch = (ZL_CHAR)source->buf[source->cur++];
+		break;
 	}
 	compile->col_no++;
 	return ch;
@@ -706,13 +722,26 @@ ZL_VOID zengl_freeonce(ZL_VOID * VM_ARG,ZL_VOID * point)
 /*将源脚本字符扫描游标回退一格，同时将列号减一*/
 ZL_VOID zengl_ungetchar(ZL_VOID * VM_ARG)
 {
-	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
-	ZENGL_COMPILE_TYPE * compile = &VM->compile;
-	compile->source.cur > 0 ? compile->source.cur-- : compile->source.cur;
-	if(VM->xor_encrypt.xor_key_len > 0)
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_SOURCE_TYPE * source = &(compile->source);
+	ZL_INT j_orig , t;
+	ZL_BYTE * state;
+	source->cur > 0 ? source->cur-- : source->cur;
+	switch(source->encrypt.type)
 	{
-		VM->xor_encrypt.xor_key_cur > 0 ? VM->xor_encrypt.xor_key_cur-- : 
-			(VM->xor_encrypt.xor_key_cur = VM->xor_encrypt.xor_key_len - 1);
+	case ZL_ENC_TYPE_XOR: //XOR普通异或加密游标回滚
+		source->encrypt.xor.xor_key_cur > 0 ? source->encrypt.xor.xor_key_cur-- : 
+			(source->encrypt.xor.xor_key_cur = source->encrypt.xor.xor_key_len - 1);
+		break;
+	case ZL_ENC_TYPE_RC4: //RC4状态盒子及i,j指针回滚
+		state = source->encrypt.rc4.state;
+		j_orig = (source->encrypt.rc4.j - state[source->encrypt.rc4.j]) & 0xFF;
+		t = state[source->encrypt.rc4.i]; 
+		state[source->encrypt.rc4.i] = state[source->encrypt.rc4.j]; 
+		state[source->encrypt.rc4.j] = t; 
+		source->encrypt.rc4.i = (source->encrypt.rc4.i - 1) & 0xFF;
+		source->encrypt.rc4.j = j_orig;
+		break;
 	}
 	compile->col_no > 0 ? compile->col_no-- : compile->col_no;
 }
@@ -1203,12 +1232,11 @@ ZL_VOID zengl_include_file(ZL_VOID * VM_ARG)
 		if(token != ZL_TK_SEMI)
 			compile->exit(VM_ARG,ZL_ERR_CP_INC_NO_END_SEMI,
 			compile->tokenInfo.start_line,compile->tokenInfo.start_col,compile->tokenInfo.filename);
-		compile->source.xor_cur = VM->xor_encrypt.xor_key_cur;
 		compile->push_FileStack(VM_ARG,&compile->source,compile->line_no,compile->col_no);
 		compile->source.file = ZL_NULL;	 //file文件指针字段设为NULL，这样扫描器就会重新去打开新的文件。
 		compile->source.needread = ZL_TRUE;
 		compile->source.cur = 0;
-		compile->source.xor_cur = VM->xor_encrypt.xor_key_cur = 0;
+		compile->source.encrypt = VM->initEncrypt;
 		compile->source.filename = newfilename; //设置新的扫描文件。
 		compile->line_no = 1;  //重置扫描的行列号为第1行第0列。
 		compile->col_no = 0;
@@ -1453,7 +1481,8 @@ ZL_VOID zengl_info(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...)
 /*编译器初始化*/
 ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args)
 {
-	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
 	ZL_INT i;
 	compile->isinCompiling = ZL_TRUE;
 	compile->start_time = ZENGL_SYS_TIME_CLOCK();
@@ -1461,9 +1490,10 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 	compile->userdef_info = vm_main_args->userdef_info;
 	compile->userdef_compile_error = vm_main_args->userdef_compile_error;
 	compile->source.needread = ZL_TRUE;
-	for(i=0;(ZL_INT)(compile->TokenOperateString[i]) != -1;i++)
+	for(i=0;(ZL_LONG)(compile->TokenOperateString[i]) != -1L;i++)
 		;
 	compile->TokenOperateStringCount = i;
+	compile->source.encrypt = VM->initEncrypt; //使用虚拟机的初始加密结构体来初始化source的encrypt成员
 }
 
 /*编译器入口函数*/
@@ -1516,7 +1546,6 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 				else if(compile->FileStackList.count > 0) //如果文件堆栈中还有元素，说明当前处于被加载文件中，将堆栈中保存的文件信息弹出，恢复原文件的扫描
 				{
 					compile->pop_FileStack(VM_ARG,&compile->source);
-					VM->xor_encrypt.xor_key_cur = compile->source.xor_cur;
 					compile->freeTokenStr(VM_ARG);
 					continue;
 				}
@@ -1547,6 +1576,24 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 	else
 		return -1;
 	return 0;
+}
+
+/*RC4使用初始密钥来初始化state状态盒子*/
+ZL_VOID zenglVM_rc4InitState(ZL_VOID * VM_ARG,ZL_CHAR * key,ZL_INT len)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZL_INT i,j = 0,t;
+	ZL_BYTE * state = VM->initEncrypt.rc4.state;
+	
+	for (i=0; i < 256; ++i) //将盒子里的元素用0到255初始化
+		state[i] = i;
+	for (i=0; i < 256; ++i) { //将盒子里的元素顺序打乱
+		j = (j + state[i] + key[i % len]) % 256;
+		t = state[i]; 
+		state[i] = state[j]; 
+		state[j] = t; 
+	}
+	VM->initEncrypt.rc4.i = VM->initEncrypt.rc4.j = 0; //将两个指针初始化为0
 }
 
 /*虚拟机初始化*/

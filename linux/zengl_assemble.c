@@ -234,7 +234,7 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 			state = ZL_ST_DOWN;
 			break;
 		case ZL_ST_INSTR: //解释同上
-			inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
+			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 							ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -268,7 +268,7 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 								ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 				break;
 			case ZL_TK_STR:
-				inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
+				inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
 								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 								ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -342,7 +342,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -396,7 +396,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
@@ -554,7 +554,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
@@ -648,7 +648,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -833,7 +833,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 					}
 					break; //case ZL_TK_FLOAT:
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -913,7 +913,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 								ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "PRINT 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 								ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
 								ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [PRINT "hello world"]
@@ -1159,7 +1159,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 					tmpClassID = 0;
 				if((tmpFunID = compile->SymLookupFun(VM_ARG,nodenum,tmpClassID)) == 0)
 				{
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 						ZL_R_IT_CALL,ZL_R_DT_NONE,0,
 						ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 "CALL %s" //如果在当前的用户自定义脚本函数哈希表中没有找到函数的信息，就说明该函数不是用户自定义的函数，而是use关键字引入的模块里的函数，所以就输出CALL "函数名"这种汇编格式，这样虚拟机解释器在运行时就会在use引入的模块中查找并调用函数。
@@ -1325,7 +1325,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 										ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 						break;
 					case ZL_TK_STR:
-						inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+						inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 										ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
@@ -1503,7 +1503,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，�
 									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 					break;
 				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
+					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]

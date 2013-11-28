@@ -1,0 +1,10 @@
+mac下直接make就可以生成libzengl.dylib main.o encrypt.o 和 zengl 以及 encrypt (mac下只有一个makefile文件，源代码是共用的linux里的代码)
+
+接着运行./zengl test.zl即可测试main.c程序(该程序是测试zengl用的，在这里生成的zengl核心文件只有libzengl.dylib动态链接库)
+
+要测试RC4脚本加密程序，可以运行 ./encrypt test.zl encrypt_script/test.zl rc4key_334566_hello_world -t rc4
+要测试普通的异或加密程序 可以运行 ./encrypt test.zl encrypt_script/test.zl xorkey_334566_hello_world -t xor (如果使用xor，则main.c里也要对应修改，因为main.c默认使用rc4方式，如果不修改，则main.c执行时会出现编译错误)
+
+上面的encrypt命令中test.zl是源文件名，encrypt_script/test.zl是异或运算后的输出文件名对应的路径，接着是异或运算或RC4的密钥，这里的密钥是和main.c里一致的，最后使用-t参数来指定是使用rc4加密还是xor普通异或加密。
+
+要清理生成的.o等中间文件，则使用make clean即可

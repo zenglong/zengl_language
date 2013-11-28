@@ -25,6 +25,8 @@
 
 #include "zengl_exportPublicDefs.h"
 
+/*以下为zenglApi接口的声明，目前一共有35个API接口函数(不包括底部声明的那些内建模块函数)*/
+
 /*通过zenglApi_Load可以加载并执行script_file脚本*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Load(ZL_EXP_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args);
 
@@ -35,7 +37,7 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_Open();
 ZL_EXPORT ZL_EXP_INT zenglApi_Run(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file);
 
 /*关闭zenglApi_Open打开的虚拟机指针，并释放虚拟机占用的系统资源*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_Close(ZL_EXP_VOID * VM_ARG);
+ZL_EXPORT ZL_EXP_INT zenglApi_Close(ZL_EXP_VOID * VM_ARG);
 
 /*API接口，重置参数对应的虚拟机*/
 ZL_EXPORT ZL_EXP_VOID * zenglApi_Reset(ZL_EXP_VOID * VM_ARG);
@@ -44,10 +46,10 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_Reset(ZL_EXP_VOID * VM_ARG);
 ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetErrorString(ZL_EXP_VOID * VM_ARG);
 
 /*API接口，设置虚拟机运行的一些选项标记*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetFlags(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARG_FLAGS flag);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFlags(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARG_FLAGS flag);
 
 /*API接口，设置虚拟机一些可选的操作句柄，例如PRINT指令对应的用户自定义输出函数等*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetHandle(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_FLAGS_HANDLE_TYPE handleType,ZL_EXP_VOID * handle);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetHandle(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_FLAGS_HANDLE_TYPE handleType,ZL_EXP_VOID * handle);
 
 /*API接口，将用户自定义的参数压入虚拟栈中*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum);
@@ -72,13 +74,13 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT mo
 
 /*API接口，获取脚本中模块函数调用时的参数信息
   argnum 为参数位置，从1开始，1代表第一个参数，2代表第二个参数，以此类推*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_GetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
 
 /*API接口，退出当前脚本*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_Exit(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, ...);
+ZL_EXPORT ZL_EXP_INT zenglApi_Exit(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, ...);
 
 /*API接口，用于在用户自定义的模块函数中设置出错信息，然后设置虚拟机停止执行，比zenglApi_Exit好的地方在于，不会长跳转直接结束，而是返回由用户决定退出的时机，有效防止外部C++调用出现内存泄漏或访问异常*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, ...);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, ...);
 
 /*设置模块函数的返回值*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetRetVal(ZL_EXP_VOID * VM_ARG,
@@ -98,16 +100,16 @@ ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZEN
 
 /*获取第argnum个参数的类型等信息，argnum从1开始表示第一个参数，之前的GetFunArg函数只能获取参数的值，如果参数是引用，则直接获取引用的变量的值，
 所以无法知道参数的类型信息，比如无法知道某个参数是否是引用等类型，该函数则可以获取到这些信息，如果参数不是引用类型，则这两个函数等价*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
 
 /*设置脚本模块函数中第argnum个参数的值，argnum从1开始表示第一个参数*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
 
 /*获取内存块的size容量等信息*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT * mblk_size,ZL_EXP_INT * mblk_count);
+ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT * mblk_size,ZL_EXP_INT * mblk_count);
 
 /*API接口，用户可以通过此接口在中途停止脚本*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_Stop(ZL_EXP_VOID * VM_ARG);
+ZL_EXPORT ZL_EXP_INT zenglApi_Stop(ZL_EXP_VOID * VM_ARG);
 
 /*API接口，用户可以通过此接口设置一些额外数据的指针*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName,ZL_EXP_VOID * point);
@@ -115,8 +117,15 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * ex
 /*API接口，用户可以通过此接口得到额外数据*/
 ZL_EXPORT ZL_EXP_VOID * zenglApi_GetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName);
 
-/*API接口，用户通过此接口设置脚本源代码的XOR异或运算加密密钥*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_SetSourceXorKey(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * xor_key_str);
+/*API接口，用户可以通过此接口得到或检测额外数据，此为上面的GetExtraData的扩展函数，当不存在extraDataName额外数据时，返回NULL，而不是产生错误信息退出虚拟机，
+  所以也可以同时检测额外数据是否存在*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_GetExtraDataEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * extraDataName);
+
+/*API接口，用户通过此接口设置脚本源代码的XOR普通异或运算加密密钥*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetSourceXorKey(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * xor_key_str);
+
+/*API接口，用户通过此接口设置脚本源代码的RC4加密密钥*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetSourceRC4Key(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * rc4_key_str,ZL_EXP_INT rc4_key_len);
 
 /*API接口，用户通过此接口将字符串拷贝到虚拟机中，这样在C++中就可以提前将源字符串资源给手动释放掉，而拷贝到虚拟机中的新分配的资源则会在结束时自动释放掉，
   防止内存泄漏*/
@@ -126,6 +135,36 @@ ZL_EXPORT ZL_EXP_CHAR * zenglApi_AllocMemForString(ZL_EXP_VOID * VM_ARG,ZL_EXP_C
 ZL_EXPORT ZL_EXP_VOID * zenglApi_AllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT size);
 
 /*API接口，将AllocMem分配的资源手动释放掉，防止资源越滚越大*/
-ZL_EXPORT ZL_EXP_VOID zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr);
+ZL_EXPORT ZL_EXP_INT zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr);
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/********************************************************************************
+		下面是虚拟机为用户提供的内建模块函数的声明
+********************************************************************************/
+
+/*array内建模块函数，用于创建zengl脚本的动态数组*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/*bltExit模块函数，直接退出zengl脚本*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltExit(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/*bltConvToInt模块函数，将参数转为整数形式*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltConvToInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/*	bltIntToStr模块函数：
+	将整数转为字符串的形式，例如bltIntToStr(25,5,'0')那么得到的结果就是字符串'00025'
+	因为第二个参数5是指总宽度，第一个参数25的宽度只有2，小于5，
+	所以左边会以第三个参数'0'补齐。
+	如果不想使用补齐，可以用bltIntToStr(25,0,'0')这样的格式，将第二个总宽度参数设为0，就不会应用补齐功能
+*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltIntToStr(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/*bltRandom模块函数，产生随机数*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltRandom(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/********************************************************************************
+		上面是虚拟机为用户提供的内建模块函数的声明
+********************************************************************************/
 
 #endif/* _ZENGL_EXPORT_FUNCTIONS_H_ */

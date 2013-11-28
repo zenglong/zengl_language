@@ -1,3 +1,29 @@
+  zengl v1.2.5 , 该版本在原来普通异或加密方式的基础上，添加了RC4加密方式，RC4可以看成是异或运算的升级版，安全性和实用性都很高，只需要很短的初始密钥就可以产生和明文一样长的伪随机密钥流。
+  
+  该版本还规范了API的调用位置，通过引入API状态枚举值，当某个API处于不正确的调用位置时，会忽略掉该API，同时返回API调用位置不正确的信息，可以使用zenglApi_GetErrorString接口来获取出错信息。
+  
+  所有API接口都可以返回出错信息，所以将原来一些返回值为VOID类型的API接口改为返回值为ZL_EXP_INT即int类型，这样当该API接口出错时，就可以返回-1，用户就可以根据此来判断API调用是否出错，如果是返回指针类型的API接口，则返回ZL_EXP_NULL即0的空指针来表示API接口是否出错，除了zenglApi_GetMemBlock这个API，该API由于原来返回的是一个结构体，所以只有当返回的ZENGL_EXPORT_MOD_FUN_ARG结构体中type成员为ZL_EXP_FAT_INVALID时才表示该API调用出错。
+
+  新增了一个zenglApi_GetExtraDataEx接口，该接口是zenglApi_GetExtraData接口的扩展版，扩展后的函数可以用于检测某额外数据是否存在，这种检测在使用额外数据替代模块函数里的静态变量和全局变量时就可以起到作用(详情可以查看zenglApi_BltModFuns.c里的zenglApiBMF_bltRandom函数，静态变量和全局变量在多线程中容易发生访问冲突)。
+
+  上面提到了zenglApi_BltModFuns.c文件，该文件是v1.2.5中新增的，它里面定义了虚拟机为用户提供的内建模块函数(只是一些很基本的脚本模块函数，像array之类的)，用户可以根据需要选择是否使用这些内建模块函数，还可以根据此文件里的模块函数为模板，复制到自己的程序中进行修改替换。因为有时候，像array这样的模块函数，用户一般不会对它进行扩展，所以就可以直接使用该文件里定义的array模块函数，只有当有需要修改时，再从该文件中复制对应的模块函数到自己的应用程序中进行修改替换，这些内建模块函数的设置方法和用户自己定义的模块函数的设置方法是一样的，都是用的zenglApi_SetModFunHandle接口来进行设置，详情可以参考main.c测试程序里的main_builtin_module_init模块初始化函数。
+
+  最后就是作者根据zengl.com上用户Raindy的评论，在64位Ubuntu系统下对zengl进行编译测试，发现之前的版本在64位下有些类型转换问题，还有些链接问题，所以在该版本中将某些地方出现的指针到int类型的转换改为指针到long类型的转换，另外还进行了一些其他的64位的处理。
+
+  v1.2.5版本新增了一个mac目录，该目录里有MAC OS X苹果系统下的makefile文件，下面是作者测试过的编译平台：
+
+  Ubuntu Studio 12.04.3 64位系统下 系统默认编译器：gcc(4.6.3版本)
+  Ubuntu Studio 12.04.3 32位系统下 系统默认编译器：gcc(4.6.3版本) gcc(4.5.3版本) gcc(4.4.7版本) gcc(4.1.2版本)
+  Slackware-13.37 32位系统下 gcc(4.5.2版本)
+  苹果雪豹操作系统 Snow Leopard 10.6 (i386内核) gcc(4.2.1版本)
+  winXP系统 vs2008
+  winXP系统 VC6
+  win7 64位系统 vs2010 (直接导入vs2008的解决方案，32位编译和64位编译,其中64位编译需要在32位项目的基础上，手动配置成x64的平台)
+
+  作者：zenglong
+  时间：2013年11月28日
+  官网：www.zengl.com
+
   zengl v1.2.4 Release发布版，该版本在原来vs2008的基础上增加了vc6的工作空间，两者使用相同的代码，同时为了支持VC6，修改了zengl_global.h，在VC6下zengl工程新增了一个ZL_LANG_IN_VC6预处理宏，zengl_global.h在遇到该宏时，就知道是VC6编译器，然后就会在项目中使用_vsnprintf函数而不是vsnprintf，因为VC6下的vsnprintf必须在前面添加下划线 ，vs2008和gcc则不需要。
 
   作者：zenglong

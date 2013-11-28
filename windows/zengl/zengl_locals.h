@@ -261,6 +261,13 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_VM_API_EXTRA_DATA_NAME_EXIST,		//解释器运行时错误：额外数据名称'%s'已经存在
 	ZL_ERR_VM_API_EXTRA_DATA_NAME_INVALID,		//解释器运行时错误：额外数据名称'%s'无效
 	ZL_ERR_CP_SYNTAX_ASM_IF_HAVE_NO_EXPRESS,	//语法错误：if语句的条件判断表达式为空
+	ZL_ERR_VM_API_INVALID_CALL_POSITION,		//解释器运行时错误：'%s'该API接口的调用位置不对
+	ZL_ERR_VM_API_INVALID_ZLVM,					//解释器运行时错误：API接口中访问的是无效的虚拟机，请通过zenglApi_Open生成有效的虚拟机
+	ZL_ERR_VM_API_INVALID_ARG_TYPE_WHEN_PUSH,		//解释器运行时错误：zenglApi_Push接口的第二个参数是无效的参数类型
+	ZL_ERR_VM_API_INVALID_RETVAL_TYPE_WHEN_SETMEMBLOCK,	//解释器运行时错误：zenglApi_SetMemBlock接口中最后一个参数的类型错误
+	ZL_ERR_VM_API_INVALID_SRC_WHEN_ALLOCMEM_FOR_STRING,	//解释器运行时错误：zenglApi_AllocMemForString源字符串指针参数无效
+	ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM,	//解释器运行时错误：zenglApi_AllocMem中的size参数无效
+	ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM,		//解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效
 }ZENGL_ERRORNO;
 /*各种错误的枚举定义结束*/
 

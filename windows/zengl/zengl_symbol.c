@@ -1040,7 +1040,7 @@ ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum)
 					break;
 				case ZL_TK_STR:
 					tmpInstType = ZL_R_DT_STR;
-					tmpInstData = (ZL_DOUBLE)((ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					tmpInstData = (ZL_DOUBLE)((ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 					break;
 				default:
 					compile->parser_curnode = nodenum;
@@ -1356,7 +1356,7 @@ ZL_VOID zengl_SymScanUseRsv(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT use_nodenum)
 			switch(nodes[nodenum].toktype)
 			{
 			case ZL_TK_ID:
-				inst_op_data.val.num = (ZL_INT)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
+				inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 					ZL_R_IT_USE,ZL_R_DT_NONE,0,
 					ZL_R_DT_STR,inst_op_data.val.num); //∂‘”¶ª„±‡÷∏¡Ó "USE %s"

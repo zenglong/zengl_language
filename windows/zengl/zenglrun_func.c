@@ -422,6 +422,30 @@ ZL_VOID zenglrun_memFreeAll(ZL_VOID * VM_ARG)
 	}
 }
 
+/*专门用于设置API出错信息的扩展函数*/
+ZL_CHAR * zenglrun_SetApiErrorEx(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno , ...)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_SYS_ARG_LIST arglist;
+	ZENGL_SYS_ARG_START(arglist,errorno);
+	VM->run.SetApiError(VM_ARG,errorno,arglist);
+	ZENGL_SYS_ARG_END(arglist);
+	return VM->ApiError;
+}
+
+/*专门用于设置API出错信息的函数*/
+ZL_CHAR * zenglrun_SetApiError(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno ,ZENGL_SYS_ARG_LIST arglist)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	if(VM->ApiError != ZL_NULL)
+		VM->run.memFreeOnce(VM_ARG,VM->ApiError);
+	VM->errorno = errorno;
+	VM->run.makeInfoString(VM_ARG,&VM->run.errorFullString , VM->errorString[VM->errorno] , arglist);
+	VM->ApiError = zenglApi_AllocMemForString(VM_ARG, VM->run.errorFullString.str);
+	VM->run.freeInfoString(VM_ARG,&VM->run.errorFullString);
+	return VM->ApiError;
+}
+
 /*生成格式化信息字符串*/
 ZL_CHAR * zenglrun_makeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist)
 {

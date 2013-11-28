@@ -68,8 +68,8 @@ LINK32=link.exe
 # PROP Intermediate_Dir "../zengl_vc6_Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ZENGL_EXPORTS" /YX /FD /GZ  /c
-# ADD CPP /nologo /MTd /w /W0 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ZENGL_EXPORTS" /D "ZL_EXP_OS_IN_WINDOWS" /D "ZL_LANG_EN_WITH_CH" /D "ZL_LANG_IN_VC6" /YX /FD /GZ  /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ZENGL_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /w /W0 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "ZENGL_EXPORTS" /D "ZL_EXP_OS_IN_WINDOWS" /D "ZL_LANG_EN_WITH_CH" /D "ZL_LANG_IN_VC6" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x804 /d "_DEBUG"
@@ -117,6 +117,10 @@ SOURCE=.\zengl_symbol.c
 # Begin Source File
 
 SOURCE=.\zenglApi.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\zenglApi_BltModFuns.c
 # End Source File
 # Begin Source File
 

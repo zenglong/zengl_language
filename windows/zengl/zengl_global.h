@@ -42,6 +42,7 @@
 #include "zengl_exportfuns.h"
 
 /*一些宏定义*/
+#define ZL_VM_SIGNER 0x4D564C5A //判断虚拟机结构体是否是有效结构体的signer标志，即ZLVM四个英文字母的ASCII码，由低字节向高字节排列
 #define ZL_FALSE 0 //逻辑假
 #define ZL_TRUE 1 //逻辑真
 #define ZL_FILE_BUF_SIZE 1024 //读取文件的缓存大小
@@ -50,12 +51,15 @@
 #define ZL_SYM_HASH_SIZE 211 //符号hash表数组的大小
 #define ZL_SYM_HASH_TOTAL_SIZE 1477 //HASH表的总大小。 目前有7个动态数组，每个动态数组使用哈希表的211项，所以一共1477项
 #define ZL_SYM_HASH_SHIFT 4  //符号名转为符号hash表索引时的计算因子
+#define ZL_RC4_STATE_SIZE 256 //RC4加密运算state状态盒子里的元素个数
 #define ZL_STRNULL '\0' //字符串结束字符
 #define ZL_NULL 0 //指针为0的宏定义
 #define ZL_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #define ZL_CHAR char
 #define ZL_UCHAR unsigned char
+#define ZL_BYTE unsigned char
 #define ZL_INT int
+#define ZL_LONG long
 #define ZL_WCHAR_T wchar_t
 #define ZL_FLOAT float
 #define ZL_DOUBLE double
@@ -109,6 +113,19 @@ typedef clock_t ZL_CLOCK_T;
 #define ZENGL_SYS_ARG_GET  va_arg  //获取可变参数值
 #define ZENGL_SYS_ARG_END va_end //结束可变参数列表定义
 /*宏定义结束*/
+
+/*API接口的各种状态枚举定义*/
+typedef enum _ZENGL_API_STATES{
+	ZL_API_ST_NONE,
+	ZL_API_ST_OPEN,
+	ZL_API_ST_RESET,
+	ZL_API_ST_RUN,
+	ZL_API_ST_AFTER_RUN,
+	ZL_API_ST_MODULES_INIT,
+	ZL_API_ST_MOD_INIT_HANDLE,
+	ZL_API_ST_MOD_FUN_HANDLE,
+}ZENGL_API_STATES;
+/*API接口的各种状态枚举定义结束*/
 
 /*token节点类型定义*/
 typedef enum _ZENGL_TOKENTYPE{
@@ -257,6 +274,14 @@ typedef enum _ZENGL_HASH_TYPES{
 }ZENGL_HASH_TYPES;
 /*各种需要用到哈希表的类型枚举定义结束*/
 
+/*加密算法类型枚举*/
+typedef enum _ZENGL_ENCRYPT_TYPES{
+	ZL_ENC_TYPE_NONE,  //没有加密，默认初始值
+	ZL_ENC_TYPE_XOR,   //普通异或加密
+	ZL_ENC_TYPE_RC4,   //RC4加密
+}ZENGL_ENCRYPT_TYPES;
+/*加密算法类型枚举定义结束*/
+
 typedef struct _ZENGL_TOKEN_STRING_TYPE{
 	ZL_CHAR * str; //token的字符串信息
 	ZL_INT size; //字符串的动态大小
@@ -275,14 +300,32 @@ typedef struct _ZENGL_INFO_STRING_TYPE{
 	ZL_INT cur;  //当前游标
 }ZENGL_INFO_STRING_TYPE; //存放普通打印信息或错误信息的类型
 
-typedef struct{
+typedef struct _ZENGL_XOR_ENCRYPT{
+	ZL_CHAR * xor_key_str;
+	ZL_INT xor_key_len;
+	ZL_INT xor_key_cur;
+}ZENGL_XOR_ENCRYPT; //XOR普通异或加密运算相关的结构体定义
+
+typedef struct _ZENGL_RC4_ENCRYPT{
+	ZL_BYTE state[ZL_RC4_STATE_SIZE];
+	ZL_INT i;
+	ZL_INT j;
+}ZENGL_RC4_ENCRYPT; //RC4加密运算相关的结构体定义
+
+typedef struct _ZENGL_ENCRYPT{
+	ZENGL_ENCRYPT_TYPES type;
+	ZENGL_XOR_ENCRYPT xor;
+	ZENGL_RC4_ENCRYPT rc4;
+}ZENGL_ENCRYPT; //加密运算结构体定义
+
+typedef struct _ZENGL_SOURCE_TYPE{
 	ZL_CHAR *filename;
 	FILE *file;
 	ZL_UCHAR buf[ZL_FILE_BUF_SIZE];
 	ZL_INT buf_read_len;
-	ZL_INT xor_cur;
 	ZL_INT cur;
 	ZL_BOOL needread;
+	ZENGL_ENCRYPT encrypt; //加密运算结构体成员
 }ZENGL_SOURCE_TYPE;  //脚本源文件类型定义，里面包含要操作的脚本文件的文件指针，文件名等成员。
 
 typedef struct _ZENGL_MEM_POOL_POINT_TYPE{
@@ -918,10 +961,10 @@ typedef struct _ZENGL_RUN_INST_OP_DATA{
 	ZENGL_RUN_INST_OP_DATA_TYPE type;
 	union{
 		ZENGL_RUN_REG_TYPE reg; //寄存器的枚举索引。
-		ZL_INT num;	//整数
-		ZL_DOUBLE floatnum; //浮点数
 		ZL_INT str_Index; //字符串信息在解释器字符串池中的索引
 		ZL_INT mem; //内存寻址值。
+		ZL_LONG num;//使用长整数，方便64位移植
+		ZL_DOUBLE floatnum; //浮点数
 	}val;
 }ZENGL_RUN_INST_OP_DATA; //解释器的指令操作数
 
@@ -1043,22 +1086,6 @@ typedef struct _ZENGL_RUN_EXTRA_DATA_TABLE{
 
 /********************************************************************************
 		上面是和虚拟机解释器相关的结构体和枚举等定义
-********************************************************************************/
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/********************************************************************************
-		下面是和虚拟机XOR异或加密运算相关的结构体和枚举等定义
-********************************************************************************/
-
-typedef struct _ZENGL_VM_XOR_ENCRYPT{
-	ZL_CHAR * xor_key_str;
-	ZL_INT xor_key_len;
-	ZL_INT xor_key_cur;
-}ZENGL_VM_XOR_ENCRYPT;
-
-/********************************************************************************
-		上面是和虚拟机解释器XOR异或加密运算相关的结构体和枚举等定义
 ********************************************************************************/
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1307,6 +1334,8 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* exit_forApiSetErrThenStop)(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数 对应 zenglrun_exit_forApiSetErrThenStop
 	ZL_VOID (* ExitPrintSourceInfo)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //当解释器出错退出时，打印出当前汇编代码对应的AST节点的行列号文件名信息 对应 zenglrun_ExitPrintSourceInfo
 	ZL_VOID (* memFreeAll)(ZL_VOID * VM_ARG); //解释器释放内存池资源 对应 zenglrun_memFreeAll
+	ZL_CHAR * (* SetApiErrorEx)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno , ...); //专门用于设置API出错信息的扩展函数 对应 zenglrun_SetApiErrorEx
+	ZL_CHAR * (* SetApiError)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno ,ZENGL_SYS_ARG_LIST arglist); //专门用于设置API出错信息的函数 对应 zenglrun_SetApiError
 	ZL_CHAR * (* makeInfoString)(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist); //生成格式化信息字符串 对应 zenglrun_makeInfoString
 	ZL_VOID (* freeInfoString)(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr); //释放格式化信息字符串的游标和大小信息 对应 zenglrun_freeInfoString
 	ZL_VOID (* info)(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...); //生成infoFullString或errorFullString的格式化字符串信息，并使用用户自定义函数进行输出显示 对应 zenglrun_info
@@ -1383,6 +1412,7 @@ typedef struct _ZENGL_VM_TYPE
 	ZL_CONST ZL_CHAR ** errorString;
 	ZL_BOOL isCompileError;
 	ZL_BOOL isRunError;
+	ZL_INT signer;   //VM虚拟机是否有效的signer签名标志
 	ZL_INT basesize; //当前虚拟机包含结构体的基础大小
 	ZL_INT totalsize; //当前虚拟机占用内存的大小总和
 	ZL_CLOCK_T start_time; //虚拟机开始执行的时间，毫秒为单位
@@ -1391,9 +1421,12 @@ typedef struct _ZENGL_VM_TYPE
 	ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args; //用户传递给虚拟机的一些参数
 	ZL_BOOL isinApiRun; //判断是否通过zenglApi_Run运行的虚拟机
 	ZL_BOOL isUseApiSetErrThenStop; //判断用户是否在模块函数中通过调用zenglApi_SetErrThenStop来停止虚拟机的
-	ZENGL_VM_XOR_ENCRYPT xor_encrypt; //异或加密运算相关结构体
+	ZENGL_ENCRYPT initEncrypt; //加密运算相关结构体的初始化状态，用于初始化 ZENGL_SOURCE_TYPE 中的encrypt成员用的
+	ZENGL_API_STATES ApiState; //API接口触发的虚拟机的各种状态，用于判断API调用的位置是否合法
+	ZL_CHAR * ApiError; //专门用于存放API的出错信息的
 
 	/*虚拟机相关的自定义函数*/
+	ZL_VOID (* rc4InitState)(ZL_VOID * VM_ARG,ZL_CHAR * key,ZL_INT len); //RC4使用初始密钥来初始化state状态盒子 对应 zenglVM_rc4InitState
 	ZL_VOID (* init)(ZL_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //虚拟机初始化函数 对应 zenglVM_init
 }ZENGL_VM_TYPE;
 /*虚拟机结构体定义结束*/
@@ -1443,6 +1476,8 @@ ZL_VOID zengl_freeInfoString(ZL_VOID * VM_ARG,ZENGL_INFO_STRING_TYPE * infoStrin
 ZL_VOID zengl_info(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...); //在用户函数中可以执行一些常规的打印操作，或者将字符串输出到文件等
 ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //编译器初始化
 ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //编译器入口函数
+ZL_VOID zengl_rc4InitState(ZL_VOID * VM_ARG,ZL_CHAR * key,ZL_INT len); //RC4使用初始密钥来初始化state状态盒子
+ZL_VOID zenglVM_rc4InitState(ZL_VOID * VM_ARG,ZL_CHAR * key,ZL_INT len); //RC4使用初始密钥来初始化state状态盒子
 ZL_VOID zenglVM_init(ZL_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //虚拟机初始化
 
 //下面是定义在zengl_symbol.c中的函数
@@ -1566,6 +1601,8 @@ ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //解释器退出
 ZL_VOID zenglrun_exit_forApiSetErrThenStop(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数
 ZL_VOID zenglrun_ExitPrintSourceInfo(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //当解释器出错退出时，打印出当前汇编代码对应的AST节点的行列号文件名信息
 ZL_VOID zenglrun_memFreeAll(ZL_VOID * VM_ARG); //解释器释放内存池资源
+ZL_CHAR * zenglrun_SetApiErrorEx(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno , ...); //专门用于设置API出错信息的扩展函数
+ZL_CHAR * zenglrun_SetApiError(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno ,ZENGL_SYS_ARG_LIST arglist); //专门用于设置API出错信息的函数
 ZL_CHAR * zenglrun_makeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist); //生成格式化信息字符串
 ZL_VOID zenglrun_freeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr); //释放格式化信息字符串的游标和大小信息
 ZL_VOID zenglrun_info(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...); //生成infoFullString或errorFullString的格式化字符串信息，并使用用户自定义函数进行输出显示

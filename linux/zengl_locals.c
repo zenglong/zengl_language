@@ -262,6 +262,13 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: VM Api err , extra data name '%s' exist (解释器运行时错误：额外数据名称'%s'已经存在)\n", //ZL_ERR_VM_API_EXTRA_DATA_NAME_EXIST
 	"\n err: VM Api err , extra data name '%s' is invalid (解释器运行时错误：额外数据名称'%s'无效)\n",//ZL_ERR_VM_API_EXTRA_DATA_NAME_INVALID
 	"\n syntax error: if statement have no express (语法错误：if语句的条件判断表达式为空)\n", //ZL_ERR_CP_SYNTAX_ASM_IF_HAVE_NO_EXPRESS
+	"\n err: VM Api err , zengl api '%s' invalid call position (解释器运行时错误：'%s'该API接口的调用位置不对)\n", //ZL_ERR_VM_API_INVALID_CALL_POSITION
+	"\n err: VM Api err , invalid zengl VM (解释器运行时错误：API接口中访问的是无效的虚拟机，请通过zenglApi_Open生成有效的虚拟机)\n", //ZL_ERR_VM_API_INVALID_ZLVM
+	"\n err: VM Api err , invalid second arg type in zenglApi_Push (解释器运行时错误：zenglApi_Push接口的第二个参数是无效的参数类型)\n", //ZL_ERR_VM_API_INVALID_ARG_TYPE_WHEN_PUSH
+	"\n err: VM Api err , invalid last arg type in zenglApi_SetMemBlock (解释器运行时错误：zenglApi_SetMemBlock接口中最后一个参数的类型错误)\n", //ZL_ERR_VM_API_INVALID_RETVAL_TYPE_WHEN_SETMEMBLOCK
+	"\n err: VM Api err , invalid src arg in zenglApi_AllocMemForString (解释器运行时错误：zenglApi_AllocMemForString源字符串指针参数无效)\n", //ZL_ERR_VM_API_INVALID_SRC_WHEN_ALLOCMEM_FOR_STRING
+	"\n err: VM Api err , invalid size arg in zenglApi_AllocMem (解释器运行时错误：zenglApi_AllocMem中的size参数无效)\n", //ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM
+	"\n err: VM Api err , invalid ptr arg in zenglApi_FreeMem (解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效)\n", //ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM
 };
 #endif
 
@@ -340,7 +347,7 @@ ZL_CONST ZL_CHAR * ZL_Token_Operate_String[] = {
 	":",	 //ZL_TK_COLON,			冒号token
 	"?",	 //ZL_TK_QUESTION_MARK,	问号token
 	".",	 //ZL_TK_DOT,			点运算符
-	(ZL_CHAR *)(-1)
+	(ZL_CHAR *)(-1L)
 };
 
 /*解释器中各种指令在打印输出时的显示字符串*/
