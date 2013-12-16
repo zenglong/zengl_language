@@ -24,8 +24,8 @@
 #define _ZENGL_EXPORT_PUBLIC_DEFS_H_
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
-#define ZL_EXP_MINOR_VERSION 2 //zengl子版本号
-#define ZL_EXP_REVISION 5      //zengl修正版本号
+#define ZL_EXP_MINOR_VERSION 3 //zengl子版本号
+#define ZL_EXP_REVISION 0      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #define ZL_EXP_CHAR char
 #define ZL_EXP_INT int

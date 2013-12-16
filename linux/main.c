@@ -331,6 +331,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltRandom",zenglApiBMF_bltRandom); //使用虚拟机zenglApi_BltModFuns.c中定义的bltRandom
 	//zenglApi_SetModFunHandle(VM_ARG,moduleID,"array",main_builtin_array); //使用main.c中定义的array
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"array",zenglApiBMF_array);  //使用虚拟机zenglApi_BltModFuns.c中定义的array
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"unset",zenglApiBMF_unset);  //使用虚拟机zenglApi_BltModFuns.c中定义的unset
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltExit",zenglApiBMF_bltExit);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltExit
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltConvToInt",zenglApiBMF_bltConvToInt);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltConvToInt
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltIntToStr",zenglApiBMF_bltIntToStr);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltIntToStr
@@ -561,12 +562,20 @@ int main(int argc,char * argv[])
 {
 	int len = 0;
 	int testint;
-	int * testint_ptr;
-	double testdouble;
+	//int * testint_ptr;
+	//double testdouble;
 	char * teststr = 0;
 	//char * xor_key_str = "xorkey_334566_hello_world";
 	char * rc4_key_str = "rc4key_334566_hello_world";
 	int rc4_key_len = strlen(rc4_key_str);
+	char * run_str = 
+		"//this is a test for zenglApi_RunStr \n"
+		"inc 'test2.zl';\n"
+		"a = 135; \n"
+		"b=2;\n"
+		"print 'a-b is '+(a-b); \n"
+		"bltLoadScript('test3.zl'); \n"; //行尾设置\n换行符这样查找语法错误时，方便定位行号信息
+	int run_str_len = strlen(run_str);
 	ZL_EXP_INT builtinID,sdlID;
 	ZL_EXP_VOID * VM;
 
@@ -602,41 +611,55 @@ int main(int argc,char * argv[])
 	if(zenglApi_SetExtraData(VM,"val","my val is zengl too") == -1)
 		main_exit(VM,"设置额外数据失败:%s",zenglApi_GetErrorString(VM));
 
+	//zenglApi_SetSourceRC4Key(VM,rc4_key_str,rc4_key_len);
+
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
 		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
-
-	if((teststr = zenglApi_GetValueAsString(VM,"glmytest")) == ZL_EXP_NULL)
-		main_exit(VM,"获取变量glmytest失败：%s\n",zenglApi_GetErrorString(VM));
 
 	if(zenglApi_GetValueAsInt(VM,"i",&testint) == -1)
 		main_exit(VM,"获取变量i失败：%s\n",zenglApi_GetErrorString(VM));
 
-	if(zenglApi_GetValueAsDouble(VM,"floatnum",&testdouble) == -1)
-		main_exit(VM,"获取变量floatnum失败：%s\n",zenglApi_GetErrorString(VM));
-
-	printf("the value of glmytest in test.zl is %s , i is %d , floatnum is %.16g\n",teststr,testint,testdouble);
-
-	if((testint_ptr = zenglApi_GetExtraDataEx(VM,"ZL_SYS_ExtraData_RandomSeed")) != ZL_EXP_NULL)
-		printf("the value of random_seed in bltRandom is %d\n",(*testint_ptr));
+	printf("after run , the i is %d\n",testint);
 
 	zenglApi_Reset(VM);
 
-	builtinID = zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
-	//zenglApi_SetModFunHandle(VM,0,"printf",main_builtin_printf);
-	if(zenglApi_Run(VM,"test2.zl") == -1) //编译执行zengl脚本
-		main_exit(VM,"错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));
+	zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
+
+	printf("\n[next test zenglApi_RunStr]: \n");
+	if(zenglApi_RunStr(VM,run_str,run_str_len,"runstr") == -1) //编译执行字符串脚本
+		main_exit(VM,"错误：编译runstr失败：%s\n",zenglApi_GetErrorString(VM));
+
+	printf("\n[next test zenglApi_Call and zenglApi_ReUse]: \n");
 
 	zenglApi_Reset(VM);
 
 	zenglApi_Push(VM,ZL_EXP_FAT_INT,0,1415,0);
 
-	zenglApi_Push(VM,ZL_EXP_FAT_STR,"test second arg",0,0);
+	zenglApi_Push(VM,ZL_EXP_FAT_INT,0,3,0);
 
-	//zenglApi_SetSourceXorKey(VM,xor_key_str);
-	zenglApi_SetSourceRC4Key(VM,rc4_key_str,rc4_key_len);
-
-	if(zenglApi_Call(VM,"encrypt_script/test.zl","OutIn","clsTest") == -1) //编译执行zengl脚本里的类函数
+	if(zenglApi_Call(VM,"test2.zl","test","clsTest") == -1) //编译执行zengl脚本里的类函数
 		main_exit(VM,"错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
+
+	zenglApi_ReUse(VM,0); //不清理虚拟内存的ReUse
+
+	zenglApi_Push(VM,ZL_EXP_FAT_INT,0,14,0);
+
+	zenglApi_Push(VM,ZL_EXP_FAT_FLOAT,0,0,3.14);
+
+	if(zenglApi_Call(VM,"test2.zl","test","clsTest") == -1) //编译执行zengl脚本里的类函数
+		main_exit(VM,"错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
+
+	zenglApi_ReUse(VM,1); //清理虚拟内存的ReUse
+
+	if(zenglApi_Call(VM,"test2.zl","test","clsTest") == -1) //编译执行zengl脚本里的类函数
+		main_exit(VM,"错误：编译<test fun call>失败：%s\n",zenglApi_GetErrorString(VM));
+
+	zenglApi_ReUse(VM,1); //清理虚拟内存的ReUse
+
+	zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
+
+	if(zenglApi_Run(VM,"test2.zl") == -1) //编译执行zengl脚本
+		main_exit(VM,"错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));
 
 	zenglApi_Close(VM);
 
@@ -651,12 +674,12 @@ int main(int argc,char * argv[])
 	main_output_xor_source("test3.zl","encrypt_script/test3.zl",xor_key_str);
 	main_output_xor_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",xor_key_str);*/
 	/*下面是脚本RC4加密和还原的测试*/
-	main_output_rc4_source("test.zl","encrypt_script/test.zl",rc4_key_str);
+	/*main_output_rc4_source("test.zl","encrypt_script/test.zl",rc4_key_str);
 	main_output_rc4_source("encrypt_script/test.zl","encrypt_script/test_src.zl",rc4_key_str);
 	main_output_rc4_source("test2.zl","encrypt_script/test2.zl",rc4_key_str);
 	main_output_rc4_source("encrypt_script/test2.zl","encrypt_script/test2_src.zl",rc4_key_str);
 	main_output_rc4_source("test3.zl","encrypt_script/test3.zl",rc4_key_str);
-	main_output_rc4_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",rc4_key_str);
+	main_output_rc4_source("encrypt_script/test3.zl","encrypt_script/test3_src.zl",rc4_key_str);*/
 
 	#ifdef ZL_EXP_OS_IN_WINDOWS
 		system("pause");

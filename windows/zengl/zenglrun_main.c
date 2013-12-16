@@ -476,6 +476,9 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
 	ZL_INT i,j,nodenum;
 	ZENGL_RUN_INST_OP_DATA op_data;
+	ZL_CLOCK_T start_time = ZENGL_SYS_TIME_CLOCK();
+	ZL_CLOCK_T end_time;
+
 	if(head_title != ZL_NULL) //打印调试标题
 		run->info(VM_ARG,head_title);
 	for(i=0;i<run->inst_list.count;i++)
@@ -524,6 +527,8 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 		else
 			run->info(VM_ARG,"[%d line:%d,col:%d,%s]\n",nodenum,nodes[nodenum].line_no,nodes[nodenum].col_no,nodes[nodenum].filename);
 	} //for(i=0;i<run->inst_list.count;i++)
+	end_time = ZENGL_SYS_TIME_CLOCK();
+	compile->total_print_time += end_time - start_time;
 }
 
 /**
@@ -1200,6 +1205,7 @@ run_ret:
 					if(run->ModFunTable.mod_funs[ModFunIndex].handle != ZL_NULL)
 					{
 						ZL_INT argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
+						run->CurRunModFunIndex = ModFunIndex; //设置当前运行的模块函数在模块函数动态数组中的索引值
 						origState = VM->ApiState;
 						VM->ApiState = ZL_API_ST_MOD_FUN_HANDLE; //设置API调用状态处于模块函数中，如果不设置则大部分API接口都会直接返回-1，这样程序执行就会乱了套
 						run->ModFunTable.mod_funs[ModFunIndex].handle(VM_ARG,argcount);
@@ -1216,6 +1222,7 @@ run_ret:
 					if(run->ModFunTable.mod_funs[ModFunIndex].handle != ZL_NULL)
 					{
 						ZL_INT argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
+						run->CurRunModFunIndex = ModFunIndex; //设置当前运行的模块函数在模块函数动态数组中的索引值
 						origState = VM->ApiState;
 						VM->ApiState = ZL_API_ST_MOD_FUN_HANDLE; //设置API调用状态处于模块函数中，如果不设置则大部分API接口都会直接返回-1，这样程序执行就会乱了套
 						run->ModFunTable.mod_funs[ModFunIndex].handle(VM_ARG,argcount);
@@ -1246,6 +1253,14 @@ run_ret:
 			break;
 		case ZL_R_IT_SWITCH: //SWITCH指令 则调用op_switch进行处理
 			run->op_switch(VM_ARG);
+			break;
+		case ZL_R_IT_BIT_AND:
+		case ZL_R_IT_BIT_OR:
+		case ZL_R_IT_BIT_XOR:
+		case ZL_R_IT_BIT_RIGHT:
+		case ZL_R_IT_BIT_LEFT:
+		case ZL_R_IT_BIT_REVERSE:
+			run->op_bits(VM_ARG); //按位与，或，异或等位运算指令的处理程式
 			break;
 		default:
 			run->exit(VM_ARG,ZL_ERR_RUN_INVALID_INST_TYPE,ZL_R_REG_PC);
@@ -1378,6 +1393,70 @@ ZL_VOID zenglrun_op_jne(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src)
 	}
 }
 
+/*按位与，或，异或等位运算指令的处理程式*/
+ZL_VOID zenglrun_op_bits(ZL_VOID * VM_ARG)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	switch(ZENGL_RUN_REG(ZL_R_RT_AX).runType)
+	{
+	case ZL_R_RDT_FLOAT:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword;
+		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
+		break;
+	case ZL_R_RDT_STR:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
+		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
+		break;
+	case ZL_R_RDT_INT:
+		break;
+	default: //其他类型使用0
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = 0;
+		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
+		break;
+	}
+	if(ZL_R_CUR_INST.type != ZL_R_IT_BIT_REVERSE)
+	{
+		switch(ZENGL_RUN_REG(ZL_R_RT_BX).runType)
+		{
+		case ZL_R_RDT_FLOAT:
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_BX).qword;
+			ZENGL_RUN_REG(ZL_R_RT_BX).runType = ZL_R_RDT_INT;
+			break;
+		case ZL_R_RDT_STR:
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
+			ZENGL_RUN_REG(ZL_R_RT_BX).runType = ZL_R_RDT_INT;
+			break;
+		case ZL_R_RDT_INT:
+			break;
+		default:
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = 0;
+			ZENGL_RUN_REG(ZL_R_RT_BX).runType = ZL_R_RDT_INT;
+			break;
+		}
+	}
+	switch(ZL_R_CUR_INST.type)
+	{
+	case ZL_R_IT_BIT_AND:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword & ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
+		break;
+	case ZL_R_IT_BIT_OR:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword | ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
+		break;
+	case ZL_R_IT_BIT_XOR:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword ^ ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
+		break;
+	case ZL_R_IT_BIT_RIGHT:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword >> ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
+		break;
+	case ZL_R_IT_BIT_LEFT:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword << ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
+		break;
+	case ZL_R_IT_BIT_REVERSE:
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ~ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword;
+		break;
+	}
+}
+
 /*
 	大于小于等于之类的比较运算符指令的处理程式。
 */
@@ -1385,10 +1464,18 @@ ZL_VOID zenglrun_op_relation(ZL_VOID * VM_ARG)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_RUNTIME_OP_DATA_TYPE retval;
+	ZL_DOUBLE tmpret;
 	retval = run->op_minis(VM_ARG);
 	if(retval == ZL_R_RDT_FLOAT) //先将AX,BX进行减法处理，再根据处理的结果和对应的比较运算符，产生相应的结果。
 	{
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword;
+		tmpret = ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword;
+		if(tmpret > 0)
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = 1;
+		else if(tmpret < 0)
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = -1;
+		else
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = 0;
+		//ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword; //不可以直接将浮点成员qword强制转为整形，因为这样的话0.5这样的小数就会变为0，就会影响下面的比较结果。
 		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
 	}
 	switch(ZL_R_CUR_INST.type)
@@ -1714,63 +1801,25 @@ ZL_VOID zenglrun_op_addminisone(ZL_VOID * VM_ARG,ZENGL_RUN_INST_TYPE type)
 ZL_VOID zenglrun_op_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
-	ZENGL_RUN_RUNTIME_OP_DATA_TYPE runtype; // used for ADDR
-	ZL_INT mem,memptrIndex; //used for ADDR
-	ZENGL_RUN_VIRTUAL_MEM_LIST * tmptr = ZL_NULL;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE runtype;
+	ZL_INT mem;
 	switch(ZL_R_CUR_INST.src.type)
 	{
 	case ZL_R_DT_MEM: //如果当前ADDR指令的操作数是全局内存，就将runtype设为ZL_R_RDT_ADDR
 		runtype = ZL_R_RDT_ADDR;
 		mem = ZL_R_CUR_INST.src.val.mem; //mem为引用的全局内存的索引
-		if(run->vmem_list.mem_array[mem].runType == ZL_R_RDT_ADDR_MEMBLK)
-		{
-			runtype = ZL_R_RDT_ADDR_MEMBLK;
-			tmptr = run->vmem_list.mem_array[mem].val.memblock; //内存块指针
-			memptrIndex = run->vmem_list.mem_array[mem].memblk_Index; //内存块指针在内存池中的索引
-			mem = run->vmem_list.mem_array[mem].val.dword; //内存块索引
-			goto end;
-		}
 		break;
 	case ZL_R_DT_ARGMEM:
 		runtype = ZL_R_RDT_ADDR_LOC;
 		mem = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword + ZL_R_CUR_INST.src.val.mem; //ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword 是所有参数的起始栈位置，加上ZL_R_CUR_INST.src.val.mem参数偏移值才能得到正确的参数栈位置。
-		if(run->vstack_list.mem_array[mem].runType == ZL_R_RDT_ADDR_MEMBLK)
-		{
-			runtype = ZL_R_RDT_ADDR_MEMBLK;
-			tmptr = run->vstack_list.mem_array[mem].val.memblock; //内存块指针
-			memptrIndex = run->vstack_list.mem_array[mem].memblk_Index; //内存块指针在内存池中的索引
-			mem = run->vstack_list.mem_array[mem].val.dword; //内存块索引
-			goto end;
-		}
 		break;
 	case ZL_R_DT_LOCMEM:
 		runtype = ZL_R_RDT_ADDR_LOC;
 		mem = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword + ZL_R_CUR_INST.src.val.mem; //ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword 是所有局部变量的起始栈位置。
-		if(run->vstack_list.mem_array[mem].runType == ZL_R_RDT_ADDR_MEMBLK)
-		{
-			runtype = ZL_R_RDT_ADDR_MEMBLK;
-			tmptr = run->vstack_list.mem_array[mem].val.memblock; //内存块指针
-			memptrIndex = run->vstack_list.mem_array[mem].memblk_Index; //内存块指针在内存池中的索引
-			mem = run->vstack_list.mem_array[mem].val.dword; //内存块索引
-			goto end;
-		}
 		break; 
 	} //switch(ZL_R_CUR_INST.src.type)
-	ZENGL_RUN_VMEM_OP_GET_BY_RUNTYPE(runtype,(*tmpmem),mem,ZL_ERR_RUN_INVALID_RUNTYPE_IN_GEN_BY_RUNTYPE_MACRO)
-	while(tmpmem->runType == ZL_R_RDT_ADDR || tmpmem->runType == ZL_R_RDT_ADDR_LOC) //如果ADDR指令所引用的内存本身就是一个引用的话，就循环找到最终的非引用类型的内存。
-	{
-		runtype = tmpmem->runType;
-		mem = tmpmem->val.dword;
-		ZENGL_RUN_VMEM_OP_GET_BY_RUNTYPE(runtype,(*tmpmem),mem,ZL_ERR_RUN_INVALID_RUNTYPE_IN_GEN_BY_RUNTYPE_MACRO)
-	}
-end:
 	ZENGL_RUN_REG(ZL_R_RT_AX).runType = runtype; //将引用的内存类型赋值给AX的runType字段 。
 	ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = mem; //将引用内存的索引赋值给AX的dword字段。
-	if(runtype == ZL_R_RDT_ADDR_MEMBLK)
-	{
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock = tmptr; //将memblock设为内存块指针。  
-		ZENGL_RUN_REG(ZL_R_RT_AX).memblk_Index = memptrIndex; //内存块指针在内存池中的索引
-	}
 }
 
 /*设置数组元素*/
@@ -2233,23 +2282,10 @@ ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT
 	if(index < 0)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
 	ptr = run->realloc_memblock(VM_ARG,ptr,index);
-	switch(ptr->mem_array[index].runType)
-	{
-	case ZL_R_RDT_ADDR:
-	case ZL_R_RDT_ADDR_LOC:
-	case ZL_R_RDT_ADDR_MEMBLK: //如果本身是一个引用，就直接将引用信息返回
-		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ptr->mem_array[index].runType;
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ptr->mem_array[index].val.dword;
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock = ptr->mem_array[index].val.memblock;
-		ZENGL_RUN_REG(ZL_R_RT_AX).memblk_Index = ptr->mem_array[index].memblk_Index;
-		break;
-	default:
-		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_ADDR_MEMBLK; //设置AX返回值为IDADDR_MEMBLK内存块引用
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = index; //dword存放引用内存块的索引
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock = ptr; //memblock存放引用内存块的指针
-		ZENGL_RUN_REG(ZL_R_RT_AX).memblk_Index = ptrIndex; //memblk_Index存放的是memblock指针在内存池中的索引
-		break;
-	}
+	ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_ADDR_MEMBLK; //设置AX返回值的运行时类型为 ZL_R_RDT_ADDR_MEMBLK 即内存块引用
+	ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = index; //dword存放引用内存块的索引
+	ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock = ptr; //memblock存放引用内存块的指针
+	ZENGL_RUN_REG(ZL_R_RT_AX).memblk_Index = ptrIndex; //memblk_Index存放的是memblock指针在内存池中的索引
 	run->vstack_list.count = ZENGL_RUN_REGVAL(ZL_R_RT_ARRAY_ITEM).dword; //恢复栈空间
 	(*tmpmem) = run->VStackListOps(VM_ARG,ZL_R_VMOPT_GETMEM,-1,(*tmpmem),ZL_TRUE);
 	if(tmpmem->runType == ZL_R_RDT_INT)
@@ -2449,14 +2485,89 @@ ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG)
 	ZL_INT locIndex = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword;
 	for(;locIndex < run->vstack_list.count;locIndex++)
 	{
-		if(run->vstack_list.mem_array[locIndex].runType == ZL_R_RDT_MEM_BLOCK && 
-			run->vstack_list.mem_array[locIndex].val.memblock != ZL_NULL)
+		switch(run->vstack_list.mem_array[locIndex].runType)
 		{
-			run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
-				&run->vstack_list.mem_array[locIndex].memblk_Index);
-			run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_INT;
+		case ZL_R_RDT_MEM_BLOCK:
+			if(run->vstack_list.mem_array[locIndex].val.memblock != ZL_NULL)
+			{
+				run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
+					&run->vstack_list.mem_array[locIndex].memblk_Index);
+				run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
+				run->vstack_list.mem_array[locIndex].val.dword = 0;
+				run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;
+			}
+			break;
+		case ZL_R_RDT_ADDR: //将局部变量和参数里的引用也释放掉
+		case ZL_R_RDT_ADDR_LOC:
+		case ZL_R_RDT_ADDR_MEMBLK:
+			run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
 			run->vstack_list.mem_array[locIndex].val.dword = 0;
 			run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;
+			run->vstack_list.mem_array[locIndex].memblk_Index = 0;
+			break;
+		}
+	}
+}
+
+/*重利用虚拟机时，释放掉全局虚拟内存，栈内存等里面的内存块和引用*/
+ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT locIndex,globalIndex;
+	for(locIndex = 0;locIndex < run->vstack_list.count;locIndex++) //释放掉栈内存中的内存块和引用
+	{
+		switch(run->vstack_list.mem_array[locIndex].runType)
+		{
+		case ZL_R_RDT_MEM_BLOCK:
+			if(run->vstack_list.mem_array[locIndex].val.memblock != ZL_NULL)
+			{
+				run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
+					&run->vstack_list.mem_array[locIndex].memblk_Index);
+				run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
+				run->vstack_list.mem_array[locIndex].val.dword = 0;
+				run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;
+			}
+			break;
+		case ZL_R_RDT_ADDR: //将局部变量和参数里的引用也释放掉
+		case ZL_R_RDT_ADDR_LOC:
+		case ZL_R_RDT_ADDR_MEMBLK:
+			run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
+			run->vstack_list.mem_array[locIndex].val.dword = 0;
+			run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;
+			run->vstack_list.mem_array[locIndex].memblk_Index = 0;
+			break;
+		default:
+			run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
+			run->vstack_list.mem_array[locIndex].val.dword = 0;
+			break;
+		}
+	}
+	for(globalIndex = 0;globalIndex < run->vmem_list.count;globalIndex++) //释放掉全局虚拟内存中的内存块和引用
+	{
+		switch(run->vmem_list.mem_array[globalIndex].runType)
+		{
+		case ZL_R_RDT_MEM_BLOCK:
+			if(run->vmem_list.mem_array[globalIndex].val.memblock != ZL_NULL)
+			{
+				run->memblock_free(VM_ARG,run->vmem_list.mem_array[globalIndex].val.memblock,
+					&run->vmem_list.mem_array[globalIndex].memblk_Index);
+				run->vmem_list.mem_array[globalIndex].runType = ZL_R_RDT_NONE;
+				run->vmem_list.mem_array[globalIndex].val.dword = 0;
+				run->vmem_list.mem_array[globalIndex].val.memblock = ZL_NULL;
+			}
+			break;
+		case ZL_R_RDT_ADDR: //将局部变量和参数里的引用也释放掉
+		case ZL_R_RDT_ADDR_LOC:
+		case ZL_R_RDT_ADDR_MEMBLK:
+			run->vmem_list.mem_array[globalIndex].runType = ZL_R_RDT_NONE;
+			run->vmem_list.mem_array[globalIndex].val.dword = 0;
+			run->vmem_list.mem_array[globalIndex].val.memblock = ZL_NULL;
+			run->vmem_list.mem_array[globalIndex].memblk_Index = 0;
+			break;
+		default:
+			run->vmem_list.mem_array[globalIndex].runType = ZL_R_RDT_NONE;
+			run->vmem_list.mem_array[globalIndex].val.dword = 0;
+			break;
 		}
 	}
 }

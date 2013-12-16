@@ -1,137 +1,114 @@
-inc 'test2.zl';
-use sdl;
-def TEST_MACRO 'i am test macro';
-class clsTest
-	a;
-	b;
+use builtin;
+class RC4
+	state;
+	key;
+	keylen;
 	fun init(obj)
-		clsTest obj,obj2;
-		clsTestOther obj3;
-		c = 3;
-		d = 6;
-		obj2.b = 'welcome to zengl';
-		obj3.n = 'thank you!';
-		print obj2.b;
-		print obj3.n;
-		switch(c)
-		case 1:
-			print 'c is 1';
-			break;
-		case 3:
-			print 'c is 3';
-			break;
-		case 5:
-			print 'c is 5';
-			break;
-		default:
-			print 'init invalid c value!';
-			break;
-		endswitch
-		print 'c is ' + c = c > 3 ? d = 9 : d = 2;
-		print 'd is ' + d;
-		print 'c is ' + c;
-		while(obj.a > 4)
-			if(obj.a > 7)
-				obj.a--;
-				continue;
-			elif(obj.a <= 5)
-				break;
-			endif
-			print 'i am in clsTest.init while obj.a is ' + obj.a;
-			obj.a--;
-		endwhile
-		obj.a = 8;
-		do
-			if(obj.a > 7)
-				obj.a--;
-				continue;
-			elif(obj.a <= 5)
-				break;
-			endif
-			print 'i am in clsTest.init do while obj.a is ' + obj.a;
-			obj.a--;
-		dowhile(obj.a > 4)
-		print m = obj.a * obj.b / 2;
+		RC4 obj;
+		obj.key = array(97,98,99,100); //对应 a , b , c , d
+		obj.keylen = 4;
+		for(i=0;i<256;i++) //将盒子里的元素用0到255初始化
+			obj.state[i] = i;
+			/*if(i < 5)
+				print 'state_init['+i+']:' + obj.state[i];
+			endif*/
+		endfor
+		for(i=0,j = 0; i < 256; ++i) //将盒子里的元素顺序打乱
+			j = (j + obj.state[i] + obj.key[i % obj.keylen]) & 0xff; 
+			t = obj.state[i]; 
+			obj.state[i] = obj.state[j]; 
+			obj.state[j] = t; 
+			/*if(i < 5)
+				print 'state_initkey['+i+']:' + obj.state[i];
+			endif*/
+		endfor
 	endfun
 
-	fun OutIn(arg1,arg2)
-		print 'arg1 is ' + arg1;
-		print 'arg2 is ' + arg2;
-	endfun
-endcls
-
-fun init()
-	print 'global init';
-endfun
-
-clsTest.init();
-print bltGetExtraData('name');
-print bltGetExtraData('val');
-//print bltGetExtraData('val2');
-init();
-clsTest test;
-glmytest = 5;
-i = 4;
-floatnum = 3.677;
-test.a = 8;
-test.b = 10;
-print 'test a is '+ test.a + ' test.b is '+ test.b;
-clsTest.init(test);
-
-a = 678;
-c = array(11,22);
-test = array('hello world',3,11.45,c,"haha end");
-for(i=0;i<4;i++)
-	print test[i];
-endfor
-print test[3,1];
-bltPrintArray(test);
-bltTestAddr(&test[0],"test[0] is modify in bltTestAddr haha");
-bltPrintArray(&test);
-test2 = 'i am test2';
-print 'test2 is '+test2;
-bltTestAddr(&test2,"test2 is modify in bltTestAddr haha");
-print 'test2 is '+test2;
-bltSetArray(test,'hello Set Array',44);
-bltPrintArray(test);
-bltLoadScript('test3.zl');
-print TEST_MACRO;
-print TEST2_MACRO;
-print 'zengl version is v' + bltGetZLVersion();
-clsTestOther.testOther();
-sdlInit(xdf,'dfsf',123);
-
-class clsTestOther
-	m;
-	n;
-	fun testOther()
-		print 'i am in testOther';
-		print 'hello zengl';
+	fun encrypt(obj,str,str_len)
+		RC4 obj;
+		i = j = 0;
+		for(cur = 0;cur < str_len;cur++)
+			i = (i + 1) & 0xff;
+			j = (j + obj.state[i]) & 0xff;
+			t = obj.state[i];
+			obj.state[i] = obj.state[j]; 
+			obj.state[j] = t;
+			str[cur] = obj.state[(obj.state[i] + obj.state[j]) & 0xff] ^ str[cur];
+			if(cur < 5)
+				print 'encrypt['+cur+']:' + obj.state[(obj.state[i] + obj.state[j]) & 0xff];
+			endif
+		endfor
 	endfun
 endclass
 
+RC4 rc4;
+rc4 = array();
+RC4.init(rc4);
+RC4.encrypt(rc4,str = array(104,105,106,107,108),5); //对应 h , i , j , k , l
+bltPrintArray(str);
+RC4.init(rc4);
+RC4.encrypt(rc4,str ,5);
+bltPrintArray(str);
 
-def MTRUE -000114;
-def STR_TEST "23hello world";
+//test = array(0,1,0,1, 0,1,1,1, 0,0,0,0, 1,0,1,0, 0,1,0,0);
+test = array(0,1,0,1, 0,0,0,0, 0,1,1,0, 1,1,0,0, 1,0,0,1, 1,0,0,0, 1,1,0,0, 0,1,0,0, 1,0,0,0, 1,0,0,1, 1,0,1,0, 0,0,1,0, 0,0,1,0, 0,1);
+for(i=0,j=1;i<54;i++)
+	if(test[i] == 1)
+		total += 1/(j*=2.0);
+	elif(test[i]== 0)
+		j*=2.0;
+	endif
+endfor
+print total;
+printf ('test:');
+test = 0.31415705488473884333333322222;
+for(i=0;i<64;i++)
+	test *=2;
+	if(i%4 == 0)
+		printf(' ');
+	endif
+	if(test > 1)
+		printf('1');
+		test -=1;
+	elif(test == 1)
+		printf('1 ['+(i+1)+']');
+		break;
+	else
+		printf('0');
+	endif
+endfor
+printf('\n');
 
-r = 4 + MTRUE;
-if(r == -110)
-	print 'r is -110';
-else
-	print 'r not -110';
-endif
+a = 0x36 & 0x55;
+a &= 0x4;
+print 'a = 0x36 & 0x55 then a &= 0x4 now a is ' + a;
+e = &a;
+print 'e = &a so now e is address of a';
+print 'e |= 0x9 is ' + e|=0x9;
+print 'now e is ' + e + ' and a is ' + a + ' they are same';
+unset(&e);
+e = 10;
+print 'unset(&e) then e=10 now e is ' + e + ' a is ' + a + ' so e is not address of a use unset!';
+b = 0x36 | 0x55;
+print 'b is ' + b + ' b|0x8 is ' + b|=0x8;
+c = 0x36 ^ 0x55;
+print 'c is ' + c + ' c ^ 0x3 is ' + c ^=3.001;
+d = 1;
+print 'd is ' + d +'\nd << 2 is ' + (d << 2);
+print 'd <<= 3 is ' + d<<=3; 
+print 'now d is ' +d;
+d = 8;
+print 'next d is ' + d + '\nd >> 2 is ' + (d>> 2);
+print 'd >>= 2 is ' + d>>=2;
+print 'now d is ' + d;
+print 'next d init is ' + d=1;
+for(i=0;i<32;i++)
+	d <<= 1;
+	printf(d+' ');
+endfor
 
-print r - -10;
+print '\nnow d is ' + d;
 
-print 'STR_TEST is ' + STR_TEST;
-
-c = bltConvToInt('36') + 17;
-
-print '36 + 17 is ' + c;
-
-if(c == 53)
-	print 'i will Exit use bltExit function , bltRandom :' + bltRandom() + " bltRandom : " + bltRandom() +" bltIntToStr(315,0,'0'):"+ bltIntToStr(315,0,'0');
-	bltExit();
-endif
-
-print 'i can\'t go to here...';
+print 'f = ~0x1 & 0xf is ' + f = ~0x1&0xf;
+print 'f = !0x1 is ' + f = !0x1;
+print 'zengl version is v' + bltGetZLVersion();

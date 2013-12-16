@@ -119,6 +119,7 @@ typedef enum _ZENGL_API_STATES{
 	ZL_API_ST_NONE,
 	ZL_API_ST_OPEN,
 	ZL_API_ST_RESET,
+	ZL_API_ST_REUSE,
 	ZL_API_ST_RUN,
 	ZL_API_ST_AFTER_RUN,
 	ZL_API_ST_MODULES_INIT,
@@ -170,6 +171,17 @@ typedef enum _ZENGL_TOKENTYPE{
 	ZL_TK_COLON,			//冒号token
 	ZL_TK_QUESTION_MARK,	//问号token
 	ZL_TK_DOT,				//点运算符
+	ZL_TK_BIT_AND,			//"&"按位与双目运算符token
+	ZL_TK_BIT_AND_ASSIGN,	//&=运算符token
+	ZL_TK_BIT_OR,			//"|"按位或双目运算符token
+	ZL_TK_BIT_OR_ASSIGN,	//|=运算符token
+	ZL_TK_BIT_XOR,			//"^"按位异或运算符token
+	ZL_TK_BIT_XOR_ASSIGN,	//^=运算符token
+	ZL_TK_BIT_RIGHT,		//">>"右移运算符token
+	ZL_TK_BIT_RIGHT_ASSIGN,	//">>="右移赋值运算符token
+	ZL_TK_BIT_LEFT,			//"<<"左移运算符token
+	ZL_TK_BIT_LEFT_ASSIGN,	//"<<="左移赋值运算符token
+	ZL_TK_BIT_REVERSE,		//"~"按位取反运算符token
 	ZL_TK_FUNCALL,			//函数调用token 例如max(a,b); 表示max函数 
 	ZL_TK_ARRAY_ITEM,		//数组元素形式 例如test[2];表示test数组的第三个元素，从0开始
 	ZL_TK_CLASS_STATEMENT,	//类声明语句，例如 Poker x,y;其中Poker为某个类 x,y为该类声明的变量
@@ -203,6 +215,9 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_INCOMMENT,			//单行注释扫描状态
 	ZL_ST_INMULTI_COMMENT,		//多行注释扫描状态
 	ZL_ST_INENDMULTI_COMMENT,	//多行注释扫描结束状态
+	ZL_ST_INXOR,				//按位异或运算符的扫描状态
+	ZL_ST_INBIT_RIGHT,			//右移运算符的扫描状态
+	ZL_ST_INBIT_LEFT,			//左移运算符的扫描状态
 	ZL_ST_PARSER_INSEMI,		//在zengl_parser.c中添加的分号token状态
 	ZL_ST_PARSER_INEQUAL,		//在zengl_parser.c中添加的等于token状态
 	ZL_ST_PARSER_INGREAT_EQ,	//在zengl_parser.c中添加的大于等于token状态
@@ -225,6 +240,17 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_PARSER_INQUESTION_MARK,//在zengl_parser.c中添加的问号运算符token状态
 	ZL_ST_PARSER_INDOT,			//在zengl_parser.c中添加的点运算符token状态
 	ZL_ST_PARSER_INNEGATIVE,	//在zengl_parser.c中添加的负号单目运算符token状态
+	ZL_ST_PARSER_INBIT_AND,		//在zengl_parser.c中添加的按位与运算符token状态
+	ZL_ST_PARSER_INBIT_AND_ASSIGN,//在zengl_parser.c中添加的&=运算符token状态
+	ZL_ST_PARSER_INBIT_OR,		//在zengl_parser.c中添加的按位或运算符token状态
+	ZL_ST_PARSER_INBIT_OR_ASSIGN,//在zengl_parser.c中添加的|=运算符token状态
+	ZL_ST_PARSER_INBIT_XOR,		//在zengl_parser.c中添加的按位异或运算符token状态
+	ZL_ST_PARSER_INBIT_XOR_ASSIGN,//在zengl_parser.c中添加的^=运算符token状态
+	ZL_ST_PARSER_INBIT_RIGHT,	//在zengl_parser.c中添加的右移运算符token状态
+	ZL_ST_PARSER_INBIT_RIGHT_ASSIGN,//在zengl_parser.c中添加的>>=右移赋值运算符token状态
+	ZL_ST_PARSER_INBIT_LEFT,	//在zengl_parser.c中添加的左移运算符token状态
+	ZL_ST_PARSER_INBIT_LEFT_ASSIGN,//在zengl_parser.c中添加的<<=左移赋值运算符token状态
+	ZL_ST_PARSER_INBIT_REVERSE,	//在zengl_parser.c中添加的~按位取反运算符token状态
 	ZL_ST_PARSER_STMT_INIF,		//用于生成if关键字语句AST的状态机
 	ZL_ST_PARSER_STMT_INFOR,	//用于生成for关键字语句AST的状态机
 	ZL_ST_PARSER_STMT_INFUN,	//用于生成fun关键字语句AST的状态机
@@ -238,6 +264,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INRELATION,	//用于生成大于，小于，等于，不等于，大于等于，小于等于运算符的汇编指令
 	ZL_ST_ASM_CODE_INAND_OR,	//用于生成逻辑与，逻辑或运算符的汇编指令
 	ZL_ST_ASM_CODE_INREVERSE,	//用于生成逻辑非运算符的汇编指令
+	ZL_ST_ASM_CODE_INBIT_REVERSE,//用于生成按位取反运算符的汇编指令
 	ZL_ST_ASM_CODE_INIF,		//用于生成if语句的汇编指令
 	ZL_ST_ASM_CODE_IN_PP_MM,	//用于生成加加减减的汇编指令
 	ZL_ST_ASM_CODE_INFOR,		//用于生成for语句的汇编指令
@@ -260,6 +287,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INCOLON,		//用于生成冒号运算符的汇编指令
 	ZL_ST_ASM_CODE_INQUESTION,	//用于生成问号运算符的汇编指令
 	ZL_ST_ASM_CODE_INNEGATIVE,	//用于生成负号单目运算符的汇编指令
+	ZL_ST_ASM_CODE_INBITS,		//用于生成按位与，或，异或等双目位运算符的汇编指令
 }ZENGL_STATES;
 /*在switch case里要用到的各种状态的枚举定义结束*/
 
@@ -326,6 +354,8 @@ typedef struct _ZENGL_SOURCE_TYPE{
 	ZL_INT cur;
 	ZL_BOOL needread;
 	ZENGL_ENCRYPT encrypt; //加密运算结构体成员
+	ZL_UCHAR * run_str; //zenglApi_RunStr设置的字符串脚本
+	ZL_INT run_str_len; //字符串脚本的长度
 }ZENGL_SOURCE_TYPE;  //脚本源文件类型定义，里面包含要操作的脚本文件的文件指针，文件名等成员。
 
 typedef struct _ZENGL_MEM_POOL_POINT_TYPE{
@@ -626,7 +656,7 @@ typedef struct _ZENGL_LD_ADDRLIST_TYPE{
 #define ZENGL_AST_ISTOKCATEX(nodenum,tokname1) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
 							  (nodes[nodenum].tokcategory == tokname1))
 #define ZENGL_AST_ISTOK_VALIDX(nodenum) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE) //判断某节点是否有效
-#define ZENGL_AST_ISTOKCATEX9(nodenum,tokname1,tokname2,tokname3,tokname4,tokname5,tokname6,tokname7,tokname8,tokname9) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
+#define ZENGL_AST_ISTOKCATEX10(nodenum,tokname1,tokname2,tokname3,tokname4,tokname5,tokname6,tokname7,tokname8,tokname9,tokname10) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
 							  (nodes[nodenum].tokcategory == tokname1 || \
 							   nodes[nodenum].tokcategory == tokname2 || \
 							   nodes[nodenum].tokcategory == tokname3 || \
@@ -635,11 +665,13 @@ typedef struct _ZENGL_LD_ADDRLIST_TYPE{
 							   nodes[nodenum].tokcategory == tokname6 || \
 							   nodes[nodenum].tokcategory == tokname7 || \
 							   nodes[nodenum].tokcategory == tokname8 || \
-							   nodes[nodenum].tokcategory == tokname9))
-#define ZENGL_AST_ISTOKCATEXOP(nodenum) ZENGL_AST_ISTOKCATEX9(nodenum,ZL_TKCG_OP_COMMA, \
+							   nodes[nodenum].tokcategory == tokname9 || \
+							   nodes[nodenum].tokcategory == tokname10))
+#define ZENGL_AST_ISTOKCATEXOP(nodenum) ZENGL_AST_ISTOKCATEX10(nodenum,ZL_TKCG_OP_COMMA, \
 													ZL_TKCG_OP_ASSIGN,\
 													ZL_TKCG_OP_PLUS_MINIS,\
 													ZL_TKCG_OP_TIM_DIV,\
+													ZL_TKCG_OP_BITS, \
 													ZL_TKCG_OP_RELATION,\
 													ZL_TKCG_OP_LOGIC,\
 													ZL_TKCG_OP_PP_MM,\
@@ -652,6 +684,7 @@ typedef enum _ZENGL_TOKEN_CATEGORY{  //token分类的枚举值，如加减运算
 	ZL_TKCG_OP_PLUS_MINIS,	//加减运算操作类型
 	ZL_TKCG_OP_ASSIGN,		//赋值操作类型
 	ZL_TKCG_OP_TIM_DIV,		//乘除运算操作类型
+	ZL_TKCG_OP_BITS,		//按位与，或，异或之类的位运算符
 	ZL_TKCG_OP_RELATION,	//大于，等于之类的关系比较运算操作类型
 	ZL_TKCG_OP_LOGIC,		//逻辑或，逻辑且之类的逻辑运算操作类型
 	ZL_TKCG_OP_FACTOR,		//变量标识符，数字，字符串之类的操作因子类型
@@ -668,6 +701,7 @@ typedef enum _ZENGL_OP_LEVEL{  //操作运算符的优先级枚举值，如赋�
 	ZL_OP_LEVEL_QUESTION,	//问号优先级
 	ZL_OP_LEVEL_LOGIC,		//逻辑运算优先级
 	ZL_OP_LEVEL_RELATION,	//关系比较运算优先级
+	ZL_OP_LEVEL_BITS,		//按位双目运算符优先级
 	ZL_OP_LEVEL_PLUS_MINIS,	//加减运算优先级
 	ZL_OP_LEVEL_TIM_DIV,	//乘除运算优先级
 	ZL_OP_LEVEL_PP_MM,		//加加减减运算优先级
@@ -875,6 +909,12 @@ typedef enum _ZENGL_RUN_INST_TYPE{
 	ZL_R_IT_GET_ARRAY,		//GET_ARRAY指令
 	ZL_R_IT_SWITCH,			//SWITCH指令
 	ZL_R_IT_LONG,			//LONG指令
+	ZL_R_IT_BIT_AND,		//BIT_AND指令
+	ZL_R_IT_BIT_OR,			//BIT_OR指令
+	ZL_R_IT_BIT_XOR,		//BIT_XOR指令
+	ZL_R_IT_BIT_RIGHT,		//BIT_RIGHT指令
+	ZL_R_IT_BIT_LEFT,		//BIT_LEFT指令
+	ZL_R_IT_BIT_REVERSE,	//BIT_REVERSE指令
 	ZL_R_IT_END,			//END指令
 }ZENGL_RUN_INST_TYPE; //指令类型
 
@@ -1107,6 +1147,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_CLOCK_T start_time; //编译器开始执行时的时间，毫秒为单位
 	ZL_CLOCK_T end_time; //编译器结束时的时间，毫秒为单位
 	ZL_CLOCK_T total_time; //执行结束时的总时间，毫秒为单位
+	ZL_CLOCK_T total_print_time; //编译器打印调试信息所消耗的时间，毫秒为单位
 	ZENGL_INFO_STRING_TYPE infoFullString; //里面存放了完整的经过解析后的普通打印信息字符串
 	ZENGL_INFO_STRING_TYPE errorFullString; //里面存放了完整的经过解析后的错误信息的字符串
 	ZL_CONST ZL_CHAR ** reserveString; //各种关键字定义
@@ -1116,6 +1157,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZENGL_DEF_TABLE def_table; //宏定义动态数组。
 	ZL_BOOL isinCompiling; //判断编译器是否正在编译
 	ZL_BOOL isDestroyed; //判断编译器的内存池等资源是否被释放了
+	ZL_BOOL isReUse;	//用户是否需要重利用虚拟机之前已经编译好的资源，如果需要则不执行具体的编译操作，可以直接执行之前编译好的指令代码
 	/*和zengl_symbol.c符号表相关的成员*/
 	ZL_INT HashTable[ZL_SYM_HASH_TOTAL_SIZE]; //hash表中存放了各种动态数组元素的索引值。
 	ZENGL_LINECOL_TABLE LineCols; //行列号表的动态数组。
@@ -1287,6 +1329,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* CheckQstColonValid)(ZL_VOID * VM_ARG); //检测问号冒号是否一一匹配 对应 zengl_CheckQstColonValid
 	ZL_VOID (* ASTAddNodeChild)(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //将child对应的节点加入到parent节点的子节点中 对应 zengl_ASTAddNodeChild
 	ZL_BOOL (* CheckIsNegative)(ZL_VOID * VM_ARG); //初步判断当前的减号是否是负号 对应 zengl_CheckIsNegative
+	ZL_BOOL (* CheckIsBitAnd)(ZL_VOID * VM_ARG); //初步判断当前的"&"符号是否是按位与运算符 对应 zengl_CheckIsBitAnd
 
 	/*下面是用户自定义的函数*/
 	ZL_INT (* userdef_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
@@ -1324,6 +1367,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZENGL_RUN_MODULE_TABLE moduleTable; //模块动态数组，里面存放了各种脚本模块的初始化函数等信息
 	ZENGL_RUN_MOD_FUN_TABLE ModFunTable; //模块函数动态数组，里面存放了各种脚本模块函数的处理句柄等信息
 	ZENGL_RUN_EXTRA_DATA_TABLE ExtraDataTable; //用户给解释器提供的额外数据构成的动态数组
+	ZL_INT CurRunModFunIndex; //当前正在运行的模块函数在模块函数动态数组中的索引值，通过该索引值，API接口就可以获取该模块函数的相关信息，如用户自定义的模块函数名等
 
 	/*定义在zenglrun_func.c中的相关函数*/
 	ZL_VOID (* init)(ZL_VOID * VM_ARG); //解释器初始化 对应 zenglrun_init
@@ -1373,6 +1417,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZENGL_RUN_RUNTIME_OP_DATA_TYPE (* op_minis)(ZL_VOID * VM_ARG); //MINIS减法指令的相关处理程式。op是operate操作的缩写 对应 zenglrun_op_minis
 	ZL_VOID (* op_je)(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JE指令执行的操作，AX寄存器里存放着之前表达式的结果，当AX为0或空时，将修改PC寄存器的值，使脚本发生跳转 对应 zenglrun_op_je
 	ZL_VOID (* op_jne)(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JNE指令，和JE指令刚好相反。AX寄存器里存放着之前表达式的结果，当AX不为0，即为TRUE时，将修改PC寄存器的值，使脚本发生跳转 对应 zenglrun_op_jne
+	ZL_VOID (* op_bits)(ZL_VOID * VM_ARG); //按位与，或，异或等位运算指令的处理程式 对应 zenglrun_op_bits
 	ZL_VOID (* op_relation)(ZL_VOID * VM_ARG); //大于小于等于之类的比较运算符指令的处理程式。对应 zenglrun_op_relation
 	ZL_VOID (* op_logic)(ZL_VOID * VM_ARG); //AND(且)，OR（或），REVERSE（取反）逻辑运算符的处理程式。对应 zenglrun_op_logic
 	ZL_VOID (* op_addminisget)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE type,ZENGL_RUN_INST_OP_DATA_TYPE memtype); //当加加或减减运算符在变量标示符的前面时，先将变量值加一或减一，再返回结果 对应 zenglrun_op_addminisget
@@ -1392,6 +1437,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* op_get_array_addr)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //获取内存块元素的引用，如test = &testarray[0];的语句 对应 zenglrun_op_get_array_addr
 	ZL_VOID (* op_addminis_one_array)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE op); //对数组元素进行加加，减减运算 对应 zenglrun_op_addminis_one_array
 	ZL_VOID (* memblock_freeall_local)(ZL_VOID * VM_ARG); //释放栈中参数部分和局部变量部分的所有内存块 对应 zenglrun_memblock_freeall_local
+	ZL_VOID (* FreeAllForReUse)(ZL_VOID * VM_ARG); //重利用虚拟机时，释放掉全局虚拟内存，栈内存等里面的内存块和引用 对应 zenglrun_FreeAllForReUse
 	ZL_VOID (* op_switch)(ZL_VOID * VM_ARG); //SWITCH指令的处理 对应 zenglrun_op_switch
 	ZL_INT (* getRegInt)(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式 对应 zenglrun_getRegInt
 	ZL_INT (* main)(ZL_VOID * VM_ARG);	//解释器的入口函数 对应 zenglrun_main
@@ -1591,6 +1637,7 @@ ZL_VOID zengl_OpLevelForColon(ZL_VOID * VM_ARG); //使用优先级堆栈处理�
 ZL_VOID zengl_CheckQstColonValid(ZL_VOID * VM_ARG); //检测问号冒号是否一一匹配
 ZL_VOID zengl_ASTAddNodeChild(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //将child对应的节点加入到parent节点的子节点中。
 ZL_BOOL zengl_CheckIsNegative(ZL_VOID * VM_ARG); //初步判断当前的减号是否是负号
+ZL_BOOL zengl_CheckIsBitAnd(ZL_VOID * VM_ARG); //初步判断当前的"&"符号是否是按位与运算符
 
 //下面是定义在zenglrun_func.c中的函数
 ZL_VOID zenglrun_init(ZL_VOID * VM_ARG); //解释器初始化
@@ -1641,6 +1688,7 @@ ZL_VOID zenglrun_RegAssignStr(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg,ZL_VOID * 
 ZENGL_RUN_RUNTIME_OP_DATA_TYPE zenglrun_op_minis(ZL_VOID * VM_ARG); //MINIS减法指令的相关处理程式。op是operate操作的缩写
 ZL_VOID zenglrun_op_je(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JE指令执行的操作，AX寄存器里存放着之前表达式的结果，当AX为0或空时，将修改PC寄存器的值，使脚本发生跳转
 ZL_VOID zenglrun_op_jne(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JNE指令，和JE指令刚好相反。AX寄存器里存放着之前表达式的结果，当AX不为0，即为TRUE时，将修改PC寄存器的值，使脚本发生跳转
+ZL_VOID zenglrun_op_bits(ZL_VOID * VM_ARG); //按位与，或，异或等位运算指令的处理程式
 ZL_VOID zenglrun_op_relation(ZL_VOID * VM_ARG); //大于小于等于之类的比较运算符指令的处理程式。
 ZL_VOID zenglrun_op_logic(ZL_VOID * VM_ARG); //AND(且)，OR（或），REVERSE（取反）逻辑运算符的处理程式。
 ZL_VOID zenglrun_op_addminisget(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE type,ZENGL_RUN_INST_OP_DATA_TYPE memtype); //当加加或减减运算符在变量标示符的前面时，先将变量值加一或减一，再返回结果
@@ -1660,6 +1708,7 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //获取内存块元素的引用，如test = &testarray[0];的语句
 ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE op); //对数组元素进行加加，减减运算
 ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG); //释放栈中参数部分和局部变量部分的所有内存块
+ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG); //重利用虚拟机时，释放掉全局虚拟内存，栈内存等里面的内存块和引用
 ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG); //SWITCH指令的处理
 ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式
 ZL_INT zenglrun_main(ZL_VOID * VM_ARG);	//解释器的入口函数

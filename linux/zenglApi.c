@@ -42,6 +42,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			0, //start_time
 			0, //end_time
 			0, //total_time
+			0, //total_print_time
 			{0}, //infoFullString
 			{0}, //errorFullString
 			ZL_Reserves_String, //reserveString
@@ -51,6 +52,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			{0}, //def_table
 			ZL_FALSE, //isinCompiling
 			ZL_FALSE, //isDestroyed
+			ZL_FALSE, //isReUse
 			/*zengl_symbol.c符号表相关的成员*/
 			{0}, //HashTable
 			{0}, //LineCols
@@ -218,6 +220,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_CheckQstColonValid,
 			zengl_ASTAddNodeChild,
 			zengl_CheckIsNegative,
+			zengl_CheckIsBitAnd,
 			/*下面是用户自定义的函数*/
 			ZL_NULL,
 			ZL_NULL 
@@ -250,6 +253,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			{0}, //moduleTable
 			{0}, //ModFunTable
 			{0}, //ExtraDataTable
+			0,	 //CurRunModFunIndex
 			/*定义在zenglrun_func.c中的相关函数*/
 			zenglrun_init,
 			zenglrun_memAlloc,
@@ -294,6 +298,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zenglrun_op_minis,
 			zenglrun_op_je,
 			zenglrun_op_jne,
+			zenglrun_op_bits,
 			zenglrun_op_relation,
 			zenglrun_op_logic,
 			zenglrun_op_addminisget,
@@ -312,6 +317,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zenglrun_op_get_array_addr,
 			zenglrun_op_addminis_one_array,
 			zenglrun_memblock_freeall_local,
+			zenglrun_FreeAllForReUse,
 			zenglrun_op_switch,
 			zenglrun_getRegInt,
 			zenglrun_main,
@@ -403,13 +409,14 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Run(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file
 	{
 	case ZL_API_ST_OPEN:
 	case ZL_API_ST_RESET:
+	case ZL_API_ST_REUSE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
 		return -1;
 		break;
 	}
-	if(VM->isinApiRun == ZL_TRUE)
+	if(VM->isinApiRun == ZL_TRUE && VM->compile.isReUse == ZL_FALSE)
 	{
 		VM->run.SetApiError(VM_ARG,ZL_ERR_VM_API_VM_MUST_RESET,arg);
 		return -1;
@@ -431,6 +438,61 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Run(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file
 	VM->end_time = ZENGL_SYS_TIME_CLOCK();
 	VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
 	VM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
+	if(VM->compile.isReUse == ZL_TRUE)
+		VM->compile.isReUse = ZL_FALSE;
+	return retcode;
+}
+
+/*
+使用zenglApi_Open打开的虚拟机来运行script_str指向的字符串脚本，len为字符串脚本的有效长度，script_name为该字符串脚本的自定义名字，
+script_name可以用于调试信息输出，同时还可以给script_name设置一个路径前缀，例如"script/runstr"，这样字符串脚本内部inc加载其他脚本时就会按照"script/"路径来加载
+*/
+ZL_EXPORT ZL_EXP_INT zenglApi_RunStr(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_str,ZL_EXP_INT len,ZL_EXP_CHAR * script_name)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_SYS_ARG_LIST arg;
+	ZL_INT retcode;
+	ZL_CHAR * ApiName = "zenglApi_RunStr";
+	ZENGL_SYS_ARG_END(arg); //由va_end来将arg设为0，避免64位gcc下报错
+	if(VM->signer != ZL_VM_SIGNER)
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+	case ZL_API_ST_REUSE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	if(VM->isinApiRun == ZL_TRUE && VM->compile.isReUse == ZL_FALSE)
+	{
+		VM->run.SetApiError(VM_ARG,ZL_ERR_VM_API_VM_MUST_RESET,arg);
+		return -1;
+	}
+	VM->isinApiRun = ZL_TRUE;
+	VM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
+	if(VM->run.mempool.isInit == ZL_FALSE)
+		VM->run.init(VM_ARG); //编译器中需要对解释器输出汇编指令，所以在此初始化解释器
+	if(script_str == ZL_NULL)
+	{
+		VM->run.SetApiError(VM_ARG,ZL_ERR_VM_API_INVALID_SCRIPT_STR_WHEN_RUNSTR,arg);
+		return -1;
+	}
+	VM->compile.source.run_str = script_str;
+	VM->compile.source.run_str_len = len;
+	retcode = VM->compile.main(VM_ARG,script_name,VM->vm_main_args);
+	if(retcode == 0) //如果编译成功，则进入解释器
+	{
+		retcode = VM->run.main(VM_ARG);
+	}
+	VM->end_time = ZENGL_SYS_TIME_CLOCK();
+	VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
+	VM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
+	if(VM->compile.isReUse == ZL_TRUE)
+		VM->compile.isReUse = ZL_FALSE;
 	return retcode;
 }
 
@@ -446,6 +508,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Close(ZL_EXP_VOID * VM_ARG)
 	case ZL_API_ST_OPEN:
 	case ZL_API_ST_RESET:
 	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -474,6 +537,7 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_Reset(ZL_EXP_VOID * VM_ARG)
 	{
 	case ZL_API_ST_OPEN:
 	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -489,6 +553,33 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_Reset(ZL_EXP_VOID * VM_ARG)
 	VM->vm_main_args = vm_main_args;
 	VM->ApiState = ZL_API_ST_RESET;
 	return (ZL_EXP_VOID *)VM;
+}
+
+/*API接口，重利用虚拟机之前的编译资源，这样就可以直接执行之前已经编译好的指令代码
+ 参数isClear不为0则执行虚拟内存的清理工作，返回-1表示出错，返回0表示什么都没做，返回1表示正常执行*/
+ZL_EXPORT ZL_EXP_INT zenglApi_ReUse(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT isClear)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	if(VM->signer != ZL_VM_SIGNER)
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_AFTER_RUN:
+		break;
+	default: //其他API状态下直接返回
+		return 0;
+		break;
+	}
+	VM->compile.isReUse = ZL_TRUE;
+	if(isClear != 0) //isClear不为0则执行虚拟内存的清理工作
+	{
+		VM->run.FreeAllForReUse(VM_ARG);
+	}
+	VM->run.reg_list[ZL_R_RT_PC].val.dword = 0; //将PC寄存器重置为0
+	VM->run.isUserWantStop = ZL_FALSE; //将解释器的停止标志重置为 ZL_FALSE
+	VM->isUseApiSetErrThenStop = ZL_FALSE; //重置API中设置的错误停止标志
+	VM->ApiState = ZL_API_ST_REUSE;
+	return 1;
 }
 
 /*API接口，返回编译运行时的出错信息*/
@@ -564,6 +655,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG
 	{
 	case ZL_API_ST_OPEN:
 	case ZL_API_ST_RESET:
+	case ZL_API_ST_REUSE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -575,7 +667,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG
 	{
 		run->init(VM_ARG);
 	}
-	if(run->vstack_list.count == 0)
+	if(run->vstack_list.count == 0) //需要模拟构造一个脚本函数调用时的栈环境，这样call调用完脚本函数后，RET指令返回时才不会发生栈的反向溢出
 	{
 		tmpmem.val.dword = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_INT,-1,tmpmem,ZL_TRUE);
@@ -623,6 +715,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 	{
 	case ZL_API_ST_OPEN:
 	case ZL_API_ST_RESET:
+	case ZL_API_ST_REUSE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -630,7 +723,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 		break;
 	}
 	run = &VM->run;
-	if(VM->isinApiRun == ZL_TRUE)
+	if(VM->isinApiRun == ZL_TRUE && VM->compile.isReUse == ZL_FALSE)
 	{
 		VM->run.SetApiError(VM_ARG,ZL_ERR_VM_API_VM_MUST_RESET,arg);
 		return -1;
@@ -639,6 +732,16 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 	VM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
 	if(run->mempool.isInit == ZL_FALSE)
 		VM->run.init(VM_ARG); //编译器中需要对解释器输出汇编指令，所以在此初始化解释器
+	if(run->vstack_list.count == 0) //需要模拟构造一个脚本函数调用时的栈环境，这样call调用完脚本函数后，RET指令返回时才不会发生栈的反向溢出
+	{
+		tmpmem.val.dword = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_INT,-1,tmpmem,ZL_TRUE);
+		tmpmem.val.dword = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_INT,-1,tmpmem,ZL_TRUE);
+		tmpmem.val.dword = ZENGL_RUN_REGVAL(ZL_R_RT_ARGTMP).dword;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_INT,-1,tmpmem,ZL_TRUE);
+		ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword = run->vstack_list.count;
+	}
 	if(script_file == ZL_NULL)
 	{
 		VM->run.SetApiError(VM_ARG,ZL_ERR_VM_API_INVALID_SCRIPT_NAME,arg);
@@ -695,6 +798,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 	VM->end_time = ZENGL_SYS_TIME_CLOCK();
 	VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
 	VM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
+	if(VM->compile.isReUse == ZL_TRUE)
+		VM->compile.isReUse = ZL_FALSE;
 	return retcode;
 }
 
@@ -715,6 +820,7 @@ ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetValueAsString(ZL_EXP_VOID * VM_ARG,ZL_EXP_CH
 	switch(VM->ApiState)
 	{
 	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
 	case ZL_API_ST_MOD_FUN_HANDLE:
 		break;
 	default:
@@ -780,6 +886,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * v
 	switch(VM->ApiState)
 	{
 	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
 	case ZL_API_ST_MOD_FUN_HANDLE:
 		break;
 	default:
@@ -840,6 +947,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 	switch(VM->ApiState)
 	{
 	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
 	case ZL_API_ST_MOD_FUN_HANDLE:
 		break;
 	default:
@@ -941,7 +1049,12 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 	else if(run->moduleTable.modules[tmpindex].isvalid == ZL_FALSE)
 		run->exit(VM_ARG,ZL_ERR_RUN_MODULE_TABLE_FIND_INVALID_INDEX);
 	else
-		run->exit(VM_ARG,ZL_ERR_RUN_MODULE_HAS_BEEN_SET_HANDLE_BEFORE,moduleName,moduleName);
+	{
+		if(VM->compile.isReUse == ZL_TRUE) //重利用情况下，直接返回以前插入过的索引值
+			return tmpindex;
+		else
+			run->exit(VM_ARG,ZL_ERR_RUN_MODULE_HAS_BEEN_SET_HANDLE_BEFORE,moduleName,moduleName);
+	}
 	return -1;
 }
 
@@ -1002,8 +1115,14 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT mo
 		run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_TABLE_FIND_INVALID_INDEX);
 	else
 	{
-		ZL_CHAR * moduleName = run->InstDataStringPoolGetPtr(VM_ARG,run->moduleTable.modules[run->ModFunTable.mod_funs[tmpindex].moduleID].strIndex);
-		run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_HAS_BEEN_SET_HANDLE_IN_OTHER_MOD_BEFORE,functionName,moduleName,functionName,moduleName);
+		ZL_CHAR * moduleName;
+		if(VM->compile.isReUse == ZL_TRUE) //重利用情况下，直接返回
+			return 0;
+		else
+		{
+			moduleName = run->InstDataStringPoolGetPtr(VM_ARG,run->moduleTable.modules[run->ModFunTable.mod_funs[tmpindex].moduleID].strIndex);
+			run->exit(VM_ARG,ZL_ERR_RUN_MOD_FUN_HAS_BEEN_SET_HANDLE_IN_OTHER_MOD_BEFORE,functionName,moduleName,functionName,moduleName);
+		}
 	}
 	return -1;
 }
@@ -1503,7 +1622,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argn
 		retval->val.memblock.ptr = tmpmem.val.memblock;
 		retval->val.memblock.index = tmpmem.memblk_Index;
 		break;
-	case ZL_R_RDT_ADDR: //全局变量引用，该函数理论上应该获取不到引用类型，只有下面的GetFunArgInfo才能获取到引用类型，因为run->VStackListOps函数会自动递归查找引用对应的变量的值，不过还是先把代码放在这里
+	case ZL_R_RDT_ADDR:
 		retval->type = ZL_EXP_FAT_ADDR;
 		retval->val.addr.index = tmpmem.val.dword;
 		break;
@@ -1522,7 +1641,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argn
 }
 
 /*设置脚本模块函数中第argnum个参数的值，argnum从1开始表示第一个参数*/
-ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval)
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * setval)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
@@ -1546,49 +1665,173 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,Z
 	if(argnum < 1 || argnum > argcount)
 		run->exit(VM_ARG,ZL_ERR_VM_API_INVALID_ARGNUM_ARG_IN_SET_FUN_ARG);
 	index = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword + argnum - 1;
-	switch(retval->type)
+	switch(setval->type)
 	{
 	case ZL_EXP_FAT_NONE:
 		tmpmem.runType = ZL_R_RDT_NONE;
-		tmpmem.val.dword = retval->val.integer;
+		tmpmem.val.dword = setval->val.integer;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_NONE,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_INT:
 		tmpmem.runType = ZL_R_RDT_INT;
-		tmpmem.val.dword = retval->val.integer;
+		tmpmem.val.dword = setval->val.integer;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_INT,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_FLOAT:
 		tmpmem.runType = ZL_R_RDT_FLOAT;
-		tmpmem.val.qword = retval->val.floatnum;
+		tmpmem.val.qword = setval->val.floatnum;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_DOUBLE,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_STR:
 		tmpmem.runType = ZL_R_RDT_STR;
-		tmpmem.val.str = (ZL_VOID *)retval->val.str;
+		tmpmem.val.str = (ZL_VOID *)setval->val.str;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_STR,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_MEMBLOCK:
 		tmpmem.runType = ZL_R_RDT_MEM_BLOCK;
-		tmpmem.val.memblock = retval->val.memblock.ptr;
-		tmpmem.memblk_Index = retval->val.memblock.index;
+		tmpmem.val.memblock = setval->val.memblock.ptr;
+		tmpmem.memblk_Index = setval->val.memblock.index;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_MEMBLOCK,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_ADDR:
 		tmpmem.runType = ZL_R_RDT_ADDR;
-		tmpmem.val.dword = retval->val.addr.index;
+		tmpmem.val.dword = setval->val.addr.index;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_ADDR_LOC:
 		tmpmem.runType = ZL_R_RDT_ADDR_LOC;
-		tmpmem.val.dword = retval->val.addr.index;
+		tmpmem.val.dword = setval->val.addr.index;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
 		break;
 	case ZL_EXP_FAT_ADDR_MEMBLK:
 		tmpmem.runType = ZL_R_RDT_ADDR_MEMBLK;
-		tmpmem.val.dword = retval->val.addr.index;
-		tmpmem.val.memblock = retval->val.addr.memblock.ptr;
-		tmpmem.memblk_Index = retval->val.addr.memblock.index;
+		tmpmem.val.dword = setval->val.addr.index;
+		tmpmem.val.memblock = setval->val.addr.memblock.ptr;
+		tmpmem.memblk_Index = setval->val.addr.memblock.index;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
+		break;
+	}
+	return 0;
+}
+
+/*该接口为zenglApi_SetFunArg的扩展函数，当参数addr_level小于0时，zenglApi_SetFunArgEx等价于zenglApi_SetFunArg，
+  当addr_level大于等于0时，就可以对不同级别的引用本身进行设置操作*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArgEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * setval,ZL_EXP_INT addr_level)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_RUN_VIRTUAL_MEM_STRUCT tmpmem = {0};  //临时的虚拟内存变量。
+	ZENGL_RUN_VIRTUAL_MEM_LIST * tmp_mblk, * tmp_mblk_new; //临时的内存块指针
+	ZL_INT argcount;
+	ZL_INT index,tmpindex,tmpindex_new;
+	ZL_CHAR * ApiName = "zenglApi_SetFunArgEx";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	run = &VM->run;
+	argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
+	if(argnum < 1 || argnum > argcount)
+		run->exit(VM_ARG,ZL_ERR_VM_API_INVALID_ARGNUM_ARG_IN_SET_FUN_ARG);
+	tmpindex = index = ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword + argnum - 1;
+	tmp_mblk = &run->vstack_list;
+	/*
+	下面的for循环，根据引用级别addr_level将需要操作的引用设为ZL_R_RDT_NONE未初始化状态，
+	这样后面的VStackListOps之类的函数在递归引用时就可以对特定级别的引用进行设置操作。
+	例如 a=&b; c=&a; 将c作为参数通过模块函数传递给zenglApi_SetFunArgEx接口，
+	那么当addr_level为0时就会将c本身重置为未初始化状态，addr_level为1时就将c引用的a重置为未初始化状态，
+	addr_level为2时就如果a引用的b是引用的话则重置，如果b是非引用类型就无需进行重置操作
+	*/
+	for(;addr_level >= 0;addr_level--)
+	{
+		if(addr_level == 0)
+		{
+			switch(tmp_mblk->mem_array[tmpindex].runType)
+			{
+			case ZL_R_RDT_ADDR:
+			case ZL_R_RDT_ADDR_LOC:
+			case ZL_R_RDT_ADDR_MEMBLK:
+				tmp_mblk->mem_array[tmpindex].runType = ZL_R_RDT_NONE;
+				tmp_mblk->mem_array[tmpindex].val.dword = 0;
+				tmp_mblk->mem_array[tmpindex].val.memblock = ZL_NULL;
+				tmp_mblk->mem_array[tmpindex].memblk_Index = 0;
+				break;
+			}
+		}
+		else //addr_level大于0时，查找下一级的引用信息
+		{
+			switch(tmp_mblk->mem_array[tmpindex].runType)
+			{
+			case ZL_R_RDT_ADDR:
+				tmpindex = tmp_mblk->mem_array[tmpindex].val.dword;
+				tmp_mblk = &run->vmem_list;
+				break;
+			case ZL_R_RDT_ADDR_LOC:
+				tmpindex = tmp_mblk->mem_array[tmpindex].val.dword;
+				tmp_mblk = &run->vstack_list;
+				break;
+			case ZL_R_RDT_ADDR_MEMBLK:
+				tmpindex_new = tmp_mblk->mem_array[tmpindex].val.dword;
+				tmp_mblk_new = (ZENGL_RUN_VIRTUAL_MEM_LIST *)(tmp_mblk->mem_array[tmpindex].val.memblock);
+				tmpindex = tmpindex_new;
+				tmp_mblk = tmp_mblk_new;
+				break;
+			default:
+				addr_level = 0;
+				break;
+			}
+		}
+	}
+	switch(setval->type)
+	{
+	case ZL_EXP_FAT_NONE:
+		tmpmem.runType = ZL_R_RDT_NONE;
+		tmpmem.val.dword = setval->val.integer;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_NONE,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_INT:
+		tmpmem.runType = ZL_R_RDT_INT;
+		tmpmem.val.dword = setval->val.integer;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_INT,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_FLOAT:
+		tmpmem.runType = ZL_R_RDT_FLOAT;
+		tmpmem.val.qword = setval->val.floatnum;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_DOUBLE,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_STR:
+		tmpmem.runType = ZL_R_RDT_STR;
+		tmpmem.val.str = (ZL_VOID *)setval->val.str;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_STR,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_MEMBLOCK:
+		tmpmem.runType = ZL_R_RDT_MEM_BLOCK;
+		tmpmem.val.memblock = setval->val.memblock.ptr;
+		tmpmem.memblk_Index = setval->val.memblock.index;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_MEMBLOCK,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_ADDR:
+		tmpmem.runType = ZL_R_RDT_ADDR;
+		tmpmem.val.dword = setval->val.addr.index;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_ADDR_LOC:
+		tmpmem.runType = ZL_R_RDT_ADDR_LOC;
+		tmpmem.val.dword = setval->val.addr.index;
+		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
+		break;
+	case ZL_EXP_FAT_ADDR_MEMBLK:
+		tmpmem.runType = ZL_R_RDT_ADDR_MEMBLK;
+		tmpmem.val.dword = setval->val.addr.index;
+		tmpmem.val.memblock = setval->val.addr.memblock.ptr;
+		tmpmem.memblk_Index = setval->val.addr.memblock.index;
 		run->VStackListOps(VM_ARG,ZL_R_VMOPT_SETMEM_ADDR,index,tmpmem,ZL_TRUE);
 		break;
 	}
@@ -1704,7 +1947,10 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetExtraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * ex
 		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_TABLE_INVALID_INDEX);
 	else
 	{
-		run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_NAME_EXIST,extraDataName,extraDataName);
+		if(VM->compile.isReUse == ZL_TRUE) //重利用情况下，直接返回
+			return 0;
+		else
+			run->exit(VM_ARG,ZL_ERR_VM_API_EXTRA_DATA_NAME_EXIST,extraDataName,extraDataName);
 	}
 	return 0;
 }
@@ -1891,5 +2137,27 @@ ZL_EXPORT ZL_EXP_INT zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr)
 		return -1;
 	}
 	run->memFreeOnce(VM_ARG,ptr);
+	return 0;
+}
+
+/*API接口，获取当前运行模块函数的用户自定义名称*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetModFunName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR ** modfun_name)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZL_CHAR * ApiName = "zenglApi_GetModFunName";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	run = &VM->run;
+	(*modfun_name) = run->InstDataStringPoolGetPtr(VM_ARG,run->ModFunTable.mod_funs[run->CurRunModFunIndex].strIndex);
 	return 0;
 }

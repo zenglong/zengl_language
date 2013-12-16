@@ -1,3 +1,13 @@
 use builtin;
 printf('i am in test2.zl,haha \n');
 def TEST2_MACRO 'test2 macro';
+
+test2 = 0;
+class clsTest
+	fun test(a,b)
+		global test2;
+		print 'at first test2 is ' + test2;
+		test2 = a + b;
+		print 'after test2 = a + b then test2 is ' + test2;
+	endfun
+endclass

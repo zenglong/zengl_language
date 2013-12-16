@@ -46,7 +46,9 @@ ZL_VOID zengl_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 		VM->isCompileError = ZL_TRUE;
 	if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //如果在调试模式下且需要输出调试信息，则打印信息，且不释放资源，以供解释器用
 	{
-		compile->info(VM_ARG,"\n compile time:%.16g s totalsize: %.16g Kbyte\n",(ZL_DOUBLE)compile->total_time / CLOCKS_PER_SEC,
+		compile->info(VM_ARG,"\n compile time:%.16g s (real compile time: %.16g s , debug print time: %.16g s) totalsize: %.16g Kbyte\n",(ZL_DOUBLE)compile->total_time / CLOCKS_PER_SEC,
+			(ZL_DOUBLE)(compile->total_time - compile->total_print_time) / CLOCKS_PER_SEC,
+			(ZL_DOUBLE)compile->total_print_time / CLOCKS_PER_SEC,
 			(ZL_FLOAT)compile->totalsize / 1024); //for debug
 	}
 
@@ -77,7 +79,7 @@ ZL_VOID zengl_freeall(ZL_VOID * VM_ARG)
 }
 
 /*
-从文件中获取下一个字符
+从文件或字符串脚本中获取下一个字符
 */
 ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 {
@@ -88,28 +90,38 @@ ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_SOURCE_TYPE * source = &(compile->source);
 
-	if(source->file == ZL_NULL)
+	if(source->run_str == ZL_NULL) //如果不是字符串脚本，则就是普通的文件脚本
 	{
-		source->file = ZENGL_SYS_FILE_OPEN(source->filename,"rb"); //一定要是rb否则二进制加密脚本解析会出错
 		if(source->file == ZL_NULL)
-			compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_OPEN ,source->filename);
-	}
-	if(source->needread || source->cur >= source->buf_read_len)
-	{
-		if((source->buf_read_len = ZENGL_SYS_FILE_READ(source->buf,sizeof(ZL_UCHAR),ZL_FILE_BUF_SIZE,source->file)) == 0)
 		{
-			if(ZENGL_SYS_FILE_EOF(source->file))
-				return ZL_FILE_EOF;
-			else
-				compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_GETS ,source->filename);
+			source->file = ZENGL_SYS_FILE_OPEN(source->filename,"rb"); //一定要是rb否则二进制加密脚本解析会出错
+			if(source->file == ZL_NULL)
+				compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_OPEN ,source->filename);
 		}
-		source->needread = ZL_FALSE;
-		source->cur = 0;
+		if(source->needread || source->cur >= source->buf_read_len)
+		{
+			if((source->buf_read_len = ZENGL_SYS_FILE_READ(source->buf,sizeof(ZL_UCHAR),ZL_FILE_BUF_SIZE,source->file)) == 0)
+			{
+				if(ZENGL_SYS_FILE_EOF(source->file))
+					return ZL_FILE_EOF;
+				else
+					compile->exit(VM_ARG, ZL_ERR_FILE_CAN_NOT_GETS ,source->filename);
+			}
+			source->needread = ZL_FALSE;
+			source->cur = 0;
+		}
+		tmpch = source->buf[source->cur++];
+	}
+	else //字符串脚本
+	{
+		if(source->cur >= source->run_str_len)
+			return ZL_FILE_EOF;
+		else
+			tmpch = source->run_str[source->cur++];
 	}
 	switch(source->encrypt.type)
 	{
 	case ZL_ENC_TYPE_XOR: //XOR普通异或加密方式
-		tmpch = source->buf[source->cur++];
 		ch = (ZL_CHAR)(tmpch ^ (ZL_UCHAR)source->encrypt.xor.xor_key_str[source->encrypt.xor.xor_key_cur]);
 		if((++source->encrypt.xor.xor_key_cur) >= source->encrypt.xor.xor_key_len)
 			source->encrypt.xor.xor_key_cur = 0;
@@ -123,11 +135,11 @@ ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 		t = state[i];
 		state[i] = state[j]; 
 		state[j] = t;
-		ch = state[(state[i] + state[j]) & 0xFF] ^ source->buf[source->cur++];
+		ch = state[(state[i] + state[j]) & 0xFF] ^ tmpch;
 		break;
 	case ZL_ENC_TYPE_NONE: //没有加密的情况下直接返回字符
 	default:
-		ch = (ZL_CHAR)source->buf[source->cur++];
+		ch = (ZL_CHAR)tmpch;
 		break;
 	}
 	compile->col_no++;
@@ -158,7 +170,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				}
 				continue;
 			}
-			else if(ZENGL_SYS_CTYPE_IS_ALPHA(ch)) //判断读取的字符是否是英文字母。
+			else if(ch >= 0 && ZENGL_SYS_CTYPE_IS_ALPHA(ch)) //判断读取的字符是否是英文字母。
 			{
 				state = ZL_ST_INID; //如果是字母，我们就将state状态机设置为ZL_ST_INID 。
 				compile->makeTokenStr(VM_ARG,ch); //然后将读取出来的ch字符通过函数makeTokenStr加入到tokenInfo的动态字符串里
@@ -168,7 +180,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				state = ZL_ST_INEIGHT_HEX;
 				compile->makeTokenStr(VM_ARG,ch);
 			}
-			else if(ZENGL_SYS_CTYPE_IS_DIGIT(ch)) //判断读取的字符是否是数字
+			else if(ch >= 0 && ZENGL_SYS_CTYPE_IS_DIGIT(ch)) //判断读取的字符是否是数字
 			{
 				state = ZL_ST_INNUM; //如果是数字，我们就将state状态机设置为ZL_ST_INNUM 。
 				compile->makeTokenStr(VM_ARG,ch); //然后将读取出来的ch字符通过函数makeTokenStr加入到tokenInfo的动态字符串里
@@ -256,6 +268,13 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 					state = ZL_ST_DOWN;
 					token = ZL_TK_DOT;
 					break;
+				case '^':	//按位异或运算符
+					state = ZL_ST_INXOR;
+					break;
+				case '~':	//按位取反运算符
+					state = ZL_ST_DOWN;
+					token = ZL_TK_BIT_REVERSE;
+					break;
 				default:
 					state = ZL_ST_DOWN; //其他情况下表示读取到了未定义的token，那么就返回ZL_TK_ERROR。
 					token = ZL_TK_ERROR;
@@ -265,7 +284,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 			}
 			break;
 		case ZL_ST_INID:
-			if(ZENGL_SYS_CTYPE_IS_ALNUM(ch) || ch == '_') //在ZL_ST_INID状态下，一直读取字符，直到该字符不是字母为止，并将读取的字母通过makeTokenStr构成完整的标示符。标示符还可以包含下划线和数字，但必须是以字母开头！
+			if(ch >= 0 && (ZENGL_SYS_CTYPE_IS_ALNUM(ch) || ch == '_')) //在ZL_ST_INID状态下，一直读取字符，直到该字符不是字母为止，并将读取的字母通过makeTokenStr构成完整的标示符。标示符还可以包含下划线和数字，但必须是以字母开头！
 				compile->makeTokenStr(VM_ARG,ch);
 			else
 			{
@@ -288,7 +307,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				break;
 			}	//如果既不是0e，也不是0x开头，如0123，则自动进入下面的ZL_ST_INNUM状态
 		case ZL_ST_INNUM: //在ZL_ST_INNUM状态下，一直读取字符，直到该字符不是数字为止，并将读取的单个数字通过makeTokenStr构成完整的数值。
-			if(ZENGL_SYS_CTYPE_IS_DIGIT(ch))
+			if(ch >= 0 && ZENGL_SYS_CTYPE_IS_DIGIT(ch))
 				compile->makeTokenStr(VM_ARG,ch);
 			else if(ch == '.')  //如果是小数点，就说明是浮点数，进入ZL_ST_INFLOAT状态
 			{
@@ -318,7 +337,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 			}
 			break;
 		case ZL_ST_INHEX:
-			if(ZENGL_SYS_CTYPE_IS_HEXDIGIT(ch))	//判断是否是十六进制数。
+			if(ch >= 0 && ZENGL_SYS_CTYPE_IS_HEXDIGIT(ch))	//判断是否是十六进制数。
 				compile->makeTokenStr(VM_ARG,ch);
 			else
 			{
@@ -329,7 +348,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 			}
 			break;
 		case ZL_ST_INFLOAT:  //在ZL_ST_INFLOAT状态下，一直读取字符，直到该字符不是数字为止，这样就可以得到一个浮点数。
-			if(ZENGL_SYS_CTYPE_IS_DIGIT(ch))
+			if(ch >= 0 && ZENGL_SYS_CTYPE_IS_DIGIT(ch))
 				compile->makeTokenStr(VM_ARG,ch);
 			else
 			{
@@ -368,12 +387,17 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				compile->ungetchar(VM_ARG);
 			}
 			break;
-		case ZL_ST_INGREAT:  //如果是'>='，token就是ZL_TK_GREAT_EQ大于等于运算符，否则就是ZL_TK_GREAT大于运算符
+		case ZL_ST_INGREAT:  //如果是'>='，token就是ZL_TK_GREAT_EQ大于等于运算符，如果是'>>'则是右移或右移赋值运算符，否则就是ZL_TK_GREAT大于运算符
 			state = ZL_ST_DOWN;
 			if(ch == '=')
 			{
 				compile->makeTokenStr(VM_ARG,ch);
 				token = ZL_TK_GREAT_EQ;
+			}
+			else if(ch == '>')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				state = ZL_ST_INBIT_RIGHT;
 			}
 			else
 			{
@@ -381,12 +405,17 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				compile->ungetchar(VM_ARG);
 			}
 			break;
-		case ZL_ST_INLESS:  //如果后面还接了等号即'<='，那么token就是ZL_TK_LESS_EQ小于等于运算符，否则就是ZL_TK_LESS小于运算符
+		case ZL_ST_INLESS:  //如果后面还接了等号即'<='，那么token就是ZL_TK_LESS_EQ小于等于运算符，如果是"<<"则是左移或左移赋值运算符，否则就是ZL_TK_LESS小于运算符
 			state = ZL_ST_DOWN;
 			if(ch == '=')
 			{
 				compile->makeTokenStr(VM_ARG,ch);
 				token = ZL_TK_LESS_EQ;
+			}
+			else if(ch == '<')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				state = ZL_ST_INBIT_LEFT;
 			}
 			else
 			{
@@ -414,22 +443,34 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				compile->makeTokenStr(VM_ARG,ch);
 				token = ZL_TK_AND;
 			}
-			else  //只有一个&表示token是变量引用符。
+			else if(ch == '=')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				token = ZL_TK_BIT_AND_ASSIGN; //&=运算符
+			}
+			else  //只有一个&表示token是变量引用符，也有可能是按位与，放在zengl_parser.c中再进行判断
 			{
 				token = ZL_TK_ADDRESS; //ZL_TK_ADDRESS是变量引用的token的枚举值。 
 				compile->ungetchar(VM_ARG);
 			}
 			break;
-		case ZL_ST_INOR:  //两个|在一起即'||'表示token是逻辑或运算符
-			if(ch == '|')
+		case ZL_ST_INOR:
+			state = ZL_ST_DOWN;
+			if(ch == '|') //两个|在一起即'||'表示token是逻辑或运算符
 			{
 				compile->makeTokenStr(VM_ARG,ch);
-				state = ZL_ST_DOWN;
 				token = ZL_TK_OR;
 			}
-			else
-				compile->exit(VM_ARG, ZL_ERR_CP_GT_INVALID_OR,
-				compile->tokenInfo.start_line, compile->tokenInfo.start_col, compile->tokenInfo.filename);
+			else if(ch == '=')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				token = ZL_TK_BIT_OR_ASSIGN; //|=运算符
+			}
+			else //只有一个"|"则表示按位或运算符
+			{
+				token = ZL_TK_BIT_OR;
+				compile->ungetchar(VM_ARG);
+			}
 			break;
 		case ZL_ST_INPLUS:
 			state = ZL_ST_DOWN;
@@ -566,6 +607,45 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 			else
 			{
 				token = ZL_TK_MOD; //取余运算符。
+				compile->ungetchar(VM_ARG);
+			}
+			break;
+		case ZL_ST_INXOR:
+			state = ZL_ST_DOWN;
+			if(ch == '=')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				token = ZL_TK_BIT_XOR_ASSIGN; //^=运算符
+			}
+			else
+			{
+				token = ZL_TK_BIT_XOR; //"^"按位异或运算符
+				compile->ungetchar(VM_ARG);
+			}
+			break;
+		case ZL_ST_INBIT_RIGHT:
+			state = ZL_ST_DOWN;
+			if(ch == '=')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				token = ZL_TK_BIT_RIGHT_ASSIGN; //">>="右移赋值运算符token
+			}
+			else
+			{
+				token = ZL_TK_BIT_RIGHT; //">>"右移运算符token
+				compile->ungetchar(VM_ARG);
+			}
+			break;
+		case ZL_ST_INBIT_LEFT:
+			state = ZL_ST_DOWN;
+			if(ch == '=')
+			{
+				compile->makeTokenStr(VM_ARG,ch);
+				token = ZL_TK_BIT_LEFT_ASSIGN; //"<<="左移赋值运算符token
+			}
+			else
+			{
+				token = ZL_TK_BIT_LEFT; //"<<"左移运算符token
 				compile->ungetchar(VM_ARG);
 			}
 			break;
@@ -1238,6 +1318,8 @@ ZL_VOID zengl_include_file(ZL_VOID * VM_ARG)
 		compile->source.cur = 0;
 		compile->source.encrypt = VM->initEncrypt;
 		compile->source.filename = newfilename; //设置新的扫描文件。
+		compile->source.run_str = ZL_NULL; //将字符串脚本设置为NULL，这样就不会影响到要加载的脚本文件的解析
+		compile->source.run_str_len = 0;   //重置字符串脚本长度。
 		compile->line_no = 1;  //重置扫描的行列号为第1行第0列。
 		compile->col_no = 0;
 	}
@@ -1486,6 +1568,8 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 	ZL_INT i;
 	compile->isinCompiling = ZL_TRUE;
 	compile->start_time = ZENGL_SYS_TIME_CLOCK();
+	if(compile->isReUse == ZL_TRUE)
+		return;
 	compile->source.filename = script_file;
 	compile->userdef_info = vm_main_args->userdef_info;
 	compile->userdef_compile_error = vm_main_args->userdef_compile_error;
@@ -1505,10 +1589,18 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 	ZENGL_TOKENTYPE token;
 	ZL_INT retcode;
 	ZL_INT isNeedDebugInfo = ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO;
+	
+	if(compile->isReUse == ZL_TRUE && run->inst_list.count > 0) //如果用户设置了重利用，且run解释器中存有已经编译好的指令，则跳过一些主要的编译过程
+		compile->isReUse = ZL_TRUE;
+	else
+		compile->isReUse = ZL_FALSE;
 
 	compile->init(VM_ARG,script_file,vm_main_args);
 	if((retcode = ZENGL_SYS_JMP_SETJMP(compile->jumpBuffer))==0)
 	{
+		if(compile->isReUse == ZL_TRUE)
+			goto end;
+
 		while(ZL_TRUE)
 		{
 			token = compile->getToken(VM_ARG);
@@ -1554,21 +1646,20 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 			}
 		}
 		compile->KeywordCompleteDetect(VM_ARG);
-		compile->buildAST(VM_ARG);
-		//compile->end_time = ZENGL_SYS_TIME_CLOCK();
-		//compile->total_time = compile->end_time - compile->start_time; //得到总的编译时间
-		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
-			compile->printASTnodes(VM_ARG); //打印AST抽象语法树的节点信息
+		compile->buildAST(VM_ARG);		//组建AST抽象语法树
 		compile->buildSymTable(VM_ARG); //组建符号表
-		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo)
+		compile->buildAsmCode(VM_ARG);	//组建汇编代码
+		compile->LDAddrListReplaceAll(VM_ARG); //将所有的伪地址替换为真实的汇编代码位置，从而完成链接工作	
+
+end:
+
+		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
 		{
+			compile->printASTnodes(VM_ARG); //打印AST抽象语法树的节点信息
 			compile->info(VM_ARG,"\n\n the symbol table:\n");
 			compile->SymPrintTables(VM_ARG); //打印符号表
-		}
-		compile->buildAsmCode(VM_ARG);	//组建汇编代码
-		compile->LDAddrListReplaceAll(VM_ARG); //将所有的伪地址替换为真实的汇编代码位置，从而完成链接工作
-		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo)
 			run->printInstList(VM_ARG,"\n[zenglrun assemble code]:\n"); //调用解释器的函数来输出显示指令集，用于分析调试
+		}
 		compile->exit(VM_ARG,ZL_NO_ERR_SUCCESS);
 	}
 	if(retcode == 1)

@@ -84,10 +84,27 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 				break;
 			}
 			compile->AST_nodes.nodes[compile->AST_nodes.count].toktype = ZL_TK_NEGATIVE; //将减号转为负号单目运算符，并使用和下面的REVERSE一样的优先级
+		case ZL_TK_BIT_REVERSE:
 		case ZL_TK_REVERSE:
 		case ZL_TK_ADDRESS:
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_LOGIC;
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_REVERSE;
+			if(compile->AST_nodes.nodes[compile->AST_nodes.count].toktype == ZL_TK_ADDRESS)
+			{
+				if(compile->CheckIsBitAnd(VM_ARG) == ZL_TRUE) //如果"&"是按位与运算符，则修改为ZL_TK_BIT_AND的token
+				{
+					compile->AST_nodes.nodes[compile->AST_nodes.count].toktype = ZL_TK_BIT_AND;
+					compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_BITS;
+					compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_BITS;
+				}
+			}
+			break;
+		case ZL_TK_BIT_LEFT:
+		case ZL_TK_BIT_RIGHT:
+		case ZL_TK_BIT_XOR:
+		case ZL_TK_BIT_OR:
+			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_BITS;
+			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_BITS;
 			break;
 		case ZL_TK_PLUS_PLUS:
 		case ZL_TK_MINIS_MINIS:
@@ -100,6 +117,11 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tokcategory = ZL_TKCG_OP_TIM_DIV;
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_TIM_DIV;
 			break;
+		case ZL_TK_BIT_LEFT_ASSIGN:
+		case ZL_TK_BIT_RIGHT_ASSIGN:
+		case ZL_TK_BIT_XOR_ASSIGN:
+		case ZL_TK_BIT_OR_ASSIGN:
+		case ZL_TK_BIT_AND_ASSIGN:
 		case ZL_TK_PLUS_ASSIGN:
 		case ZL_TK_MINIS_ASSIGN:
 		case ZL_TK_MOD_ASSIGN:
@@ -400,6 +422,9 @@ ZL_VOID zengl_printNode(ZL_VOID * VM_ARG , ZL_INT nodenum)
 		case ZL_TK_RESERVE:
 			compile->info(VM_ARG,"reserve token: %s ", compile->getTokenStr(VM_ARG,nodes,nodenum));
 			break;
+		case ZL_TK_BIT_REVERSE:
+			compile->info(VM_ARG,"bit reserve token: %s ", compile->getTokenStr(VM_ARG,nodes,nodenum));
+			break;
 		case ZL_TK_NUM:
 			compile->info(VM_ARG,"number token: %s ",compile->getTokenStr(VM_ARG,nodes,nodenum));
 			break;
@@ -414,6 +439,7 @@ ZL_VOID zengl_printNode(ZL_VOID * VM_ARG , ZL_INT nodenum)
 			break;
 		case ZL_TK_PLUS:
 		case ZL_TK_MINIS:
+		case ZL_TK_NEGATIVE:
 		case ZL_TK_MOD:
 		case ZL_TK_TIMES:
 		case ZL_TK_DIVIDE:
@@ -438,6 +464,16 @@ ZL_VOID zengl_printNode(ZL_VOID * VM_ARG , ZL_INT nodenum)
 		case ZL_TK_PLUS_PLUS:
 		case ZL_TK_MINIS_MINIS:
 		case ZL_TK_DOT:
+		case ZL_TK_BIT_AND:
+		case ZL_TK_BIT_AND_ASSIGN:
+		case ZL_TK_BIT_OR:
+		case ZL_TK_BIT_OR_ASSIGN:
+		case ZL_TK_BIT_XOR:
+		case ZL_TK_BIT_XOR_ASSIGN:
+		case ZL_TK_BIT_RIGHT:
+		case ZL_TK_BIT_RIGHT_ASSIGN:
+		case ZL_TK_BIT_LEFT:
+		case ZL_TK_BIT_LEFT_ASSIGN:
 			compile->info(VM_ARG,"ops token: %s ",compile->getTokenStr(VM_ARG,nodes,nodenum));
 			break;
 		case ZL_TK_LBRACKET:
@@ -504,6 +540,9 @@ ZL_VOID zengl_printASTnodes(ZL_VOID * VM_ARG)
 	ZENGL_AST_SCAN_STACK_TYPE tmpstack;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
 	ZL_INT nodenum;
+	ZL_CLOCK_T start_time = ZENGL_SYS_TIME_CLOCK();
+	ZL_CLOCK_T end_time;
+
 	compile->push_AST_TreeScanStack(VM_ARG,compile->AST_nodes.rootnode); //将AST根节点压入栈，表示从根节点开始，将AST里的所有节点信息全部遍历打印输出。
 	do{
 		tmpstack = compile->pop_AST_TreeScanStack(VM_ARG,ZL_FALSE); //返回前面压入栈的节点信息。参数ZL_FALSE表示只返回信息，暂不将节点从堆栈中删除。
@@ -542,6 +581,8 @@ ZL_VOID zengl_printASTnodes(ZL_VOID * VM_ARG)
 		else
 			compile->pop_AST_TreeScanStack(VM_ARG,ZL_TRUE); //当子节点和next节点信息都打印完了，就将节点从堆栈中弹出。
 	}while(compile->AST_TreeScanStackList.count > 0); //如果堆栈中还有元素，说明还有节点信息没打印完，只有当堆栈里的元素个数为0时则表示所有AST里的节点信息都打印完了，就可以跳出循环返回了。
+	end_time = ZENGL_SYS_TIME_CLOCK();
+	compile->total_print_time += end_time - start_time;
 }
 
 /*
@@ -1795,6 +1836,39 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			case ZL_TK_DOT:
 				compile->exp_struct.state = ZL_ST_PARSER_INDOT;
 				break;
+			case ZL_TK_BIT_AND:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_AND;
+				break;
+			case ZL_TK_BIT_AND_ASSIGN:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_AND_ASSIGN;
+				break;
+			case ZL_TK_BIT_OR:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_OR;
+				break;
+			case ZL_TK_BIT_OR_ASSIGN:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_OR_ASSIGN;
+				break;
+			case ZL_TK_BIT_XOR:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_XOR;
+				break;
+			case ZL_TK_BIT_XOR_ASSIGN:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_XOR_ASSIGN;
+				break;
+			case ZL_TK_BIT_RIGHT:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_RIGHT;
+				break;
+			case ZL_TK_BIT_RIGHT_ASSIGN:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_RIGHT_ASSIGN;
+				break;
+			case ZL_TK_BIT_LEFT:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_LEFT;
+				break;
+			case ZL_TK_BIT_LEFT_ASSIGN:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_LEFT_ASSIGN;
+				break;
+			case ZL_TK_BIT_REVERSE:
+				compile->exp_struct.state = ZL_ST_PARSER_INBIT_REVERSE;
+				break;
 			}
 			break;
 		case ZL_ST_INNUM:
@@ -1805,6 +1879,11 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			compile->opLevel_push_stack(VM_ARG,compile->parser_curnode);
 			compile->exp_struct.state = ZL_ST_START;
 			break;
+		case ZL_ST_PARSER_INBIT_LEFT_ASSIGN:
+		case ZL_ST_PARSER_INBIT_RIGHT_ASSIGN:
+		case ZL_ST_PARSER_INBIT_XOR_ASSIGN:
+		case ZL_ST_PARSER_INBIT_OR_ASSIGN:
+		case ZL_ST_PARSER_INBIT_AND_ASSIGN:
 		case ZL_ST_PARSER_INPLUS_ASSIGN:
 		case ZL_ST_PARSER_INMINIS_ASSIGN:
 		case ZL_ST_PARSER_INTIMES_ASSIGN:
@@ -1814,6 +1893,11 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			compile->detectCurnodeSyntax(VM_ARG);
 			compile->OpLevelForAssign(VM_ARG);
 			break;
+		case ZL_ST_PARSER_INBIT_LEFT:
+		case ZL_ST_PARSER_INBIT_RIGHT:
+		case ZL_ST_PARSER_INBIT_XOR:
+		case ZL_ST_PARSER_INBIT_OR:
+		case ZL_ST_PARSER_INBIT_AND:
 		case ZL_ST_PARSER_INEQUAL:
 		case ZL_ST_PARSER_INGREAT_EQ:
 		case ZL_ST_INGREAT:
@@ -1832,6 +1916,7 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			compile->detectCurnodeSyntax(VM_ARG);
 			compile->OpLevelForTwo(VM_ARG);
 			break;
+		case ZL_ST_PARSER_INBIT_REVERSE:
 		case ZL_ST_PARSER_INNEGATIVE:
 		case ZL_ST_PARSER_INADDRESS:
 		case ZL_ST_PARSER_INREVERSE:
@@ -2000,12 +2085,14 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 	case ZL_ST_INFLOAT:
 	case ZL_ST_INSTR:
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
+			nextNodeTkType != ZL_TK_BIT_REVERSE &&
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
 			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
+			 nextNodeTKCG == ZL_TKCG_OP_BITS ||
 			 nextNodeTKCG == ZL_TKCG_OP_RELATION ||
 			 nextNodeTKCG == ZL_TKCG_OP_LOGIC ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
@@ -2020,7 +2107,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_NEXT_NODE);
 		break;
 	case ZL_ST_INID:
-		if((ZENGL_AST_ISTOKCATEXOP(nextNodeNum) && nextNodeTkType != ZL_TK_REVERSE && nextNodeTkType != ZL_TK_ADDRESS && nextNodeTkType != ZL_TK_NEGATIVE) || 
+		if((ZENGL_AST_ISTOKCATEXOP(nextNodeNum) && nextNodeTkType != ZL_TK_BIT_REVERSE && nextNodeTkType != ZL_TK_REVERSE && nextNodeTkType != ZL_TK_ADDRESS && nextNodeTkType != ZL_TK_NEGATIVE) || 
 			(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTkType == ZL_TK_LBRACKET ||
 			 nextNodeTkType == ZL_TK_LMBRACKET ||
@@ -2033,6 +2120,12 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		else
 			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_NEXT_NODE);
 		break;
+	case ZL_ST_PARSER_INBIT_REVERSE:
+	case ZL_ST_PARSER_INBIT_LEFT:
+	case ZL_ST_PARSER_INBIT_RIGHT:
+	case ZL_ST_PARSER_INBIT_XOR:
+	case ZL_ST_PARSER_INBIT_OR:
+	case ZL_ST_PARSER_INBIT_AND:
 	case ZL_ST_PARSER_INEQUAL:
 	case ZL_ST_PARSER_INGREAT_EQ:
 	case ZL_ST_INGREAT:
@@ -2042,6 +2135,11 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 	case ZL_ST_PARSER_INREVERSE:
 	case ZL_ST_INAND:
 	case ZL_ST_INOR:
+	case ZL_ST_PARSER_INBIT_LEFT_ASSIGN:
+	case ZL_ST_PARSER_INBIT_RIGHT_ASSIGN:
+	case ZL_ST_PARSER_INBIT_XOR_ASSIGN:
+	case ZL_ST_PARSER_INBIT_OR_ASSIGN:
+	case ZL_ST_PARSER_INBIT_AND_ASSIGN:
 	case ZL_ST_PARSER_INPLUS_ASSIGN:
 	case ZL_ST_PARSER_INMINIS_ASSIGN:
 	case ZL_ST_PARSER_INTIMES_ASSIGN:
@@ -2053,9 +2151,11 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 	case ZL_ST_INTIMES:
 	case ZL_ST_INDIVIDE:
 	case ZL_ST_INMOD:
+	case ZL_ST_PARSER_INNEGATIVE:
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
+			 nextNodeTkType == ZL_TK_BIT_REVERSE ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
 			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET)) //表达式操作运算符后面必须是变量，数字，字符串等操作因子或者加加减减或者取反运算符或负号或左括号
@@ -2084,18 +2184,21 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 			nodes[compile->parser_curnode].leftOrRight == ZL_OP_POS_IN_LEFT && 
 			(nextNodeTKCG == ZL_TKCG_OP_PP_MM || 
 			 nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
+			 nextNodeTkType == ZL_TK_BIT_REVERSE ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
 			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET)) //当加加减减在左侧时，后面只能是加加减减，操作因子，取反，负号或左括号
 			 return;
 		else if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 				nodes[compile->parser_curnode].leftOrRight == ZL_OP_POS_IN_RIGHT && 
+				nextNodeTkType != ZL_TK_BIT_REVERSE &&
 				nextNodeTkType != ZL_TK_REVERSE && 
 				nextNodeTkType != ZL_TK_ADDRESS && 
 				nextNodeTkType != ZL_TK_NEGATIVE && 
 				(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 				 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 				 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
+				 nextNodeTKCG == ZL_TKCG_OP_BITS ||
 				 nextNodeTKCG == ZL_TKCG_OP_RELATION ||
 				 nextNodeTKCG == ZL_TKCG_OP_LOGIC ||
 				 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
@@ -2113,6 +2216,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
+			 nextNodeTkType == ZL_TK_BIT_REVERSE ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
 			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
@@ -2134,6 +2238,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		else if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
+			 nextNodeTkType == ZL_TK_BIT_REVERSE ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
 			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
@@ -2146,12 +2251,14 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		break;
 	case ZL_ST_PARSER_INRBRACKET:
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
+			nextNodeTkType != ZL_TK_BIT_REVERSE &&
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
 			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
+			 nextNodeTKCG == ZL_TKCG_OP_BITS ||
 			 nextNodeTKCG == ZL_TKCG_OP_RELATION ||
 			 nextNodeTKCG == ZL_TKCG_OP_LOGIC ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
@@ -2167,12 +2274,14 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		break;
 	case ZL_ST_PARSER_INRMBRACKET:
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
+			nextNodeTkType != ZL_TK_BIT_REVERSE && 
 			nextNodeTkType != ZL_TK_REVERSE && 
 			nextNodeTkType != ZL_TK_ADDRESS && 
 			nextNodeTkType != ZL_TK_NEGATIVE &&
 			(nextNodeTKCG == ZL_TKCG_OP_COMMA ||
 			 nextNodeTKCG == ZL_TKCG_OP_PLUS_MINIS ||
 			 nextNodeTKCG == ZL_TKCG_OP_TIM_DIV ||
+			 nextNodeTKCG == ZL_TKCG_OP_BITS ||
 			 nextNodeTKCG == ZL_TKCG_OP_RELATION ||
 			 nextNodeTKCG == ZL_TKCG_OP_LOGIC ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
@@ -2194,6 +2303,7 @@ ZL_VOID zengl_detectCurnodeSyntax(ZL_VOID * VM_ARG)
 		if(ZENGL_AST_ISTOK_VALIDX(nextNodeNum) && 
 			(nextNodeTKCG == ZL_TKCG_OP_FACTOR ||
 			 nextNodeTKCG == ZL_TKCG_OP_PP_MM ||
+			 nextNodeTkType == ZL_TK_BIT_REVERSE ||
 			 nextNodeTkType == ZL_TK_REVERSE ||
 			 nextNodeTkType == ZL_TK_NEGATIVE ||
 			 nextNodeTkType == ZL_TK_LBRACKET ||
@@ -2783,6 +2893,35 @@ ZL_BOOL zengl_CheckIsNegative(ZL_VOID * VM_ARG)
 		case ZL_TKCG_OP_COMMA:
 		case ZL_TKCG_OP_QUESTION:
 		case ZL_TKCG_OP_PP_MM:
+			return ZL_TRUE;
+			break;
+		}
+		break;
+	}
+	return ZL_FALSE;
+}
+
+/*初步判断当前的"&"符号是否是按位与运算符*/
+ZL_BOOL zengl_CheckIsBitAnd(ZL_VOID * VM_ARG)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	if(nodes[compile->AST_nodes.count].toktype != ZL_TK_ADDRESS)
+		return ZL_FALSE;
+	else if(compile->AST_nodes.count == 0)
+		return ZL_FALSE;
+	switch(nodes[compile->AST_nodes.count - 1].toktype)
+	{
+	case ZL_TK_RBRACKET:
+	case ZL_TK_RMBRACKET:
+	case ZL_TK_PLUS_PLUS:
+	case ZL_TK_MINIS_MINIS:
+		return ZL_TRUE;
+		break;
+	default:
+		switch(nodes[compile->AST_nodes.count - 1].tokcategory)
+		{
+		case ZL_TKCG_OP_FACTOR:
 			return ZL_TRUE;
 			break;
 		}

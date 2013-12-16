@@ -96,6 +96,8 @@ ZL_VOID zengl_buildSymTable(ZL_VOID * VM_ARG)
 	ZL_INT i = 0;
 
 	compile->AST_TreeScanStackList.count = 0;
+	if(compile->AST_nodes.isInit == ZL_FALSE || compile->AST_nodes.count <= 0) //如果语法树没初始化或为空，则表示里面没有任何token (可能是一个空的字符串脚本或空的脚本文件) 则什么都不做，直接返回
+		return;
 	while(tmpNodeNum !=0 || count == 0)
 	{
 		switch(nodes[tmpNodeNum].reserve)
@@ -1213,9 +1215,12 @@ ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 	ZENGL_AST_SCAN_STACK_TYPE tmpstack;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
 	ZL_INT classid = 0;
+	ZL_INT start_scan_num = 0;
 	ZL_BOOL initScan = ZL_TRUE;
-	if(compile->AST_TreeScanStackList.count != 0)
-		compile->exit(VM_ARG,ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_NOT_EMPTY);
+	if(compile->AST_TreeScanStackList.count < 0)
+		compile->exit(VM_ARG,ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_INVALID_COUNT);
+	else
+		start_scan_num = compile->AST_TreeScanStackList.count; //像obj.key[i % obj.keylen]这样的表达式，当扫描obj.key数组元素时，会递归进去扫描obj.keylen，所以AST_TreeScanStackList.count不一定为0，可以大于0
 	if(nodenum == -1)
 	{
 		return;
@@ -1327,7 +1332,7 @@ ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 		}
 		else
 			compile->pop_AST_TreeScanStack(VM_ARG,ZL_TRUE); //如果没有子节点或者子节点也已扫描完，则弹出当前节点。
-	}while(compile->AST_TreeScanStackList.count > 0); //如果堆栈中还有元素，说明还有节点没处理完，只有当堆栈里的元素个数为0时则表示所有AST里的节点都处理完了，就可以跳出循环返回了
+	}while(compile->AST_TreeScanStackList.count > start_scan_num); //如果堆栈中还有元素，说明还有节点没处理完，只有当堆栈里的元素个数为start_scan_num时则表示所有当前AST里的节点都处理完了，就可以跳出循环返回了
 }
 
 /*
@@ -1560,6 +1565,8 @@ ZL_VOID zengl_SymPrintTables(ZL_VOID * VM_ARG)
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZL_INT i;
 	ZL_INT linecol;
+	ZL_CLOCK_T start_time = ZENGL_SYS_TIME_CLOCK();
+	ZL_CLOCK_T end_time;
 
 	for(i=1;i<compile->SymGlobalTable.count;i++)
 	{
@@ -1641,4 +1648,6 @@ ZL_VOID zengl_SymPrintTables(ZL_VOID * VM_ARG)
 			compile->info(VM_ARG,"\n");
 		}
 	}
+	end_time = ZENGL_SYS_TIME_CLOCK();
+	compile->total_print_time += end_time - start_time;
 }

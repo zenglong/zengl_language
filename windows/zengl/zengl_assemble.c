@@ -37,11 +37,14 @@ ZL_VOID zengl_buildAsmCode(ZL_VOID * VM_ARG)
 	ZL_INT tmpNodeNum = compile->AST_nodes.rootnode;
 	ZL_INT count = 0;
 	compile->gencode_struct.pc = 0;
-	while(tmpNodeNum !=0 || count == 0)
+	if(!(compile->AST_nodes.isInit == ZL_FALSE || compile->AST_nodes.count <= 0)) //如果语法树没初始化或为空，则表示里面没有任何token (可能是一个空的字符串脚本或空的脚本文件) 则只输出END指令
 	{
-		compile->AsmGenCodes(VM_ARG,tmpNodeNum);
-		tmpNodeNum = nodes[tmpNodeNum].nextnode;
-		count++;
+		while(tmpNodeNum !=0 || count == 0)
+		{
+			compile->AsmGenCodes(VM_ARG,tmpNodeNum);
+			tmpNodeNum = nodes[tmpNodeNum].nextnode;
+			count++;
+		}
 	}
 	run->AddInst(VM_ARG,compile->gencode_struct.pc++,compile->AST_nodes.count - 1,
 				ZL_R_IT_END,ZL_R_DT_NONE,0,
@@ -106,6 +109,9 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 			case ZL_TK_NEGATIVE: //负号单目运算符
 				state = ZL_ST_ASM_CODE_INNEGATIVE;
 				break;
+			case ZL_TK_BIT_REVERSE: //按位取反运算符
+				state = ZL_ST_ASM_CODE_INBIT_REVERSE;
+				break;
 			case ZL_TK_REVERSE: //取反运算符
 				state = ZL_ST_ASM_CODE_INREVERSE;
 				break;
@@ -129,6 +135,18 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 				break;
 			case ZL_TK_QUESTION_MARK: //判断是否是... ? ... : ... 结构中的问号
 				state = ZL_ST_ASM_CODE_INQUESTION;
+				break;
+			case ZL_TK_BIT_AND: //按位与，或，异或，&= 等双目位运算符
+			case ZL_TK_BIT_AND_ASSIGN:
+			case ZL_TK_BIT_OR:
+			case ZL_TK_BIT_OR_ASSIGN:
+			case ZL_TK_BIT_XOR:
+			case ZL_TK_BIT_XOR_ASSIGN:
+			case ZL_TK_BIT_RIGHT:
+			case ZL_TK_BIT_RIGHT_ASSIGN:
+			case ZL_TK_BIT_LEFT:
+			case ZL_TK_BIT_LEFT_ASSIGN:
+				state = ZL_ST_ASM_CODE_INBITS;
 				break;
 			default:
 				if(nodes[nodenum].tokcategory == ZL_TKCG_OP_PP_MM) //加加，减减运算符
@@ -310,6 +328,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 			}
 			state = ZL_ST_DOWN; //赋值的代码生成完毕，state设为ZL_ST_DOWN，接着退出循环，完成一次AsmGenCodes操作。
 			break; //case ZL_ST_INASSIGN: //赋值运算符汇编输出
+		case ZL_ST_ASM_CODE_INBITS: //按位与，或，异或等双目位运算符
 		case ZL_ST_ASM_CODE_INRELATION:	//大于等于之类的关系比较运算符
 		case ZL_ST_ASM_CODE_INAND_OR:	//与或运算符
 		case ZL_ST_ASM_CODE_INTIME_DIVIDE://乘除取余运算符汇编输出
@@ -469,6 +488,46 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 					if(nodes[nodenum].toktype == ZL_TK_DIVIDE_ASSIGN)
 						goto assign;
 					break;
+				case ZL_TK_BIT_AND_ASSIGN:
+				case ZL_TK_BIT_AND:
+					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
+							ZL_R_IT_BIT_AND , ZL_R_DT_NONE , 0,
+							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_AND" 按位与汇编码 BIT_AND指令会将AX 和 BX寄存器的值进行按位与运算，结果存放在AX中。
+					if(nodes[nodenum].toktype == ZL_TK_BIT_AND_ASSIGN)
+						goto assign;
+					break;
+				case ZL_TK_BIT_OR_ASSIGN:
+				case ZL_TK_BIT_OR:
+					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
+							ZL_R_IT_BIT_OR , ZL_R_DT_NONE , 0,
+							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_OR" 按位或汇编码 BIT_OR指令会将AX 和 BX寄存器的值进行按位或运算，结果存放在AX中。
+					if(nodes[nodenum].toktype == ZL_TK_BIT_OR_ASSIGN)
+						goto assign;
+					break;
+				case ZL_TK_BIT_XOR_ASSIGN:
+				case ZL_TK_BIT_XOR:
+					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
+							ZL_R_IT_BIT_XOR , ZL_R_DT_NONE , 0,
+							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_XOR" 按位异或汇编码 BIT_XOR指令会将AX 和 BX寄存器的值进行按位异或运算，结果存放在AX中。
+					if(nodes[nodenum].toktype == ZL_TK_BIT_XOR_ASSIGN)
+						goto assign;
+					break;
+				case ZL_TK_BIT_RIGHT_ASSIGN:
+				case ZL_TK_BIT_RIGHT:
+					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
+							ZL_R_IT_BIT_RIGHT , ZL_R_DT_NONE , 0,
+							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_RIGHT" 右移汇编码 BIT_RIGHT指令会将AX里的值根据BX里的值进行>>右移运算，结果存放在AX中。
+					if(nodes[nodenum].toktype == ZL_TK_BIT_RIGHT_ASSIGN)
+						goto assign;
+					break;
+				case ZL_TK_BIT_LEFT_ASSIGN:
+				case ZL_TK_BIT_LEFT:
+					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
+							ZL_R_IT_BIT_LEFT , ZL_R_DT_NONE , 0,
+							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_LEFT" 左移汇编码 BIT_LEFT指令会将AX里的值根据BX里的值进行<<左移运算，结果存放在AX中。
+					if(nodes[nodenum].toktype == ZL_TK_BIT_LEFT_ASSIGN)
+						goto assign;
+					break;
 				case ZL_TK_GREAT:
 					run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
 							ZL_R_IT_GREAT , ZL_R_DT_NONE , 0,
@@ -623,6 +682,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
 			}
 			break; //case ZL_ST_ASM_CODE_INCOMMA: //逗号运算符和c语言的逗号运算符作用是一样的
+		case ZL_ST_ASM_CODE_INBIT_REVERSE: //按位取反运算符的处理
 		case ZL_ST_ASM_CODE_INREVERSE: //取反运算符的处理
 			if(nodes[nodenum].childs.count == 1)
 			{
@@ -667,9 +727,18 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 					}
 					break;
 				} //switch(nodes[chnum[0]].toktype)
-				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-								ZL_R_IT_REVERSE,ZL_R_DT_NONE , 0,
-								ZL_R_DT_NONE , 0); //对应汇编指令 "REVERSE" 取反运算符的汇编码，会将AX里的值取反，结果存放于AX中。
+				if(state == ZL_ST_ASM_CODE_INREVERSE)
+				{
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+									ZL_R_IT_REVERSE,ZL_R_DT_NONE , 0,
+									ZL_R_DT_NONE , 0); //对应汇编指令 "REVERSE" 取反运算符的汇编码，会将AX里的值取反，结果存放于AX中。
+				}
+				else
+				{
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
+									ZL_R_IT_BIT_REVERSE,ZL_R_DT_NONE , 0,
+									ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_REVERSE" 按位取反运算符的汇编码，会将AX里的值进行按位取反，结果存放于AX中。
+				}
 				state = ZL_ST_DOWN; 
 			}
 			else
@@ -677,7 +746,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 				compile->parser_curnode = nodenum;
 				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_ONE_CHILD);
 			}
-			break; //case ZL_ST_ASM_CODE_INREVERSE: //取反运算符的处理
+			break; //case ZL_ST_ASM_CODE_INREVERSE: //取反运算符或按位取反运算符的处理
 		case ZL_ST_ASM_CODE_INADDRESS: //引用运算符的处理
 			if(nodes[nodenum].childs.count == 1)
 			{

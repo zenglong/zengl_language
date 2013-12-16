@@ -33,6 +33,7 @@ ZL_EXP_VOID zenglApiBMF_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	ZENGL_EXPORT_MEMBLOCK memblock = {0};
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
 	ZL_EXP_INT i;
+	ZL_EXP_CHAR * modfun_name;
 	if(argcount == 0) //如果array函数没带参数，则创建一个默认大小的未初始化的数组
 	{
 		if(zenglApi_CreateMemBlock(VM_ARG,&memblock,0) == -1)
@@ -58,25 +59,33 @@ ZL_EXP_VOID zenglApiBMF_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 				zenglApi_SetMemBlock(VM_ARG,&memblock,i,&arg);
 				break;
 			default:
-				zenglApi_Exit(VM_ARG,"array函数第%d个参数类型无效",i);
+				zenglApi_GetModFunName(VM_ARG,&modfun_name); //获取用户自定义的模块函数名
+				zenglApi_Exit(VM_ARG,"%s函数第%d个参数类型无效",modfun_name,i);
 				break;
 			}
 		}
 		zenglApi_SetRetValAsMemBlock(VM_ARG,&memblock);
 	}
 	else
-		zenglApi_Exit(VM_ARG,"array函数异常：参数个数小于0");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name); //获取用户自定义的模块函数名
+		zenglApi_Exit(VM_ARG,"%s函数异常：参数个数小于0",modfun_name);
+	}
 }
 
 /*bltExit模块函数，直接退出zengl脚本*/
 ZL_EXP_VOID zenglApiBMF_bltExit(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZL_EXP_CHAR * modfun_name;
 	if(argcount > 0)
 	{
 		zenglApi_GetFunArg(VM_ARG,1,&arg); //得到第一个参数
 		if(arg.type != ZL_EXP_FAT_STR)
-			zenglApi_Exit(VM_ARG,"bltExit函数的第一个参数必须是字符串，表示退出脚本时需要显示的信息");
+		{
+			zenglApi_GetModFunName(VM_ARG,&modfun_name); //获取用户自定义的模块函数名
+			zenglApi_Exit(VM_ARG,"%s函数的第一个参数必须是字符串，表示退出脚本时需要显示的信息",modfun_name);
+		}
 		zenglApi_Exit(VM_ARG,arg.val.str);
 	}
 	else
@@ -91,8 +100,12 @@ ZL_EXP_VOID zenglApiBMF_bltConvToInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
 	ZL_EXP_INT ret;
+	ZL_EXP_CHAR * modfun_name;
 	if(argcount != 1)
-		zenglApi_Exit(VM_ARG,"bltConvToInt函数必须接受1个参数");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数必须接受1个参数",modfun_name);
+	}
 	zenglApi_GetFunArg(VM_ARG,1,&arg); //得到第一个参数
 	switch(arg.type)
 	{
@@ -106,7 +119,8 @@ ZL_EXP_VOID zenglApiBMF_bltConvToInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		ret = arg.val.integer;
 		break;
 	default:
-		zenglApi_Exit(VM_ARG,"bltConvToInt函数参数只能是整数，浮点数或字符串类型");
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数参数只能是整数，浮点数或字符串类型",modfun_name);
 		break;
 	}
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_INT,ZL_EXP_NULL,ret,0);
@@ -123,21 +137,34 @@ ZL_EXP_VOID zenglApiBMF_bltIntToStr(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
 	ZL_EXP_CHAR buf[100],dest[100];
 	ZL_EXP_INT num,len,i;
+	ZL_EXP_CHAR * modfun_name;
 	if(argcount != 3)
-		zenglApi_Exit(VM_ARG,"bltIntToStr函数必须接受3个参数");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数必须接受3个参数",modfun_name);
+	}
 	zenglApi_GetFunArg(VM_ARG,1,&arg); //得到第一个参数
 	if(arg.type != ZL_EXP_FAT_INT)
-		zenglApi_Exit(VM_ARG,"bltIntToStr函数的第一个参数必须是整数，表示要进行转换的整数值");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数的第一个参数必须是整数，表示要进行转换的整数值",modfun_name);
+	}
 	num = arg.val.integer;
 	sprintf(buf,"%d",num);
 	len = strlen(buf);
 	zenglApi_GetFunArg(VM_ARG,2,&arg); //得到第二个参数
 	if(arg.type != ZL_EXP_FAT_INT)
-		zenglApi_Exit(VM_ARG,"bltIntToStr函数的第二个参数必须是整数，表示总宽度，当整数的宽度不足时，在左侧按第三个参数进行补充");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数的第二个参数必须是整数，表示总宽度，当整数的宽度不足时，在左侧按第三个参数进行补充",modfun_name);
+	}
 	num = arg.val.integer;
 	zenglApi_GetFunArg(VM_ARG,3,&arg); //得到第三个参数
 	if(arg.type != ZL_EXP_FAT_STR)
-		zenglApi_Exit(VM_ARG,"bltIntToStr函数的第三个参数必须是字符串类型，表示要进行补充的元素");
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数的第三个参数必须是字符串类型，表示要进行补充的元素",modfun_name);
+	}
 	if(len < num)  //当第一个参数的字符串长度不足时，则用第三个参数来补齐。
 	{
 		for(i=0;i<num-len;i++)
@@ -173,4 +200,32 @@ ZL_EXP_VOID zenglApiBMF_bltRandom(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		(*random_seed) = rand();
 	}
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_INT,ZL_EXP_NULL,(*random_seed),0);
+}
+
+/*unset模块函数，将所有参数所引用的变量或数组元素或类成员等重置为未初始化状态
+  未初始化状态在很多场合可以产生和整数0一样的效果，该模块函数最主要的是可以用来重置引用类型的变量*/
+ZL_EXP_VOID zenglApiBMF_unset(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZENGL_EXPORT_MOD_FUN_ARG null_arg = {ZL_EXP_FAT_NONE,{0}};
+	ZL_EXP_INT i;
+	ZL_EXP_CHAR * modfun_name;
+	if(argcount <= 0)
+	{
+		zenglApi_GetModFunName(VM_ARG,&modfun_name);
+		zenglApi_Exit(VM_ARG,"%s函数的参数个数必须大于0",modfun_name);
+	}
+	for(i=1;i <= argcount;i++)
+	{
+		zenglApi_GetFunArgInfo(VM_ARG,i,&arg);
+		if(arg.type != ZL_EXP_FAT_ADDR && 
+			arg.type != ZL_EXP_FAT_ADDR_LOC &&
+			arg.type != ZL_EXP_FAT_ADDR_MEMBLK
+			)
+		{
+			zenglApi_GetModFunName(VM_ARG,&modfun_name);
+			zenglApi_Exit(VM_ARG,"%s函数第%d个参数类型无效，参数必须是引用类型",modfun_name,i);
+		}
+		zenglApi_SetFunArgEx(VM_ARG,i,&null_arg,1); //循环将参数所引用的变量设置为未初始化状态，如果参数所引用的变量依然是个引用的话，就可以将该引用类型的变量重置为普通变量
+	}
 }

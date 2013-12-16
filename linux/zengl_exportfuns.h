@@ -25,7 +25,7 @@
 
 #include "zengl_exportPublicDefs.h"
 
-/*以下为zenglApi接口的声明，目前一共有35个API接口函数(不包括底部声明的那些内建模块函数)*/
+/*以下为zenglApi接口的声明，目前一共有39个API接口函数(不包括底部声明的那些内建模块函数)*/
 
 /*通过zenglApi_Load可以加载并执行script_file脚本*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Load(ZL_EXP_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args);
@@ -36,11 +36,21 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_Open();
 /*使用zenglApi_Open打开的虚拟机来运行script_file对应的脚本*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Run(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file);
 
+/*
+使用zenglApi_Open打开的虚拟机来运行script_str指向的字符串脚本，len为字符串脚本的有效长度，script_name为该字符串脚本的自定义名字，
+script_name可以用于调试信息输出，同时还可以给script_name设置一个路径前缀，例如"script/runstr"，这样字符串脚本内部inc加载其他脚本时就会按照"script/"路径来加载
+*/
+ZL_EXPORT ZL_EXP_INT zenglApi_RunStr(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_str,ZL_EXP_INT len,ZL_EXP_CHAR * script_name);
+
 /*关闭zenglApi_Open打开的虚拟机指针，并释放虚拟机占用的系统资源*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Close(ZL_EXP_VOID * VM_ARG);
 
 /*API接口，重置参数对应的虚拟机*/
 ZL_EXPORT ZL_EXP_VOID * zenglApi_Reset(ZL_EXP_VOID * VM_ARG);
+
+/*API接口，重利用虚拟机之前的编译资源，这样就可以直接执行之前已经编译好的指令代码
+ 参数isClear不为0则执行虚拟内存的清理工作，返回-1表示出错，返回0表示什么都没做，返回1表示正常执行*/
+ZL_EXPORT ZL_EXP_INT zenglApi_ReUse(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT isClear);
 
 /*API接口，返回编译运行时的出错信息*/
 ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetErrorString(ZL_EXP_VOID * VM_ARG);
@@ -103,7 +113,11 @@ ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZEN
 ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
 
 /*设置脚本模块函数中第argnum个参数的值，argnum从1开始表示第一个参数*/
-ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * setval);
+
+/*该接口为zenglApi_SetFunArg的扩展函数，当参数addr_level小于0时，zenglApi_SetFunArgEx等价于zenglApi_SetFunArg，
+  当addr_level大于等于0时，就可以对不同级别的引用本身进行设置操作*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArgEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * setval,ZL_EXP_INT addr_level);
 
 /*获取内存块的size容量等信息*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT * mblk_size,ZL_EXP_INT * mblk_count);
@@ -137,6 +151,9 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_AllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT size);
 /*API接口，将AllocMem分配的资源手动释放掉，防止资源越滚越大*/
 ZL_EXPORT ZL_EXP_INT zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr);
 
+/*API接口，获取当前运行模块函数的用户自定义名称*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetModFunName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR ** modfun_name);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /********************************************************************************
@@ -162,6 +179,10 @@ ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltIntToStr(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT ar
 
 /*bltRandom模块函数，产生随机数*/
 ZL_EXPORT ZL_EXP_VOID zenglApiBMF_bltRandom(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
+
+/*unset模块函数，将所有参数所引用的变量或数组元素或类成员等重置为未初始化状态
+  未初始化状态在很多场合可以产生和整数0一样的效果，该模块函数最主要的是可以用来重置引用类型的变量*/
+ZL_EXPORT ZL_EXP_VOID zenglApiBMF_unset(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount);
 
 /********************************************************************************
 		上面是虚拟机为用户提供的内建模块函数的声明

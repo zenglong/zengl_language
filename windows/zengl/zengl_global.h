@@ -119,6 +119,7 @@ typedef enum _ZENGL_API_STATES{
 	ZL_API_ST_NONE,
 	ZL_API_ST_OPEN,
 	ZL_API_ST_RESET,
+	ZL_API_ST_REUSE,
 	ZL_API_ST_RUN,
 	ZL_API_ST_AFTER_RUN,
 	ZL_API_ST_MODULES_INIT,
@@ -170,6 +171,17 @@ typedef enum _ZENGL_TOKENTYPE{
 	ZL_TK_COLON,			//Ã°ºÅtoken
 	ZL_TK_QUESTION_MARK,	//ÎÊºÅtoken
 	ZL_TK_DOT,				//µãÔËËã·û
+	ZL_TK_BIT_AND,			//"&"°´Î»ÓëË«Ä¿ÔËËã·ûtoken
+	ZL_TK_BIT_AND_ASSIGN,	//&=ÔËËã·ûtoken
+	ZL_TK_BIT_OR,			//"|"°´Î»»òË«Ä¿ÔËËã·ûtoken
+	ZL_TK_BIT_OR_ASSIGN,	//|=ÔËËã·ûtoken
+	ZL_TK_BIT_XOR,			//"^"°´Î»Òì»òÔËËã·ûtoken
+	ZL_TK_BIT_XOR_ASSIGN,	//^=ÔËËã·ûtoken
+	ZL_TK_BIT_RIGHT,		//">>"ÓÒÒÆÔËËã·ûtoken
+	ZL_TK_BIT_RIGHT_ASSIGN,	//">>="ÓÒÒÆ¸³ÖµÔËËã·ûtoken
+	ZL_TK_BIT_LEFT,			//"<<"×óÒÆÔËËã·ûtoken
+	ZL_TK_BIT_LEFT_ASSIGN,	//"<<="×óÒÆ¸³ÖµÔËËã·ûtoken
+	ZL_TK_BIT_REVERSE,		//"~"°´Î»È¡·´ÔËËã·ûtoken
 	ZL_TK_FUNCALL,			//º¯Êýµ÷ÓÃtoken ÀýÈçmax(a,b); ±íÊ¾maxº¯Êý 
 	ZL_TK_ARRAY_ITEM,		//Êý×éÔªËØÐÎÊ½ ÀýÈçtest[2];±íÊ¾testÊý×éµÄµÚÈý¸öÔªËØ£¬´Ó0¿ªÊ¼
 	ZL_TK_CLASS_STATEMENT,	//ÀàÉùÃ÷Óï¾ä£¬ÀýÈç Poker x,y;ÆäÖÐPokerÎªÄ³¸öÀà x,yÎª¸ÃÀàÉùÃ÷µÄ±äÁ¿
@@ -203,6 +215,9 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_INCOMMENT,			//µ¥ÐÐ×¢ÊÍÉ¨Ãè×´Ì¬
 	ZL_ST_INMULTI_COMMENT,		//¶àÐÐ×¢ÊÍÉ¨Ãè×´Ì¬
 	ZL_ST_INENDMULTI_COMMENT,	//¶àÐÐ×¢ÊÍÉ¨Ãè½áÊø×´Ì¬
+	ZL_ST_INXOR,				//°´Î»Òì»òÔËËã·ûµÄÉ¨Ãè×´Ì¬
+	ZL_ST_INBIT_RIGHT,			//ÓÒÒÆÔËËã·ûµÄÉ¨Ãè×´Ì¬
+	ZL_ST_INBIT_LEFT,			//×óÒÆÔËËã·ûµÄÉ¨Ãè×´Ì¬
 	ZL_ST_PARSER_INSEMI,		//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ·ÖºÅtoken×´Ì¬
 	ZL_ST_PARSER_INEQUAL,		//ÔÚzengl_parser.cÖÐÌí¼ÓµÄµÈÓÚtoken×´Ì¬
 	ZL_ST_PARSER_INGREAT_EQ,	//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ´óÓÚµÈÓÚtoken×´Ì¬
@@ -225,6 +240,17 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_PARSER_INQUESTION_MARK,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄÎÊºÅÔËËã·ûtoken×´Ì¬
 	ZL_ST_PARSER_INDOT,			//ÔÚzengl_parser.cÖÐÌí¼ÓµÄµãÔËËã·ûtoken×´Ì¬
 	ZL_ST_PARSER_INNEGATIVE,	//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ¸ººÅµ¥Ä¿ÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_AND,		//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ°´Î»ÓëÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_AND_ASSIGN,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ&=ÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_OR,		//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ°´Î»»òÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_OR_ASSIGN,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ|=ÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_XOR,		//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ°´Î»Òì»òÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_XOR_ASSIGN,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ^=ÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_RIGHT,	//ÔÚzengl_parser.cÖÐÌí¼ÓµÄÓÒÒÆÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_RIGHT_ASSIGN,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ>>=ÓÒÒÆ¸³ÖµÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_LEFT,	//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ×óÒÆÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_LEFT_ASSIGN,//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ<<=×óÒÆ¸³ÖµÔËËã·ûtoken×´Ì¬
+	ZL_ST_PARSER_INBIT_REVERSE,	//ÔÚzengl_parser.cÖÐÌí¼ÓµÄ~°´Î»È¡·´ÔËËã·ûtoken×´Ì¬
 	ZL_ST_PARSER_STMT_INIF,		//ÓÃÓÚÉú³Éif¹Ø¼ü×ÖÓï¾äASTµÄ×´Ì¬»ú
 	ZL_ST_PARSER_STMT_INFOR,	//ÓÃÓÚÉú³Éfor¹Ø¼ü×ÖÓï¾äASTµÄ×´Ì¬»ú
 	ZL_ST_PARSER_STMT_INFUN,	//ÓÃÓÚÉú³Éfun¹Ø¼ü×ÖÓï¾äASTµÄ×´Ì¬»ú
@@ -238,6 +264,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INRELATION,	//ÓÃÓÚÉú³É´óÓÚ£¬Ð¡ÓÚ£¬µÈÓÚ£¬²»µÈÓÚ£¬´óÓÚµÈÓÚ£¬Ð¡ÓÚµÈÓÚÔËËã·ûµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INAND_OR,	//ÓÃÓÚÉú³ÉÂß¼­Óë£¬Âß¼­»òÔËËã·ûµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INREVERSE,	//ÓÃÓÚÉú³ÉÂß¼­·ÇÔËËã·ûµÄ»ã±àÖ¸Áî
+	ZL_ST_ASM_CODE_INBIT_REVERSE,//ÓÃÓÚÉú³É°´Î»È¡·´ÔËËã·ûµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INIF,		//ÓÃÓÚÉú³ÉifÓï¾äµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_IN_PP_MM,	//ÓÃÓÚÉú³É¼Ó¼Ó¼õ¼õµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INFOR,		//ÓÃÓÚÉú³ÉforÓï¾äµÄ»ã±àÖ¸Áî
@@ -260,6 +287,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INCOLON,		//ÓÃÓÚÉú³ÉÃ°ºÅÔËËã·ûµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INQUESTION,	//ÓÃÓÚÉú³ÉÎÊºÅÔËËã·ûµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INNEGATIVE,	//ÓÃÓÚÉú³É¸ººÅµ¥Ä¿ÔËËã·ûµÄ»ã±àÖ¸Áî
+	ZL_ST_ASM_CODE_INBITS,		//ÓÃÓÚÉú³É°´Î»Óë£¬»ò£¬Òì»òµÈË«Ä¿Î»ÔËËã·ûµÄ»ã±àÖ¸Áî
 }ZENGL_STATES;
 /*ÔÚswitch caseÀïÒªÓÃµ½µÄ¸÷ÖÖ×´Ì¬µÄÃ¶¾Ù¶¨Òå½áÊø*/
 
@@ -326,6 +354,8 @@ typedef struct _ZENGL_SOURCE_TYPE{
 	ZL_INT cur;
 	ZL_BOOL needread;
 	ZENGL_ENCRYPT encrypt; //¼ÓÃÜÔËËã½á¹¹Ìå³ÉÔ±
+	ZL_UCHAR * run_str; //zenglApi_RunStrÉèÖÃµÄ×Ö·û´®½Å±¾
+	ZL_INT run_str_len; //×Ö·û´®½Å±¾µÄ³¤¶È
 }ZENGL_SOURCE_TYPE;  //½Å±¾Ô´ÎÄ¼þÀàÐÍ¶¨Òå£¬ÀïÃæ°üº¬Òª²Ù×÷µÄ½Å±¾ÎÄ¼þµÄÎÄ¼þÖ¸Õë£¬ÎÄ¼þÃûµÈ³ÉÔ±¡£
 
 typedef struct _ZENGL_MEM_POOL_POINT_TYPE{
@@ -626,7 +656,7 @@ typedef struct _ZENGL_LD_ADDRLIST_TYPE{
 #define ZENGL_AST_ISTOKCATEX(nodenum,tokname1) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
 							  (nodes[nodenum].tokcategory == tokname1))
 #define ZENGL_AST_ISTOK_VALIDX(nodenum) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE) //ÅÐ¶ÏÄ³½ÚµãÊÇ·ñÓÐÐ§
-#define ZENGL_AST_ISTOKCATEX9(nodenum,tokname1,tokname2,tokname3,tokname4,tokname5,tokname6,tokname7,tokname8,tokname9) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
+#define ZENGL_AST_ISTOKCATEX10(nodenum,tokname1,tokname2,tokname3,tokname4,tokname5,tokname6,tokname7,tokname8,tokname9,tokname10) (nodenum >=0 && nodes[nodenum].isvalid == ZL_TRUE  &&  \
 							  (nodes[nodenum].tokcategory == tokname1 || \
 							   nodes[nodenum].tokcategory == tokname2 || \
 							   nodes[nodenum].tokcategory == tokname3 || \
@@ -635,11 +665,13 @@ typedef struct _ZENGL_LD_ADDRLIST_TYPE{
 							   nodes[nodenum].tokcategory == tokname6 || \
 							   nodes[nodenum].tokcategory == tokname7 || \
 							   nodes[nodenum].tokcategory == tokname8 || \
-							   nodes[nodenum].tokcategory == tokname9))
-#define ZENGL_AST_ISTOKCATEXOP(nodenum) ZENGL_AST_ISTOKCATEX9(nodenum,ZL_TKCG_OP_COMMA, \
+							   nodes[nodenum].tokcategory == tokname9 || \
+							   nodes[nodenum].tokcategory == tokname10))
+#define ZENGL_AST_ISTOKCATEXOP(nodenum) ZENGL_AST_ISTOKCATEX10(nodenum,ZL_TKCG_OP_COMMA, \
 													ZL_TKCG_OP_ASSIGN,\
 													ZL_TKCG_OP_PLUS_MINIS,\
 													ZL_TKCG_OP_TIM_DIV,\
+													ZL_TKCG_OP_BITS, \
 													ZL_TKCG_OP_RELATION,\
 													ZL_TKCG_OP_LOGIC,\
 													ZL_TKCG_OP_PP_MM,\
@@ -652,6 +684,7 @@ typedef enum _ZENGL_TOKEN_CATEGORY{  //token·ÖÀàµÄÃ¶¾ÙÖµ£¬Èç¼Ó¼õÔËËã·û¶¼ÊÇOP_PLU
 	ZL_TKCG_OP_PLUS_MINIS,	//¼Ó¼õÔËËã²Ù×÷ÀàÐÍ
 	ZL_TKCG_OP_ASSIGN,		//¸³Öµ²Ù×÷ÀàÐÍ
 	ZL_TKCG_OP_TIM_DIV,		//³Ë³ýÔËËã²Ù×÷ÀàÐÍ
+	ZL_TKCG_OP_BITS,		//°´Î»Óë£¬»ò£¬Òì»òÖ®ÀàµÄÎ»ÔËËã·û
 	ZL_TKCG_OP_RELATION,	//´óÓÚ£¬µÈÓÚÖ®ÀàµÄ¹ØÏµ±È½ÏÔËËã²Ù×÷ÀàÐÍ
 	ZL_TKCG_OP_LOGIC,		//Âß¼­»ò£¬Âß¼­ÇÒÖ®ÀàµÄÂß¼­ÔËËã²Ù×÷ÀàÐÍ
 	ZL_TKCG_OP_FACTOR,		//±äÁ¿±êÊ¶·û£¬Êý×Ö£¬×Ö·û´®Ö®ÀàµÄ²Ù×÷Òò×ÓÀàÐÍ
@@ -668,6 +701,7 @@ typedef enum _ZENGL_OP_LEVEL{  //²Ù×÷ÔËËã·ûµÄÓÅÏÈ¼¶Ã¶¾ÙÖµ£¬Èç¸³Öµ£¬Âß¼­£¬¹ØÏµ±È½
 	ZL_OP_LEVEL_QUESTION,	//ÎÊºÅÓÅÏÈ¼¶
 	ZL_OP_LEVEL_LOGIC,		//Âß¼­ÔËËãÓÅÏÈ¼¶
 	ZL_OP_LEVEL_RELATION,	//¹ØÏµ±È½ÏÔËËãÓÅÏÈ¼¶
+	ZL_OP_LEVEL_BITS,		//°´Î»Ë«Ä¿ÔËËã·ûÓÅÏÈ¼¶
 	ZL_OP_LEVEL_PLUS_MINIS,	//¼Ó¼õÔËËãÓÅÏÈ¼¶
 	ZL_OP_LEVEL_TIM_DIV,	//³Ë³ýÔËËãÓÅÏÈ¼¶
 	ZL_OP_LEVEL_PP_MM,		//¼Ó¼Ó¼õ¼õÔËËãÓÅÏÈ¼¶
@@ -875,6 +909,12 @@ typedef enum _ZENGL_RUN_INST_TYPE{
 	ZL_R_IT_GET_ARRAY,		//GET_ARRAYÖ¸Áî
 	ZL_R_IT_SWITCH,			//SWITCHÖ¸Áî
 	ZL_R_IT_LONG,			//LONGÖ¸Áî
+	ZL_R_IT_BIT_AND,		//BIT_ANDÖ¸Áî
+	ZL_R_IT_BIT_OR,			//BIT_ORÖ¸Áî
+	ZL_R_IT_BIT_XOR,		//BIT_XORÖ¸Áî
+	ZL_R_IT_BIT_RIGHT,		//BIT_RIGHTÖ¸Áî
+	ZL_R_IT_BIT_LEFT,		//BIT_LEFTÖ¸Áî
+	ZL_R_IT_BIT_REVERSE,	//BIT_REVERSEÖ¸Áî
 	ZL_R_IT_END,			//ENDÖ¸Áî
 }ZENGL_RUN_INST_TYPE; //Ö¸ÁîÀàÐÍ
 
@@ -1107,6 +1147,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_CLOCK_T start_time; //±àÒëÆ÷¿ªÊ¼Ö´ÐÐÊ±µÄÊ±¼ä£¬ºÁÃëÎªµ¥Î»
 	ZL_CLOCK_T end_time; //±àÒëÆ÷½áÊøÊ±µÄÊ±¼ä£¬ºÁÃëÎªµ¥Î»
 	ZL_CLOCK_T total_time; //Ö´ÐÐ½áÊøÊ±µÄ×ÜÊ±¼ä£¬ºÁÃëÎªµ¥Î»
+	ZL_CLOCK_T total_print_time; //±àÒëÆ÷´òÓ¡µ÷ÊÔÐÅÏ¢ËùÏûºÄµÄÊ±¼ä£¬ºÁÃëÎªµ¥Î»
 	ZENGL_INFO_STRING_TYPE infoFullString; //ÀïÃæ´æ·ÅÁËÍêÕûµÄ¾­¹ý½âÎöºóµÄÆÕÍ¨´òÓ¡ÐÅÏ¢×Ö·û´®
 	ZENGL_INFO_STRING_TYPE errorFullString; //ÀïÃæ´æ·ÅÁËÍêÕûµÄ¾­¹ý½âÎöºóµÄ´íÎóÐÅÏ¢µÄ×Ö·û´®
 	ZL_CONST ZL_CHAR ** reserveString; //¸÷ÖÖ¹Ø¼ü×Ö¶¨Òå
@@ -1116,6 +1157,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZENGL_DEF_TABLE def_table; //ºê¶¨Òå¶¯Ì¬Êý×é¡£
 	ZL_BOOL isinCompiling; //ÅÐ¶Ï±àÒëÆ÷ÊÇ·ñÕýÔÚ±àÒë
 	ZL_BOOL isDestroyed; //ÅÐ¶Ï±àÒëÆ÷µÄÄÚ´æ³ØµÈ×ÊÔ´ÊÇ·ñ±»ÊÍ·ÅÁË
+	ZL_BOOL isReUse;	//ÓÃ»§ÊÇ·ñÐèÒªÖØÀûÓÃÐéÄâ»úÖ®Ç°ÒÑ¾­±àÒëºÃµÄ×ÊÔ´£¬Èç¹ûÐèÒªÔò²»Ö´ÐÐ¾ßÌåµÄ±àÒë²Ù×÷£¬¿ÉÒÔÖ±½ÓÖ´ÐÐÖ®Ç°±àÒëºÃµÄÖ¸Áî´úÂë
 	/*ºÍzengl_symbol.c·ûºÅ±íÏà¹ØµÄ³ÉÔ±*/
 	ZL_INT HashTable[ZL_SYM_HASH_TOTAL_SIZE]; //hash±íÖÐ´æ·ÅÁË¸÷ÖÖ¶¯Ì¬Êý×éÔªËØµÄË÷ÒýÖµ¡£
 	ZENGL_LINECOL_TABLE LineCols; //ÐÐÁÐºÅ±íµÄ¶¯Ì¬Êý×é¡£
@@ -1287,6 +1329,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* CheckQstColonValid)(ZL_VOID * VM_ARG); //¼ì²âÎÊºÅÃ°ºÅÊÇ·ñÒ»Ò»Æ¥Åä ¶ÔÓ¦ zengl_CheckQstColonValid
 	ZL_VOID (* ASTAddNodeChild)(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //½«child¶ÔÓ¦µÄ½Úµã¼ÓÈëµ½parent½ÚµãµÄ×Ó½ÚµãÖÐ ¶ÔÓ¦ zengl_ASTAddNodeChild
 	ZL_BOOL (* CheckIsNegative)(ZL_VOID * VM_ARG); //³õ²½ÅÐ¶Ïµ±Ç°µÄ¼õºÅÊÇ·ñÊÇ¸ººÅ ¶ÔÓ¦ zengl_CheckIsNegative
+	ZL_BOOL (* CheckIsBitAnd)(ZL_VOID * VM_ARG); //³õ²½ÅÐ¶Ïµ±Ç°µÄ"&"·ûºÅÊÇ·ñÊÇ°´Î»ÓëÔËËã·û ¶ÔÓ¦ zengl_CheckIsBitAnd
 
 	/*ÏÂÃæÊÇÓÃ»§×Ô¶¨ÒåµÄº¯Êý*/
 	ZL_INT (* userdef_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //ÓÃ»§×Ô¶¨ÒåµÄÏÔÊ¾ÆÕÍ¨ÐÅÏ¢µÄº¯Êý£¬ÓÃ»§¿ÉÒÔ×Ô¶¨ÒåÐÅÏ¢µÄ´òÓ¡ºÍÊä³ö·½Ê½¡£
@@ -1324,6 +1367,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZENGL_RUN_MODULE_TABLE moduleTable; //Ä£¿é¶¯Ì¬Êý×é£¬ÀïÃæ´æ·ÅÁË¸÷ÖÖ½Å±¾Ä£¿éµÄ³õÊ¼»¯º¯ÊýµÈÐÅÏ¢
 	ZENGL_RUN_MOD_FUN_TABLE ModFunTable; //Ä£¿éº¯Êý¶¯Ì¬Êý×é£¬ÀïÃæ´æ·ÅÁË¸÷ÖÖ½Å±¾Ä£¿éº¯ÊýµÄ´¦Àí¾ä±úµÈÐÅÏ¢
 	ZENGL_RUN_EXTRA_DATA_TABLE ExtraDataTable; //ÓÃ»§¸ø½âÊÍÆ÷Ìá¹©µÄ¶îÍâÊý¾Ý¹¹³ÉµÄ¶¯Ì¬Êý×é
+	ZL_INT CurRunModFunIndex; //µ±Ç°ÕýÔÚÔËÐÐµÄÄ£¿éº¯ÊýÔÚÄ£¿éº¯Êý¶¯Ì¬Êý×éÖÐµÄË÷ÒýÖµ£¬Í¨¹ý¸ÃË÷ÒýÖµ£¬API½Ó¿Ú¾Í¿ÉÒÔ»ñÈ¡¸ÃÄ£¿éº¯ÊýµÄÏà¹ØÐÅÏ¢£¬ÈçÓÃ»§×Ô¶¨ÒåµÄÄ£¿éº¯ÊýÃûµÈ
 
 	/*¶¨ÒåÔÚzenglrun_func.cÖÐµÄÏà¹Øº¯Êý*/
 	ZL_VOID (* init)(ZL_VOID * VM_ARG); //½âÊÍÆ÷³õÊ¼»¯ ¶ÔÓ¦ zenglrun_init
@@ -1373,6 +1417,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZENGL_RUN_RUNTIME_OP_DATA_TYPE (* op_minis)(ZL_VOID * VM_ARG); //MINIS¼õ·¨Ö¸ÁîµÄÏà¹Ø´¦Àí³ÌÊ½¡£opÊÇoperate²Ù×÷µÄËõÐ´ ¶ÔÓ¦ zenglrun_op_minis
 	ZL_VOID (* op_je)(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JEÖ¸ÁîÖ´ÐÐµÄ²Ù×÷£¬AX¼Ä´æÆ÷Àï´æ·Å×ÅÖ®Ç°±í´ïÊ½µÄ½á¹û£¬µ±AXÎª0»ò¿ÕÊ±£¬½«ÐÞ¸ÄPC¼Ä´æÆ÷µÄÖµ£¬Ê¹½Å±¾·¢ÉúÌø×ª ¶ÔÓ¦ zenglrun_op_je
 	ZL_VOID (* op_jne)(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JNEÖ¸Áî£¬ºÍJEÖ¸Áî¸ÕºÃÏà·´¡£AX¼Ä´æÆ÷Àï´æ·Å×ÅÖ®Ç°±í´ïÊ½µÄ½á¹û£¬µ±AX²»Îª0£¬¼´ÎªTRUEÊ±£¬½«ÐÞ¸ÄPC¼Ä´æÆ÷µÄÖµ£¬Ê¹½Å±¾·¢ÉúÌø×ª ¶ÔÓ¦ zenglrun_op_jne
+	ZL_VOID (* op_bits)(ZL_VOID * VM_ARG); //°´Î»Óë£¬»ò£¬Òì»òµÈÎ»ÔËËãÖ¸ÁîµÄ´¦Àí³ÌÊ½ ¶ÔÓ¦ zenglrun_op_bits
 	ZL_VOID (* op_relation)(ZL_VOID * VM_ARG); //´óÓÚÐ¡ÓÚµÈÓÚÖ®ÀàµÄ±È½ÏÔËËã·ûÖ¸ÁîµÄ´¦Àí³ÌÊ½¡£¶ÔÓ¦ zenglrun_op_relation
 	ZL_VOID (* op_logic)(ZL_VOID * VM_ARG); //AND(ÇÒ)£¬OR£¨»ò£©£¬REVERSE£¨È¡·´£©Âß¼­ÔËËã·ûµÄ´¦Àí³ÌÊ½¡£¶ÔÓ¦ zenglrun_op_logic
 	ZL_VOID (* op_addminisget)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE type,ZENGL_RUN_INST_OP_DATA_TYPE memtype); //µ±¼Ó¼Ó»ò¼õ¼õÔËËã·ûÔÚ±äÁ¿±êÊ¾·ûµÄÇ°ÃæÊ±£¬ÏÈ½«±äÁ¿Öµ¼ÓÒ»»ò¼õÒ»£¬ÔÙ·µ»Ø½á¹û ¶ÔÓ¦ zenglrun_op_addminisget
@@ -1392,6 +1437,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* op_get_array_addr)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //»ñÈ¡ÄÚ´æ¿éÔªËØµÄÒýÓÃ£¬Èçtest = &testarray[0];µÄÓï¾ä ¶ÔÓ¦ zenglrun_op_get_array_addr
 	ZL_VOID (* op_addminis_one_array)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE op); //¶ÔÊý×éÔªËØ½øÐÐ¼Ó¼Ó£¬¼õ¼õÔËËã ¶ÔÓ¦ zenglrun_op_addminis_one_array
 	ZL_VOID (* memblock_freeall_local)(ZL_VOID * VM_ARG); //ÊÍ·ÅÕ»ÖÐ²ÎÊý²¿·ÖºÍ¾Ö²¿±äÁ¿²¿·ÖµÄËùÓÐÄÚ´æ¿é ¶ÔÓ¦ zenglrun_memblock_freeall_local
+	ZL_VOID (* FreeAllForReUse)(ZL_VOID * VM_ARG); //ÖØÀûÓÃÐéÄâ»úÊ±£¬ÊÍ·ÅµôÈ«¾ÖÐéÄâÄÚ´æ£¬Õ»ÄÚ´æµÈÀïÃæµÄÄÚ´æ¿éºÍÒýÓÃ ¶ÔÓ¦ zenglrun_FreeAllForReUse
 	ZL_VOID (* op_switch)(ZL_VOID * VM_ARG); //SWITCHÖ¸ÁîµÄ´¦Àí ¶ÔÓ¦ zenglrun_op_switch
 	ZL_INT (* getRegInt)(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //·µ»Ø¼Ä´æÆ÷ÖµµÄÕûÊýÐÎÊ½ ¶ÔÓ¦ zenglrun_getRegInt
 	ZL_INT (* main)(ZL_VOID * VM_ARG);	//½âÊÍÆ÷µÄÈë¿Úº¯Êý ¶ÔÓ¦ zenglrun_main
@@ -1591,6 +1637,7 @@ ZL_VOID zengl_OpLevelForColon(ZL_VOID * VM_ARG); //Ê¹ÓÃÓÅÏÈ¼¶¶ÑÕ»´¦ÀíÃ°ºÅÔËËã·û
 ZL_VOID zengl_CheckQstColonValid(ZL_VOID * VM_ARG); //¼ì²âÎÊºÅÃ°ºÅÊÇ·ñÒ»Ò»Æ¥Åä
 ZL_VOID zengl_ASTAddNodeChild(ZL_VOID * VM_ARG,ZL_INT parent,ZL_INT child); //½«child¶ÔÓ¦µÄ½Úµã¼ÓÈëµ½parent½ÚµãµÄ×Ó½ÚµãÖÐ¡£
 ZL_BOOL zengl_CheckIsNegative(ZL_VOID * VM_ARG); //³õ²½ÅÐ¶Ïµ±Ç°µÄ¼õºÅÊÇ·ñÊÇ¸ººÅ
+ZL_BOOL zengl_CheckIsBitAnd(ZL_VOID * VM_ARG); //³õ²½ÅÐ¶Ïµ±Ç°µÄ"&"·ûºÅÊÇ·ñÊÇ°´Î»ÓëÔËËã·û
 
 //ÏÂÃæÊÇ¶¨ÒåÔÚzenglrun_func.cÖÐµÄº¯Êý
 ZL_VOID zenglrun_init(ZL_VOID * VM_ARG); //½âÊÍÆ÷³õÊ¼»¯
@@ -1641,6 +1688,7 @@ ZL_VOID zenglrun_RegAssignStr(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg,ZL_VOID * 
 ZENGL_RUN_RUNTIME_OP_DATA_TYPE zenglrun_op_minis(ZL_VOID * VM_ARG); //MINIS¼õ·¨Ö¸ÁîµÄÏà¹Ø´¦Àí³ÌÊ½¡£opÊÇoperate²Ù×÷µÄËõÐ´
 ZL_VOID zenglrun_op_je(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JEÖ¸ÁîÖ´ÐÐµÄ²Ù×÷£¬AX¼Ä´æÆ÷Àï´æ·Å×ÅÖ®Ç°±í´ïÊ½µÄ½á¹û£¬µ±AXÎª0»ò¿ÕÊ±£¬½«ÐÞ¸ÄPC¼Ä´æÆ÷µÄÖµ£¬Ê¹½Å±¾·¢ÉúÌø×ª
 ZL_VOID zenglrun_op_jne(ZL_VOID * VM_ARG,ZENGL_RUN_RUNTIME_OP_DATA * src); //JNEÖ¸Áî£¬ºÍJEÖ¸Áî¸ÕºÃÏà·´¡£AX¼Ä´æÆ÷Àï´æ·Å×ÅÖ®Ç°±í´ïÊ½µÄ½á¹û£¬µ±AX²»Îª0£¬¼´ÎªTRUEÊ±£¬½«ÐÞ¸ÄPC¼Ä´æÆ÷µÄÖµ£¬Ê¹½Å±¾·¢ÉúÌø×ª
+ZL_VOID zenglrun_op_bits(ZL_VOID * VM_ARG); //°´Î»Óë£¬»ò£¬Òì»òµÈÎ»ÔËËãÖ¸ÁîµÄ´¦Àí³ÌÊ½
 ZL_VOID zenglrun_op_relation(ZL_VOID * VM_ARG); //´óÓÚÐ¡ÓÚµÈÓÚÖ®ÀàµÄ±È½ÏÔËËã·ûÖ¸ÁîµÄ´¦Àí³ÌÊ½¡£
 ZL_VOID zenglrun_op_logic(ZL_VOID * VM_ARG); //AND(ÇÒ)£¬OR£¨»ò£©£¬REVERSE£¨È¡·´£©Âß¼­ÔËËã·ûµÄ´¦Àí³ÌÊ½¡£
 ZL_VOID zenglrun_op_addminisget(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE type,ZENGL_RUN_INST_OP_DATA_TYPE memtype); //µ±¼Ó¼Ó»ò¼õ¼õÔËËã·ûÔÚ±äÁ¿±êÊ¾·ûµÄÇ°ÃæÊ±£¬ÏÈ½«±äÁ¿Öµ¼ÓÒ»»ò¼õÒ»£¬ÔÙ·µ»Ø½á¹û
@@ -1660,6 +1708,7 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //»ñÈ¡ÄÚ´æ¿éÔªËØµÄÒýÓÃ£¬Èçtest = &testarray[0];µÄÓï¾ä
 ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem,ZENGL_RUN_INST_TYPE op); //¶ÔÊý×éÔªËØ½øÐÐ¼Ó¼Ó£¬¼õ¼õÔËËã
 ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG); //ÊÍ·ÅÕ»ÖÐ²ÎÊý²¿·ÖºÍ¾Ö²¿±äÁ¿²¿·ÖµÄËùÓÐÄÚ´æ¿é
+ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG); //ÖØÀûÓÃÐéÄâ»úÊ±£¬ÊÍ·ÅµôÈ«¾ÖÐéÄâÄÚ´æ£¬Õ»ÄÚ´æµÈÀïÃæµÄÄÚ´æ¿éºÍÒýÓÃ
 ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG); //SWITCHÖ¸ÁîµÄ´¦Àí
 ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //·µ»Ø¼Ä´æÆ÷ÖµµÄÕûÊýÐÎÊ½
 ZL_INT zenglrun_main(ZL_VOID * VM_ARG);	//½âÊÍÆ÷µÄÈë¿Úº¯Êý

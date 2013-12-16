@@ -1,3 +1,19 @@
+  zengl v1.3.0 , 该版本添加了"&"(按位与),"&="(按位与赋值),"|"(按位或),"|="(按位或赋值),"^"(按位异或),"^="(按位异或赋值),"<<"(左移),"<<="(左移赋值),">>"(右移),">>="(右移赋值),"~"(按位取反)一共11个二进制位操作相关的运算符
+
+  添加了zenglApi_RunStr接口，可以将一段字符串直接当作脚本来解析执行。
+
+  添加了zenglApi_ReUse接口，如果某虚拟机之前编译过，那么可以通过此接口设置重利用标志，接着就可以在zenglApi_Run或zenglApi_Call或zenglApi_RunStr中跳过编译，直接执行代码，该接口可以看成一种缓存方式。
+
+  添加zenglApi_SetFunArgEx接口，并使用该接口来实现zenglApiBMF_unset内建模块函数，该模块函数可以将变量重置到未初始化状态，最主要的是可以将引用类型的变量或数组成员或类成员重置为普通变量。引用类型也做了调整，引用可以是一级，二级，三级甚至是更多级的引用，这样才能对引用进行重置。
+
+  添加zenglApi_GetModFunName接口，该接口可以在模块函数定义中获取用户定义的模块函数名
+
+  修复一些BUG，例如当字符串脚本或文件型脚本内容为空时，可能会出现的内存访问异常的BUG，以及像obj.key[i % obj.keylen]这样的表达式，类成员数组元素中再访问类成员时可能会出现的递归错误等
+
+  作者：zenglong
+  时间：2013年12月16日
+  官网：www.zengl.com
+  
   zengl v1.2.5 , 该版本在原来普通异或加密方式的基础上，添加了RC4加密方式，RC4可以看成是异或运算的升级版，安全性和实用性都很高，只需要很短的初始密钥就可以产生和明文一样长的伪随机密钥流。
   
   该版本还规范了API的调用位置，通过引入API状态枚举值，当某个API处于不正确的调用位置时，会忽略掉该API，同时返回API调用位置不正确的信息，可以使用zenglApi_GetErrorString接口来获取出错信息。
@@ -121,6 +137,7 @@
 接着运行./zengl test.zl即可测试main.c程序(该程序是测试zengl用的，在这里生成的zengl核心文件只有libzengl.so动态链接库)
 
 要测试RC4脚本加密程序，可以运行 ./encrypt test.zl encrypt_script/test.zl rc4key_334566_hello_world -t rc4
-要测试普通的异或加密程序 可以运行 ./encrypt test.zl encrypt_script/test.zl xorkey_334566_hello_world -t xor (如果使用xor，则main.c里也要对应修改，因为main.c默认使用rc4方式，如果不修改，则main.c执行时会出现编译错误)
+要测试普通的异或加密程序 可以运行 ./encrypt test.zl encrypt_script/test.zl xorkey_334566_hello_world -t xor
+(如果main.c中没有使用加密方式，可以自行调整main.c的代码来测试运行加密脚本)
 
 上面的encrypt命令中test.zl是源文件名，encrypt_script/test.zl是异或运算后的输出文件名对应的路径，接着是异或运算或RC4的密钥，这里的密钥是和main.c里一致的，最后使用-t参数来指定是使用rc4加密还是xor普通异或加密。

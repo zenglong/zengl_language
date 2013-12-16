@@ -37,7 +37,6 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: %d:%d <'%s'> invalid Hex number (语法错误：无效的十六进制，十六进制是以0x开头，并且其后的数值是0到9或a到f或A到F之间的数)\n", //ZL_ERR_CP_INVALID_HEX
 	"\n syntax error: %d:%d <'%s'> string %s have no end close char [%c] (语法错误：字符串没有用于结束的单引号或双引号)\n", //ZL_ERR_CP_INVALID_STR_NO_ENDCHAR
 	"\n err: makeTokenStrForString alloc failure. (编译器在makeTokenStrForString函数中分配内存失败)\n", //ZL_ERR_CP_MTSFS_MALLOC_FAILED
-	"\n syntax error: '|' must with '|' now: %d:%d <'%s'> (语法错误：'|'符号后面必须再接一个'|'才能构成逻辑或，否则是无效符号)\n", //ZL_ERR_CP_GT_INVALID_OR
 	"\n syntax error: %d:%d <'%s'> multicomment %s have no end close [*/] (语法错误：多行注释没有正确的结束符)\n", //ZL_ERR_CP_GT_INVALID_MULTI_COMMENT
 	"\n err: def_StringPool alloc failure. (编译器异常：为def_StringPool常量宏字符串池分配内存初始化失败)\n", //ZL_ERR_CP_DEF_STR_POOL_MALLOC_FAILED
 	"\n err: def_StringPool add str err i out of bounds (编译器异常：将宏相关的字符串信息添加到def_StringPool字符串池时超出字符串数组范围)\n", //ZL_ERR_CP_DEF_STR_POOL_I_OUT_OF_BOUND
@@ -201,6 +200,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: current node must have 4 child-nodes (语法错误：当前节点必须有且只有四个子节点)\n", //ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_FOUR_CHILDS
 	"\n syntax error: current node must have 3 child-nodes (语法错误：当前节点必须有且只有三个子节点)\n", //ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_THREE_CHILDS
 	"\n syntax error: fun can't be defined in other fun (语法错误：在一个函数体内不能再定义另一个函数)\n",//ZL_ERR_CP_SYNTAX_ASM_FUN_CAN_NOT_DEFINED_IN_OTHER_FUN
+	"\n err: compile symbol err , AST_TreeScanStackList invalid count (编译器异常：AST扫描堆栈里的元素个数小于0)\n", //ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_INVALID_COUNT
 	"\n err: compile symbol err , AST_TreeScanStackList are not empty (编译器异常：AST扫描堆栈不为空)\n", //ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_NOT_EMPTY
 	"\n err: compile symbol err , SymLocalTable alloc failure (编译器异常：局部变量符号表动态数组分配内存初始化失败)\n", //ZL_ERR_CP_SYM_LOCAL_TABLE_MALLOC_FAILED
 	"\n err: compile symbol err , SymLocalTable can't find non-valid index when in zengl_SymInsertLocalTable (编译器异常：局部符号表无法找到没被占用的索引，无法完成符号插入操作)\n", //ZL_ERR_CP_SYM_LOCAL_TABLE_CAN_NOT_FIND_NOT_VALID_INDEX_WHEN_INSERT
@@ -269,6 +269,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: VM Api err , invalid src arg in zenglApi_AllocMemForString (解释器运行时错误：zenglApi_AllocMemForString源字符串指针参数无效)\n", //ZL_ERR_VM_API_INVALID_SRC_WHEN_ALLOCMEM_FOR_STRING
 	"\n err: VM Api err , invalid size arg in zenglApi_AllocMem (解释器运行时错误：zenglApi_AllocMem中的size参数无效)\n", //ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM
 	"\n err: VM Api err , invalid ptr arg in zenglApi_FreeMem (解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效)\n", //ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM
+	"\n err: VM Api err , invalid script string in zenglApi_RunStr (解释器运行时错误：zenglApi_RunStr接口中的字符串脚本无效)\n", //ZL_ERR_VM_API_INVALID_SCRIPT_STR_WHEN_RUNSTR
 };
 #endif
 
@@ -331,6 +332,7 @@ ZL_CONST ZL_CHAR * ZL_Token_Operate_String[] = {
 	"--",	 //ZL_TK_MINIS_MINIS,	--运算符token
 	"-=",	 //ZL_TK_MINIS_ASSIGN,	-=运算符token
 	"-",	 //ZL_TK_MINIS,			减法运算符token
+	"-",	 //ZL_TK_NEGATIVE,		负号单目运算符token
 	"*=",	 //ZL_TK_TIMES_ASSIGN,	*=运算符token
 	"*",	 //ZL_TK_TIMES,			乘法运算符token
 	"/=",	 //ZL_TK_DIVIDE_ASSIGN,	"/=" 除赋值token
@@ -347,6 +349,17 @@ ZL_CONST ZL_CHAR * ZL_Token_Operate_String[] = {
 	":",	 //ZL_TK_COLON,			冒号token
 	"?",	 //ZL_TK_QUESTION_MARK,	问号token
 	".",	 //ZL_TK_DOT,			点运算符
+	"&",	 //ZL_TK_BIT_AND,		"&"按位与双目运算符token
+	"&=",	 //ZL_TK_BIT_AND_ASSIGN, &=运算符token
+	"|",	 //ZL_TK_BIT_OR,		"|"按位或双目运算符token
+	"|=",	 //ZL_TK_BIT_OR_ASSIGN, |=运算符token
+	"^",	 //ZL_TK_BIT_XOR,		"^"按位异或运算符token
+	"^=",	 //ZL_TK_BIT_XOR_ASSIGN, ^=运算符token
+	">>",	 //ZL_TK_BIT_RIGHT,		">>"右移运算符token
+	">>=",	 //ZL_TK_BIT_RIGHT_ASSIGN, ">>="右移赋值运算符token
+	"<<",	 //ZL_TK_BIT_LEFT,		"<<"左移运算符token
+	"<<=",	 //ZL_TK_BIT_LEFT_ASSIGN,  "<<="左移赋值运算符token
+	"~",	 //ZL_TK_BIT_REVERSE,	"~"按位取反运算符token
 	(ZL_CHAR *)(-1L)
 };
 
@@ -397,6 +410,12 @@ ZL_CONST ZL_CHAR * ZL_Run_Inst_Type_String[] = {
 	"GET_ARRAY",		//ZL_R_IT_GET_ARRAY
 	"SWITCH",			//ZL_R_IT_SWITCH
 	"LONG",				//ZL_R_IT_LONG
+	"BIT_AND",			//ZL_R_IT_BIT_AND
+	"BIT_OR",			//ZL_R_IT_BIT_OR
+	"BIT_XOR",			//ZL_R_IT_BIT_XOR
+	"BIT_RIGHT",		//ZL_R_IT_BIT_RIGHT
+	"BIT_LEFT",			//ZL_R_IT_BIT_LEFT
+	"BIT_REVERSE",		//ZL_R_IT_BIT_REVERSE
 	"END",				//ZL_R_IT_END
 };
 

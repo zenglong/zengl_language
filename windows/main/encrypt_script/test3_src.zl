@@ -1,2 +1,0 @@
-use builtin;
-printf('i am run in test3.zl,haha \n');

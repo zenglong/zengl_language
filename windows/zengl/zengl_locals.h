@@ -36,7 +36,6 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_INVALID_HEX, //无效的十六进制数
 	ZL_ERR_CP_INVALID_STR_NO_ENDCHAR, //字符串没有用于结束的单引号或双引号
 	ZL_ERR_CP_MTSFS_MALLOC_FAILED, //编译器在makeTokenStrForString函数中分配内存失败
-	ZL_ERR_CP_GT_INVALID_OR, //无效的逻辑或运算符
 	ZL_ERR_CP_GT_INVALID_MULTI_COMMENT, //无效的多行注释
 	ZL_ERR_CP_DEF_STR_POOL_MALLOC_FAILED, //编译器为def_StringPool常量宏字符串池分配内存初始化失败
 	ZL_ERR_CP_DEF_STR_POOL_I_OUT_OF_BOUND, //编译器将宏相关的字符串信息添加到def_StringPool字符串池时超出字符串数组范围
@@ -200,7 +199,8 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_FOUR_CHILDS,	//语法错误：当前节点必须有且只有四个子节点
 	ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_THREE_CHILDS,	//语法错误：当前节点必须有且只有三个子节点
 	ZL_ERR_CP_SYNTAX_ASM_FUN_CAN_NOT_DEFINED_IN_OTHER_FUN,		//语法错误：在一个函数体内不能再定义另一个函数
-	ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_NOT_EMPTY,	//编译器异常：AST扫描堆栈不为空
+	ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_INVALID_COUNT,	//编译器异常：AST扫描堆栈里的元素个数小于0
+	ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_NOT_EMPTY,		//编译器异常：AST扫描堆栈不为空
 	ZL_ERR_CP_SYM_LOCAL_TABLE_MALLOC_FAILED,	//编译器异常：局部变量符号表动态数组分配内存初始化失败
 	ZL_ERR_CP_SYM_LOCAL_TABLE_CAN_NOT_FIND_NOT_VALID_INDEX_WHEN_INSERT, //编译器异常：局部符号表无法找到没被占用的索引，无法完成符号插入操作
 	ZL_ERR_CP_SYM_LOCAL_TABLE_INVALID_INDEX,	//编译器异常：局部符号表遇到无效索引
@@ -268,6 +268,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_VM_API_INVALID_SRC_WHEN_ALLOCMEM_FOR_STRING,	//解释器运行时错误：zenglApi_AllocMemForString源字符串指针参数无效
 	ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM,	//解释器运行时错误：zenglApi_AllocMem中的size参数无效
 	ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM,		//解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效
+	ZL_ERR_VM_API_INVALID_SCRIPT_STR_WHEN_RUNSTR,		//解释器运行时错误：zenglApi_RunStr接口中的字符串脚本无效
 }ZENGL_ERRORNO;
 /*各种错误的枚举定义结束*/
 
