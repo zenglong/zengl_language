@@ -307,7 +307,7 @@ ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 				}
 			}
 			if(run->userdef_run_error != ZL_NULL)
-				run->userdef_run_error(run->errorFullString.str,run->errorFullString.count);
+				run->userdef_run_error(run->errorFullString.str,run->errorFullString.count,VM_ARG);
 			if(VM->isinApiRun == ZL_FALSE)
 				run->freeInfoString(VM_ARG,&run->errorFullString);
 			ZENGL_SYS_ARG_END(arg);
@@ -503,7 +503,7 @@ ZL_VOID zenglrun_info(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...)
 	{
 		run->makeInfoString(VM_ARG,&run->infoFullString,format,arg);
 		if(run->userdef_run_info != ZL_NULL)
-			run->userdef_run_info(run->infoFullString.str , run->infoFullString.count);
+			run->userdef_run_info(run->infoFullString.str , run->infoFullString.count , VM_ARG);
 		run->freeInfoString(VM_ARG,&run->infoFullString);
 	}
 	ZENGL_SYS_ARG_END(arg);
@@ -519,7 +519,7 @@ ZL_VOID zenglrun_print(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...)
 	ZENGL_SYS_ARG_START(arg,format);
 	run->makeInfoString(VM_ARG,&run->printFullString,format,arg);
 	if(run->userdef_run_print != ZL_NULL)
-		run->userdef_run_print(run->printFullString.str , run->printFullString.count);
+		run->userdef_run_print(run->printFullString.str , run->printFullString.count , VM_ARG);
 	run->freeInfoString(VM_ARG,&run->printFullString);
 	ZENGL_SYS_ARG_END(arg);
 }

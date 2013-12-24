@@ -25,9 +25,13 @@
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
 #define ZL_EXP_MINOR_VERSION 3 //zengl子版本号
-#define ZL_EXP_REVISION 0      //zengl修正版本号
+#define ZL_EXP_REVISION 1      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
-#define ZL_EXP_CHAR char
+#ifdef ZL_EXP_OS_IN_ARM_GCC
+	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
+#else
+	#define ZL_EXP_CHAR char
+#endif
 #define ZL_EXP_INT int
 #define ZL_EXP_DOUBLE double
 #define ZL_EXP_NULL 0 //指针为0的宏定义
@@ -98,11 +102,11 @@ typedef struct _ZENGL_EXPORT_MOD_FUN_ARG{
 }ZENGL_EXPORT_MOD_FUN_ARG; //通过API获取的参数结构体定义
 
 typedef struct _ZENGL_EXPORT_VM_MAIN_ARGS{
-	ZL_EXP_INT (* userdef_info)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
-	ZL_EXP_INT (* userdef_compile_error)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount); //用户自定义的显示错误信息的函数。
-	ZL_EXP_INT (* userdef_run_info)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount); //用户自定义的解释器中显示普通信息的函数，用户可以自定义信息的打印和输出方式。
-	ZL_EXP_INT (* userdef_run_print)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount); //用户自定义的解释器PRINT之类的指令对应的打印输出方式。
-	ZL_EXP_INT (* userdef_run_error)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount); //用户自定义的解释器中显示错误信息的函数。
+	ZL_EXP_INT (* userdef_info)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
+	ZL_EXP_INT (* userdef_compile_error)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //用户自定义的显示错误信息的函数。
+	ZL_EXP_INT (* userdef_run_info)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //用户自定义的解释器中显示普通信息的函数，用户可以自定义信息的打印和输出方式。
+	ZL_EXP_INT (* userdef_run_print)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //用户自定义的解释器PRINT之类的指令对应的打印输出方式。
+	ZL_EXP_INT (* userdef_run_error)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //用户自定义的解释器中显示错误信息的函数。
 	ZL_EXP_VOID (* userdef_module_init)(ZL_EXP_VOID * VM_ARG); //用户自定义的模块初始化函数
 	ZL_EXP_INT flags; //用户自定义的一些编译器或解释器的选项
 }ZENGL_EXPORT_VM_MAIN_ARGS;

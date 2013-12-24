@@ -55,7 +55,11 @@
 #define ZL_STRNULL '\0' //字符串结束字符
 #define ZL_NULL 0 //指针为0的宏定义
 #define ZL_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
-#define ZL_CHAR char
+#ifdef ZL_EXP_OS_IN_ARM_GCC
+	#define ZL_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
+#else
+	#define ZL_CHAR char
+#endif
 #define ZL_UCHAR unsigned char
 #define ZL_BYTE unsigned char
 #define ZL_INT int
@@ -65,7 +69,7 @@
 #define ZL_DOUBLE double
 #define ZL_CONST const
 #define ZL_EXTERN extern
-typedef unsigned ZL_CHAR ZL_BOOL; //定义bool类型
+typedef unsigned char ZL_BOOL; //定义bool类型
 typedef size_t ZL_SIZE_T;
 typedef unsigned int ZL_UINT;
 typedef clock_t ZL_CLOCK_T;
@@ -1332,8 +1336,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_BOOL (* CheckIsBitAnd)(ZL_VOID * VM_ARG); //初步判断当前的"&"符号是否是按位与运算符 对应 zengl_CheckIsBitAnd
 
 	/*下面是用户自定义的函数*/
-	ZL_INT (* userdef_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
-	ZL_INT (* userdef_compile_error)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的显示错误信息的函数。
+	ZL_INT (* userdef_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount, ZL_VOID * VM_ARG); //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
+	ZL_INT (* userdef_compile_error)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount, ZL_VOID * VM_ARG); //用户自定义的显示错误信息的函数。
 }ZENGL_COMPILE_TYPE;
 /*zengl编译器结构体定义结束*/
 
@@ -1443,9 +1447,9 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_INT (* main)(ZL_VOID * VM_ARG);	//解释器的入口函数 对应 zenglrun_main
 
 	/*下面是用户自定义的函数*/
-	ZL_INT (* userdef_run_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的解释器中显示普通信息的函数，用户可以自定义调试信息的打印和输出方式。
-	ZL_INT (* userdef_run_print)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的解释器PRINT之类的指令对应的打印输出方式。
-	ZL_INT (* userdef_run_error)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount); //用户自定义的解释器中显示错误信息的函数。
+	ZL_INT (* userdef_run_info)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount, ZL_VOID * VM_ARG); //用户自定义的解释器中显示普通信息的函数，用户可以自定义调试信息的打印和输出方式。
+	ZL_INT (* userdef_run_print)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount, ZL_VOID * VM_ARG); //用户自定义的解释器PRINT之类的指令对应的打印输出方式。
+	ZL_INT (* userdef_run_error)(ZL_CHAR * infoStrPtr, ZL_INT infoStrCount, ZL_VOID * VM_ARG); //用户自定义的解释器中显示错误信息的函数。
 }ZENGL_RUN_TYPE;
 /*虚拟机的解释器结构体定义结束*/
 

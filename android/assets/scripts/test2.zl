@@ -1,0 +1,114 @@
+use builtin;
+class RC4
+	state;
+	key;
+	keylen;
+	fun init(obj)
+		RC4 obj;
+		obj.key = array(97,98,99,100); //对应 a , b , c , d
+		obj.keylen = 4;
+		for(i=0;i<256;i++) //将盒子里的元素用0到255初始化
+			obj.state[i] = i;
+			/*if(i < 5)
+				print 'state_init['+i+']:' + obj.state[i];
+			endif*/
+		endfor
+		for(i=0,j = 0; i < 256; ++i) //将盒子里的元素顺序打乱
+			j = (j + obj.state[i] + obj.key[i % obj.keylen]) & 0xff; 
+			t = obj.state[i]; 
+			obj.state[i] = obj.state[j]; 
+			obj.state[j] = t; 
+			/*if(i < 5)
+				print 'state_initkey['+i+']:' + obj.state[i];
+			endif*/
+		endfor
+	endfun
+
+	fun encrypt(obj,str,str_len)
+		RC4 obj;
+		i = j = 0;
+		for(cur = 0;cur < str_len;cur++)
+			i = (i + 1) & 0xff;
+			j = (j + obj.state[i]) & 0xff;
+			t = obj.state[i];
+			obj.state[i] = obj.state[j]; 
+			obj.state[j] = t;
+			str[cur] = obj.state[(obj.state[i] + obj.state[j]) & 0xff] ^ str[cur];
+			if(cur < 5)
+				print 'encrypt['+cur+']:' + obj.state[(obj.state[i] + obj.state[j]) & 0xff];
+			endif
+		endfor
+	endfun
+endclass
+
+RC4 rc4;
+rc4 = array();
+RC4.init(rc4);
+RC4.encrypt(rc4,str = array(104,105,106,107,108),5); //对应 h , i , j , k , l
+bltPrintArray(str);
+RC4.init(rc4);
+RC4.encrypt(rc4,str ,5);
+bltPrintArray(str);
+
+//test = array(0,1,0,1, 0,1,1,1, 0,0,0,0, 1,0,1,0, 0,1,0,0);
+test = array(0,1,0,1, 0,0,0,0, 0,1,1,0, 1,1,0,0, 1,0,0,1, 1,0,0,0, 1,1,0,0, 0,1,0,0, 1,0,0,0, 1,0,0,1, 1,0,1,0, 0,0,1,0, 0,0,1,0, 0,1);
+for(i=0,j=1;i<54;i++)
+	if(test[i] == 1)
+		total += 1/(j*=2.0);
+	elif(test[i]== 0)
+		j*=2.0;
+	endif
+endfor
+print total;
+printf ('test:');
+test = 0.31415705488473884333333322222;
+for(i=0;i<64;i++)
+	test *=2;
+	if(i%4 == 0)
+		printf(' ');
+	endif
+	if(test > 1)
+		printf('1');
+		test -=1;
+	elif(test == 1)
+		printf('1 ['+(i+1)+']');
+		break;
+	else
+		printf('0');
+	endif
+endfor
+printf('\n');
+
+a = 0x36 & 0x55;
+a &= 0x4;
+print 'a = 0x36 & 0x55 then a &= 0x4 now a is ' + a;
+e = &a;
+print 'e = &a so now e is address of a';
+print 'e |= 0x9 is ' + e|=0x9;
+print 'now e is ' + e + ' and a is ' + a + ' they are same';
+unset(&e);
+e = 10;
+print 'unset(&e) then e=10 now e is ' + e + ' a is ' + a + ' so e is not address of a use unset!';
+b = 0x36 | 0x55;
+print 'b is ' + b + ' b|0x8 is ' + b|=0x8;
+c = 0x36 ^ 0x55;
+print 'c is ' + c + ' c ^ 0x3 is ' + c ^=3.001;
+d = 1;
+print 'd is ' + d +'\nd << 2 is ' + (d << 2);
+print 'd <<= 3 is ' + d<<=3; 
+print 'now d is ' +d;
+d = 8;
+print 'next d is ' + d + '\nd >> 2 is ' + (d>> 2);
+print 'd >>= 2 is ' + d>>=2;
+print 'now d is ' + d;
+print 'next d init is ' + d=1;
+for(i=0;i<32;i++)
+	d <<= 1;
+	printf(d+' ');
+endfor
+
+print '\nnow d is ' + d;
+
+print 'f = ~0x1 & 0xf is ' + f = ~0x1&0xf;
+print 'f = !0x1 is ' + f = !0x1;
+print 'zengl version is v' + bltGetZLVersion();

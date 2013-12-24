@@ -35,7 +35,7 @@ ZL_VOID zengl_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 		ZENGL_SYS_ARG_START(arg,errorno);
 		compile->makeInfoString(VM_ARG,&compile->errorFullString, VM->errorString[VM->errorno] , arg);
 		if(compile->userdef_compile_error != ZL_NULL)
-			compile->userdef_compile_error(compile->errorFullString.str,compile->errorFullString.count);
+			compile->userdef_compile_error(compile->errorFullString.str,compile->errorFullString.count,VM_ARG);
 		if(VM->isinApiRun == ZL_FALSE)
 			compile->freeInfoString(VM_ARG,&compile->errorFullString);
 		ZENGL_SYS_ARG_END(arg);
@@ -1554,7 +1554,7 @@ ZL_VOID zengl_info(ZL_VOID * VM_ARG , ZL_CONST ZL_CHAR * format , ...)
 	{
 		compile->makeInfoString(VM_ARG,&compile->infoFullString,format,arg);
 		if(compile->userdef_info != ZL_NULL)
-			compile->userdef_info(compile->infoFullString.str,compile->infoFullString.count);
+			compile->userdef_info(compile->infoFullString.str,compile->infoFullString.count,VM_ARG);
 		compile->freeInfoString(VM_ARG,&compile->infoFullString);
 	}
 	ZENGL_SYS_ARG_END(arg);

@@ -222,8 +222,8 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_CheckIsNegative,
 			zengl_CheckIsBitAnd,
 			/*下面是用户自定义的函数*/
-			ZL_NULL,
-			ZL_NULL 
+			ZL_NULL, //userdef_info
+			ZL_NULL  //userdef_compile_error
 		}, //初始化虚拟机的编译器
 
 		{
@@ -363,7 +363,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Load(ZL_EXP_CHAR * script_file,ZENGL_EXPORT_VM_MAI
 		VM.errorno = ZL_ERR_VM_API_INVALID_SCRIPT_NAME;
 		VM.run.makeInfoString((ZL_VOID * )&VM,&VM.run.errorFullString , VM.errorString[VM.errorno] , arg);
 		if(VM.run.userdef_run_error != ZL_NULL)
-			VM.run.userdef_run_error(VM.run.errorFullString.str,VM.run.errorFullString.count);
+			VM.run.userdef_run_error(VM.run.errorFullString.str,VM.run.errorFullString.count,(ZL_VOID * )&VM);
 		VM.isRunError = ZL_TRUE;
 		return -1;
 	}
@@ -1243,7 +1243,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Exit(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, 
 		}
 	}
 	if(run->userdef_run_error != ZL_NULL)
-		run->userdef_run_error(run->errorFullString.str,run->errorFullString.count);
+		run->userdef_run_error(run->errorFullString.str,run->errorFullString.count,VM_ARG);
 	if(VM->isinApiRun == ZL_FALSE)
 		run->freeInfoString(VM_ARG,&run->errorFullString);
 	ZENGL_SYS_ARG_END(arg);
@@ -1315,7 +1315,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * 
 			compile->AST_nodes.nodes[error_nodenum].filename);
 	}
 	if(run->userdef_run_error != ZL_NULL)
-		run->userdef_run_error(run->errorFullString.str,run->errorFullString.count);
+		run->userdef_run_error(run->errorFullString.str,run->errorFullString.count,VM_ARG);
 	if(VM->isinApiRun == ZL_FALSE)
 		run->freeInfoString(VM_ARG,&run->errorFullString);
 	ZENGL_SYS_ARG_END(arg);
