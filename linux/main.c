@@ -616,10 +616,8 @@ int main(int argc,char * argv[])
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
 		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
 
-	if(zenglApi_GetValueAsInt(VM,"i",&testint) == -1)
-		main_exit(VM,"获取变量i失败：%s\n",zenglApi_GetErrorString(VM));
-
-	printf("after run , the i is %d\n",testint);
+	if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
+		printf("after run , the i is %d\n",testint);
 
 	zenglApi_Reset(VM);
 

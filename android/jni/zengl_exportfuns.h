@@ -23,7 +23,95 @@
 #ifndef _ZENGL_EXPORT_FUNCTIONS_H_
 #define _ZENGL_EXPORT_FUNCTIONS_H_
 
-#include "zengl_exportPublicDefs.h"
+#define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
+#define ZL_EXP_MINOR_VERSION 3 //zengl子版本号
+#define ZL_EXP_REVISION 2      //zengl修正版本号
+#define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
+#ifdef ZL_EXP_OS_IN_ARM_GCC
+	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
+#else
+	#define ZL_EXP_CHAR char
+#endif
+#define ZL_EXP_INT int
+#define ZL_EXP_DOUBLE double
+#define ZL_EXP_NULL 0 //指针为0的宏定义
+
+typedef ZL_EXP_VOID (* ZL_VM_API_MODS_INIT)(ZL_EXP_VOID * VM_ARG); //全局模块初始化函数，会在run解释器入口处执行
+typedef ZL_EXP_VOID (* ZL_VM_API_MOD_INIT_FUNC)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID); //单个模块初始化函数，use指令执行时会调用该函数
+typedef ZL_EXP_VOID (* ZL_VM_API_MOD_FUN_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount); //脚本中的模块函数在执行时调用的用户自定义函数
+typedef ZL_EXP_INT (* ZL_VM_API_INFO_FUN_HANDLE)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //一些调试信息或print指令等调用的用户自定义的函数指针
+
+typedef enum _ZENGL_EXPORT_VM_MAIN_ARG_FLAGS{
+	ZL_EXP_CP_AF_IN_DEBUG_MODE = 0x1,		//保留编译器内存中的语法树符号表等资源，以供解释器调试等用途
+	ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO = 0x2,	//打印输出编译器的符号表等调试信息
+}ZENGL_EXPORT_VM_MAIN_ARG_FLAGS;
+
+typedef enum _ZENGL_EXPORT_VM_FLAGS_HANDLE_TYPE{
+	ZL_EXP_VFLAG_HANDLE_NONE,			//默认初始值
+	ZL_EXP_VFLAG_HANDLE_COMPILE_INFO,	//userdef_info用户自定义的显示普通信息的函数
+	ZL_EXP_VFLAG_HANDLE_COMPILE_ERROR,	//userdef_compile_error用户自定义的显示错误信息的函数。
+	ZL_EXP_VFLAG_HANDLE_RUN_INFO,		//userdef_run_info用户自定义的解释器中显示普通信息的函数
+	ZL_EXP_VFLAG_HANDLE_RUN_PRINT,		//userdef_run_print运行时的PRINT指令对应的用户自定义函数句柄
+	ZL_EXP_VFLAG_HANDLE_RUN_ERROR,		//userdef_run_error用户自定义的解释器中显示错误信息的函数。
+	ZL_EXP_VFLAG_HANDLE_MODULE_INIT,	//userdef_module_init用户自定义的模块初始化函数
+}ZENGL_EXPORT_VM_FLAGS_HANDLE_TYPE;
+
+typedef enum _ZENGL_EXPORT_MOD_FUN_ARG_TYPE{
+	ZL_EXP_FAT_NONE,
+	ZL_EXP_FAT_INT,
+	ZL_EXP_FAT_FLOAT,
+	ZL_EXP_FAT_STR,
+	ZL_EXP_FAT_MEMBLOCK, //内存块类型
+	ZL_EXP_FAT_ADDR,	 //全局变量的引用
+	ZL_EXP_FAT_ADDR_LOC, //局部变量的引用
+	ZL_EXP_FAT_ADDR_MEMBLK,//内存块的引用
+	ZL_EXP_FAT_INVALID,	 //无效的参数类型,可以用于指示API错误
+}ZENGL_EXPORT_MOD_FUN_ARG_TYPE; //通过API获取的参数类型
+
+#ifdef __cplusplus 
+	#ifdef ZL_EXP_OS_IN_WINDOWS
+		#define ZL_EXPORT extern "C" __declspec (dllexport) 
+	#else 
+		#define ZL_EXPORT extern "C" __attribute__((visibility("default")))
+	#endif 
+#else 
+	#ifdef ZL_EXP_OS_IN_WINDOWS
+		#define ZL_EXPORT __declspec (dllexport) 
+	#else 
+		#define ZL_EXPORT __attribute__((visibility("default")))
+	#endif 
+#endif
+
+typedef struct _ZENGL_EXPORT_MEMBLOCK{
+	ZL_EXP_VOID * ptr; //内存块指针
+	ZL_EXP_INT index;//内存块指针在内存池中的索引
+}ZENGL_EXPORT_MEMBLOCK; //数组，类变量等内存块
+
+typedef struct _ZENGL_EXPORT_ADDR{
+	ZL_EXP_INT index;
+	ZENGL_EXPORT_MEMBLOCK memblock;
+}ZENGL_EXPORT_ADDR; //全局变量，局部变量，内存块的引用
+
+typedef struct _ZENGL_EXPORT_MOD_FUN_ARG{
+	ZENGL_EXPORT_MOD_FUN_ARG_TYPE type;
+	struct{
+		ZL_EXP_INT integer; //当函数调用的参数为整数时
+		ZL_EXP_DOUBLE floatnum; //浮点数
+		ZL_EXP_CHAR * str; //字符串
+		ZENGL_EXPORT_MEMBLOCK memblock; //内存块类型
+		ZENGL_EXPORT_ADDR addr; //引用类型
+	}val;
+}ZENGL_EXPORT_MOD_FUN_ARG; //通过API获取的参数结构体定义
+
+typedef struct _ZENGL_EXPORT_VM_MAIN_ARGS{
+	ZL_EXP_VOID * userdef_info; //用户自定义的显示普通信息的函数，用户可以自定义信息的打印和输出方式。
+	ZL_EXP_VOID * userdef_compile_error; //用户自定义的显示错误信息的函数。
+	ZL_EXP_VOID * userdef_run_info; //用户自定义的解释器中显示普通信息的函数，用户可以自定义信息的打印和输出方式。
+	ZL_EXP_VOID * userdef_run_print; //用户自定义的解释器PRINT之类的指令对应的打印输出方式。
+	ZL_EXP_VOID * userdef_run_error; //用户自定义的解释器中显示错误信息的函数。
+	ZL_EXP_VOID * userdef_module_init; //用户自定义的全局模块初始化函数，在run解释器入口处会被调用
+	ZL_EXP_INT flags; //用户自定义的一些编译器或解释器的选项
+}ZENGL_EXPORT_VM_MAIN_ARGS;
 
 /*以下为zenglApi接口的声明，目前一共有39个API接口函数(不包括底部声明的那些内建模块函数)*/
 
@@ -76,11 +164,11 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * v
 /*API接口，通过此接口获取某个变量值的浮点数格式*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_DOUBLE * retValue);
 
-/*API接口，用户可以通过此接口定义模块初始化函数*/
-ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_VM_API_MOD_INIT_FUNC module_init_function);
+/*API接口，用户可以通过此接口定义模块初始化函数，脚本中使用use指令时就会调用该函数来初始化模块里的各模块函数*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_EXP_VOID * modInitFun);
 
 /*API接口，用户通过此接口可以自定义某模块中的函数处理句柄*/
-ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle);
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_EXP_VOID * funHandle);
 
 /*API接口，获取脚本中模块函数调用时的参数信息
   argnum 为参数位置，从1开始，1代表第一个参数，2代表第二个参数，以此类推*/

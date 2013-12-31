@@ -55,9 +55,9 @@ ZL_VOID zenglrun_init(ZL_VOID * VM_ARG)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_FREE_POOL_MALLOC_FAILED);
 	else
 		ZENGL_SYS_MEM_SET(run->memfreepool.frees,0,run->memfreepool.size * sizeof(ZL_INT));
-	run->userdef_run_info = VM->vm_main_args->userdef_run_info;
-	run->userdef_run_print = VM->vm_main_args->userdef_run_print;
-	run->userdef_run_error = VM->vm_main_args->userdef_run_error;
+	run->userdef_run_info = (ZL_VM_API_INFO_FUN_HANDLE)VM->vm_main_args->userdef_run_info;
+	run->userdef_run_print = (ZL_VM_API_INFO_FUN_HANDLE)VM->vm_main_args->userdef_run_print;
+	run->userdef_run_error = (ZL_VM_API_INFO_FUN_HANDLE)VM->vm_main_args->userdef_run_error;
 }
 
 /*

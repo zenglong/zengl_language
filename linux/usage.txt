@@ -1,3 +1,15 @@
+  zengl v1.3.2 , 修复字符串脚本解析时可能出现的结尾字符死循环问题。
+  
+  将用户自定义的函数指针在用户API接口部分统一设置为void *指针类型，这样一方面可以解决v1.3.1所产生的函数指针兼容问题，另一方面有利于以后扩展和调整用户自定义函数的参数。
+
+  删除zengl_exportPublicDefs.h文件，将该文件里的内容移入zengl_exportfuns.h，用户文件部分就只需包含zengl_exportfuns.h一个头文件即可，同时也不影响之前版本的用户程序部分。
+
+  linux中的makefile添加静态编译，在make clean清理完之前的中间文件后，使用make static就可以生成libzengl.a静态库，静态库就不需要root权限，普通的make生成的默认是动态库。
+
+  作者：zenglong
+  时间：2013年12月31日
+  官网：www.zengl.com
+
   zengl v1.3.1 , 增加了android工程目录，对android平台下的ARM GCC进行了测试，使用android ndk开发了一个手机上运行zengl脚本的app，arm gcc下默认约定char类型为unsigned无符号类型，所以在该平台下编译时需要指明ZL_EXP_OS_IN_ARM_GCC宏，有了该宏，ZL_CHAR类型就会被定义为signed char类型。
   
   调整了编译器和解释器中用户自定义函数的参数，例如编译器调试信息的输出函数等，添加了一个虚拟机指针参数(方便通过虚拟机指针来调用其他接口)，由于增加了参数，所以在C++下可能会造成和之前版本的不兼容，需要自行调整用户函数参数。
@@ -138,7 +150,7 @@
 
 如果不是root用户，就请用 "su" 之类的命令提权，因为make生成libzengl.so后，会copy这个.so文件到/usr/lib目录中，这样可执行文件zengl和encrypt才能链接和使用libzengl.so的动态链接库，详情可以查看makefile
 
-再运行make , 或者像ubuntu中那样直接使用sudo make
+再运行make , 或者像ubuntu中那样直接使用sudo make (还可以使用make static生成libzengl.a静态库，静态库就不需要root权限)
 
 生成libzengl.so main.o encrypt.o 和 zengl 以及 encrypt
 

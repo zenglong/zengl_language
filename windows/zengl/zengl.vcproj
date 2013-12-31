@@ -216,10 +216,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\zengl_exportPublicDefs.h"
-				>
-			</File>
-			<File
 				RelativePath=".\zengl_global.h"
 				>
 			</File>

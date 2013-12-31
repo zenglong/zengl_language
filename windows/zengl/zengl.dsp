@@ -140,10 +140,6 @@ SOURCE=.\zengl_exportfuns.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\zengl_exportPublicDefs.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\zengl_global.h
 # End Source File
 # Begin Source File

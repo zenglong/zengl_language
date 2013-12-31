@@ -115,7 +115,10 @@ ZL_CHAR zengl_getNextchar(ZL_VOID * VM_ARG)
 	else //字符串脚本
 	{
 		if(source->cur >= source->run_str_len)
+		{
+			source->cur++;
 			return ZL_FILE_EOF;
+		}
 		else
 			tmpch = source->run_str[source->cur++];
 	}
@@ -1571,8 +1574,8 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 	if(compile->isReUse == ZL_TRUE)
 		return;
 	compile->source.filename = script_file;
-	compile->userdef_info = vm_main_args->userdef_info;
-	compile->userdef_compile_error = vm_main_args->userdef_compile_error;
+	compile->userdef_info = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_info;
+	compile->userdef_compile_error = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_compile_error;
 	compile->source.needread = ZL_TRUE;
 	for(i=0;(ZL_LONG)(compile->TokenOperateString[i]) != -1L;i++)
 		;
@@ -1585,7 +1588,7 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_COMPILE_TYPE * compile = &VM->compile;
-	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_RUN_TYPE * run = &VM->run;
 	ZENGL_TOKENTYPE token;
 	ZL_INT retcode;
 	ZL_INT isNeedDebugInfo = ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO;

@@ -695,7 +695,7 @@ ZL_VOID zengl_SymInitClassMemberTable(ZL_VOID * VM_ARG)
 }
 
 /**
-	通过节点索引来查找该节点的变量标示符在自定义的虚拟内存中的内存地址，并返回内存地址的字符串格式，例如：内存地址1则返回“(1)”	
+	通过节点索引来查找该节点的变量标示符在自定义的虚拟内存中的内存地址，并返回内存地址的相关结构	
 */
 ZENGL_RUN_INST_OP_DATA zengl_SymLookupID(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {

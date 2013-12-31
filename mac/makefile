@@ -15,13 +15,13 @@ zengl: $(RUNOBJS) encrypt.o libzengl.dylib
 		$(CC) $(CFLAGS) -o zengl $(RUNOBJS) $(ZENGL_LIB_CFLAGS_LIB)
 		$(CC) $(CFLAGS) -o encrypt encrypt.o $(ZENGL_LIB_CFLAGS_LIB)
 
-libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h ../linux/zengl_exportPublicDefs.h
+libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h
 		$(CC) $(CDEFINES) $(SHARED_CFLAGS) -o libzengl.dylib $(OBJS)
 		
-main.o: ../linux/main.c ../linux/zengl_exportfuns.h ../linux/zengl_exportPublicDefs.h
+main.o: ../linux/main.c ../linux/zengl_exportfuns.h
 		$(CC) $(CFLAGS) -c ../linux/main.c
 
-encrypt.o: ../linux/encrypt.c ../linux/zengl_exportfuns.h ../linux/zengl_exportPublicDefs.h
+encrypt.o: ../linux/encrypt.c ../linux/zengl_exportfuns.h
 		$(CC) $(CFLAGS) -c ../linux/encrypt.c
 
 clean:

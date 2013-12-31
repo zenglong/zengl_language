@@ -996,12 +996,13 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 /*
 	API接口，用户可以通过此接口定义模块初始化函数
 */
-ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_VM_API_MOD_INIT_FUNC module_init_function)
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * moduleName,ZL_EXP_VOID * modInitFun)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
 	ZL_INT h;
 	ZL_INT tmpindex;
+	ZL_VM_API_MOD_INIT_FUNC module_init_function = (ZL_VM_API_MOD_INIT_FUNC)modInitFun;
 	ZL_CHAR * ApiName = "zenglApi_SetModInitHandle";
 	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
 		return -1;
@@ -1061,12 +1062,13 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetModInitHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR 
 /*
 	API接口，用户通过此接口可以自定义某模块中的函数处理句柄
 */
-ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_VM_API_MOD_FUN_HANDLE handle)
+ZL_EXPORT ZL_EXP_INT zenglApi_SetModFunHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID,ZL_EXP_CHAR * functionName,ZL_EXP_VOID * funHandle)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
 	ZL_INT h;
 	ZL_INT tmpindex;
+	ZL_VM_API_MOD_FUN_HANDLE handle = (ZL_VM_API_MOD_FUN_HANDLE)funHandle;
 	ZL_CHAR * ApiName = "zenglApi_SetModFunHandle";
 	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
 		return -1;

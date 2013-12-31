@@ -616,10 +616,8 @@ int main(int argc,char * argv[])
 	if(zenglApi_Run(VM,argv[1]) == -1) //±‡“Î÷¥––zenglΩ≈±æ
 		main_exit(VM,"¥ÌŒÛ£∫±‡“Î<%s> ß∞‹£∫%s\n",argv[1],zenglApi_GetErrorString(VM));
 
-	if(zenglApi_GetValueAsInt(VM,"i",&testint) == -1)
-		main_exit(VM,"ªÒ»°±‰¡øi ß∞‹£∫%s\n",zenglApi_GetErrorString(VM));
-
-	printf("after run , the i is %d\n",testint);
+	if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
+		printf("after run , the i is %d\n",testint);
 
 	zenglApi_Reset(VM);
 

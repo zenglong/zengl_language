@@ -2682,7 +2682,7 @@ ZL_INT zenglrun_main(ZL_VOID * VM_ARG)
 		{
 			origState = VM->ApiState;
 			VM->ApiState = ZL_API_ST_MODULES_INIT;
-			VM->vm_main_args->userdef_module_init(VM_ARG); //调用用户自定义的模块初始化函数
+			((ZL_VM_API_MODS_INIT)VM->vm_main_args->userdef_module_init)(VM_ARG); //调用用户自定义的模块初始化函数
 			VM->ApiState = origState;
 		}
 		run->RunInsts(VM_ARG);
