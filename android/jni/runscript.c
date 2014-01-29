@@ -73,7 +73,7 @@ ZL_EXP_VOID builtin_printf(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		switch(arg.type)
 		{
 		case ZL_EXP_FAT_INT:
-			sprintf(tmp,"%d",arg.val.integer);
+			sprintf(tmp,"%ld",arg.val.integer);
 			java_printcall(myenv,tmp);
 			break;
 		case ZL_EXP_FAT_FLOAT:
@@ -114,7 +114,7 @@ ZL_EXP_VOID print_array(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK memblock,ZL_E
 		switch(mblk_val.type)
 		{
 		case ZL_EXP_FAT_INT:
-			sprintf(tmp,"[%d] %d\n",i-1,mblk_val.val.integer);
+			sprintf(tmp,"[%d] %ld\n",i-1,mblk_val.val.integer);
 			java_printcall(myenv,tmp);
 			break;
 		case ZL_EXP_FAT_FLOAT:

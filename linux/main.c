@@ -7,8 +7,10 @@
 #include <signal.h>
 #include <time.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #define STRNULL '\0'
+#define DEBUG_INPUT_MAX 50
 
 typedef struct{
 	char str[50];
@@ -21,6 +23,569 @@ typedef struct{
 FILE * debuglog;
 ReadStr_Type ReadStr;
 int random_seed=0;
+
+ZL_EXP_CHAR * getDebugArg(ZL_EXP_CHAR * str,ZL_EXP_INT * start,ZL_EXP_BOOL needNull)
+{
+	int i;
+	char * ret;
+	if((*start) < 0)
+	{
+		(*start) = -1;
+		return ZL_EXP_NULL;
+	}
+	for(i=(*start);;i++)
+	{
+		if(str[i] == ' ' || str[i] == '\t')
+			continue;
+		else if(str[i] == STRNULL)
+		{
+			(*start) = -1;
+			return ZL_EXP_NULL;
+		}
+		else
+		{
+			ret = str + i;
+			while(++i)
+			{
+				if(str[i] == ' ' || str[i] == '\t')
+				{
+					if(needNull != ZL_EXP_FALSE)
+						str[i] = STRNULL;
+					(*start) = i+1;
+					break;
+				}
+				else if(str[i] == STRNULL)
+				{
+					(*start) = -1;
+					break;
+				}
+			}
+			return ret;
+		} //else
+	}//for(i=(*start);;i++)
+	(*start) = -1;
+	return ZL_EXP_NULL;
+}
+
+ZL_EXP_VOID main_print_array(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK memblock,ZL_EXP_INT recur_count);
+
+ZL_EXP_VOID main_print_debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG reg_debug;
+	ZL_EXP_INT debug_str_len = strlen(debug_str);
+	ZL_EXP_BOOL hasSemi = ZL_EXP_FALSE;
+	zenglApi_GetDebug(VM_ARG,&reg_debug);
+	if(debug_str_len > 0 && debug_str[debug_str_len - 1] == ';')
+	{
+		hasSemi = ZL_EXP_TRUE;
+		debug_str[debug_str_len - 1] = ' ';
+	}
+	printf("%s:",debug_str);
+	switch(reg_debug.type)
+	{
+	case ZL_EXP_FAT_NONE:
+		printf("none type , number equal %ld",reg_debug.val.integer);
+		break;
+	case ZL_EXP_FAT_INT:
+		printf("integer:%ld",reg_debug.val.integer);
+		break;
+	case ZL_EXP_FAT_FLOAT:
+		printf("float:%.16g",reg_debug.val.floatnum);
+		break;
+	case ZL_EXP_FAT_STR:
+		printf("string:%s",reg_debug.val.str);
+		break;
+	case ZL_EXP_FAT_MEMBLOCK:
+		printf("array or class obj:\n");
+		main_print_array(VM_ARG,reg_debug.val.memblock,0);
+		break;
+	case ZL_EXP_FAT_ADDR:
+	case ZL_EXP_FAT_ADDR_LOC:
+	case ZL_EXP_FAT_ADDR_MEMBLK:
+		printf("addr type");
+		break;
+	case ZL_EXP_FAT_INVALID:
+		printf("invalid type");
+		break;
+	}
+	if(hasSemi == ZL_EXP_TRUE)
+		debug_str[debug_str_len - 1] = ';';
+	printf("\n");
+}
+
+ZL_EXP_BOOL main_isNumber(ZL_EXP_CHAR * str)
+{
+	int len = strlen(str);
+	int i;
+	for(i=0;i<len;i++)
+	{
+		if(!isdigit(str[i]))
+			return ZL_EXP_FALSE;
+	}
+	return ZL_EXP_TRUE;
+}
+
+ZL_EXP_INT main_debug_break(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * cur_filename,ZL_EXP_INT cur_line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * log)
+{
+	char * str = ZL_EXP_NULL;
+	char * tmpstr = ZL_EXP_NULL;
+	char ch;
+	char * command,* arg;
+	int i,start;
+	int exit = 0;
+	int str_size = 0;
+	int str_count = 0;
+	int tmplen;
+	if(log != ZL_EXP_NULL)
+	{
+		if(zenglApi_Debug(VM_ARG,log) == -1)
+		{
+			printf("log日志断点错误：%s",zenglApi_GetErrorString(VM_ARG));
+		}
+		else
+		{
+			main_print_debug(VM_ARG,log);
+			return 0;
+		}
+	}
+	printf("* %s:%d ",cur_filename,cur_line);
+	if(breakIndex == -1)
+		printf("Single Break [current]\n");
+	else
+		printf("Break index:%d [current]\n",breakIndex);
+	if(str == ZL_EXP_NULL)
+	{
+		str_size = DEBUG_INPUT_MAX;
+		str = zenglApi_AllocMem(VM_ARG,str_size);
+	}
+	while(!exit)
+	{
+		printf(">>> debug input:");
+		ch = getchar();
+		for(i=0;ch!='\n';i++)
+		{
+			if(i >= str_size - 10) //i到达最后一个元素时，对str进行扩容，str_size - 10让str可以在尾部预留一段空间
+			{
+				str_size += DEBUG_INPUT_MAX;
+				tmpstr = zenglApi_AllocMem(VM_ARG,str_size);
+				strcpy(tmpstr,str);
+				zenglApi_FreeMem(VM_ARG,str);
+				str = tmpstr;
+			}
+			str[i] = ch;
+			ch = getchar();
+		}
+		str[i] = STRNULL;
+		str_count = i;
+		start = 0;
+		command = getDebugArg(str,&start,ZL_EXP_TRUE);
+		if(command == ZL_EXP_NULL || strlen(command) != 1)
+		{
+			printf("命令必须是一个字符\n");
+			continue;
+		}
+		switch(command[0])
+		{
+		case 'p':
+			{
+				arg = getDebugArg(str,&start,ZL_EXP_FALSE);
+				tmplen = arg != ZL_EXP_NULL ? strlen(arg) : 0;
+				if(arg != ZL_EXP_NULL && tmplen > 0)
+				{
+					if(arg[tmplen - 1] != ';' && str_count < str_size - 1)
+					{
+						arg[tmplen] = ';';
+						arg[tmplen+1] = STRNULL;
+					}
+					if(zenglApi_Debug(VM_ARG,arg) == -1)
+					{
+						printf("p调试错误：%s\n",zenglApi_GetErrorString(VM_ARG));
+						continue;
+					}
+					main_print_debug(VM_ARG,arg);
+				}
+				else
+					printf("p命令缺少参数\n");
+			}
+			break;
+		case 'b':
+			{
+				char * filename = ZL_EXP_NULL;
+				int line = 0;
+				int count = 0;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0)
+					filename = arg;
+				else
+				{
+					printf("b命令缺少文件名参数\n");
+					continue;
+				}
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0)
+					line = atoi(arg);
+				else
+				{
+					printf("b命令缺少行号参数\n");
+					continue;
+				}
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0)
+					count = atoi(arg);
+				if(zenglApi_DebugSetBreak(VM_ARG,filename,line,ZL_EXP_NULL,ZL_EXP_NULL,count,ZL_EXP_FALSE) == -1)
+					printf("b命令error:%s\n",zenglApi_GetErrorString(VM_ARG));
+				else
+					printf("设置断点成功\n");
+			}
+			break;
+		case 'B':
+			{
+				int size;
+				int totalcount;
+				int i;
+				char * filename = ZL_EXP_NULL;
+				char * condition = ZL_EXP_NULL;
+				char * log = ZL_EXP_NULL;
+				int count;
+				int line;
+				ZL_EXP_BOOL disabled;
+				if(breakIndex == -1)
+					printf("* %s:%d Single Break [current]\n",cur_filename,cur_line);
+				size = zenglApi_DebugGetBreak(VM_ARG,-1,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,&totalcount,ZL_EXP_NULL,ZL_EXP_NULL);
+				for(i=0;i<size;i++)
+				{
+					if(zenglApi_DebugGetBreak(VM_ARG,i,&filename,&line,&condition,&log,&count,&disabled,ZL_EXP_NULL) == -1)
+						continue;
+					else
+					{
+						printf("[%d] %s:%d",i,filename,line);
+						if(condition != ZL_EXP_NULL)
+							printf(" C:%s",condition);
+						if(log != ZL_EXP_NULL)
+							printf(" L:%s",log);
+						printf(" N:%d",count);
+						if(disabled == ZL_EXP_FALSE)
+							printf(" D:enable");
+						else
+							printf(" D:disable");
+						if(i == breakIndex)
+							printf(" [current]");
+						printf("\n");
+					}
+				}
+				printf("total:%d\n",totalcount);
+			}
+			break;
+		case 'T':
+			{	
+				int arg = -1;
+				int loc = -1;
+				int pc = -1;
+				int ret;
+				int line = 0;
+				char * fileName = ZL_EXP_NULL;
+				char * className = ZL_EXP_NULL;
+				char * funcName = ZL_EXP_NULL;
+				while(ZL_EXP_TRUE)
+				{
+					ret = zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,&className,&funcName);
+					if(ret == 1)
+					{
+						printf(" %s:%d ",fileName,line);
+						if(className != ZL_EXP_NULL)
+							printf("%s:",className);
+						if(funcName != ZL_EXP_NULL)
+							printf("%s",funcName);
+						printf("\n");
+						continue;
+					}
+					else if(ret == 0)
+					{
+						printf(" %s:%d ",fileName,line);
+						if(className != ZL_EXP_NULL)
+							printf("%s:",className);
+						if(funcName != ZL_EXP_NULL)
+							printf("%s",funcName);
+						printf("\n");
+						break;
+					}
+					else if(ret == -1)
+					{
+						printf("%s",zenglApi_GetErrorString(VM_ARG));
+						break;
+					}
+				}
+			}
+			break;
+		case 'r':
+			{
+				int arg = -1;
+				int loc = -1;
+				int pc = -1;
+				int tmpPC;
+				int ret;
+				int size,i;
+				int line = 0;
+				char * fileName = ZL_EXP_NULL;
+				ZL_EXP_BOOL hasBreaked = ZL_EXP_FALSE;
+				ret = zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,ZL_EXP_NULL,ZL_EXP_NULL);
+				if(ret == 1)
+				{
+					zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,ZL_EXP_NULL,ZL_EXP_NULL);
+					pc++;
+					size = zenglApi_DebugGetBreak(VM_ARG,-1,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL);
+					for(i=0;i<size;i++)
+					{
+						if(zenglApi_DebugGetBreak(VM_ARG,i,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,&tmpPC) == -1)
+							continue;
+						else if(pc == tmpPC)
+						{
+							hasBreaked = ZL_EXP_TRUE;
+							break;
+						}
+					}
+					if(!hasBreaked)
+					{
+						if(zenglApi_DebugSetBreakEx(VM_ARG,pc,ZL_EXP_NULL,ZL_EXP_NULL,1,ZL_EXP_FALSE) == -1)
+							printf("%s",zenglApi_GetErrorString(VM_ARG));
+						else
+							exit = 1;
+					}
+					else
+						exit = 1;
+				}
+				else if(ret == 0)
+					exit = 1;
+				else if(ret == -1)
+					printf("%s",zenglApi_GetErrorString(VM_ARG));
+			}
+			break;
+		case 'd':
+			{
+				int index;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					index = atoi(arg);
+				else
+				{
+					printf("d命令缺少断点索引参数\n");
+					continue;
+				}
+				if(zenglApi_DebugDelBreak(VM_ARG,index) == -1)
+					printf("d命令error:无效的断点索引");
+				else
+					printf("删除断点成功");
+				printf("\n");
+			}
+			break;
+		case 'D':
+			{
+				int index;
+				char * filename = ZL_EXP_NULL;
+				char * condition = ZL_EXP_NULL;
+				char * log = ZL_EXP_NULL;
+				int count;
+				int line;
+				ZL_EXP_BOOL disabled;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					index = atoi(arg);
+				else
+				{
+					printf("D命令缺少断点索引参数\n");
+					continue;
+				}
+				if(zenglApi_DebugGetBreak(VM_ARG,index,&filename,&line,&condition,&log,&count,&disabled,ZL_EXP_NULL) == -1)
+				{
+					printf("D命令error:无效的断点索引\n");
+					continue;
+				}
+				else
+				{
+					if(zenglApi_DebugSetBreak(VM_ARG,filename,line,condition,log,count,ZL_EXP_TRUE) == -1)
+						printf("D命令禁用断点error:%s",zenglApi_GetErrorString(VM_ARG));
+					else
+						printf("D命令禁用断点成功");
+					printf("\n");
+				}
+			}
+			break;
+		case 'C':
+			{
+				int index;
+				char * newCondition;
+				char * filename = ZL_EXP_NULL;
+				char * condition = ZL_EXP_NULL;
+				char * log = ZL_EXP_NULL;
+				int count;
+				int line;
+				ZL_EXP_BOOL disabled;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					index = atoi(arg);
+				else
+				{
+					printf("C命令缺少断点索引参数\n");
+					continue;
+				}
+				arg = getDebugArg(str,&start,ZL_EXP_FALSE);
+				tmplen = arg != ZL_EXP_NULL ? strlen(arg) : 0;
+				if(arg != ZL_EXP_NULL && tmplen > 0)
+				{
+					if(arg[tmplen - 1] != ';' && str_count < str_size - 1)
+					{
+						arg[tmplen] = ';';
+						arg[tmplen+1] = STRNULL;
+					}
+					newCondition = arg;
+				}
+				else
+					newCondition = ZL_EXP_NULL;
+				if(zenglApi_DebugGetBreak(VM_ARG,index,&filename,&line,&condition,&log,&count,&disabled,ZL_EXP_NULL) == -1)
+				{
+					printf("C命令error:无效的断点索引\n");
+					continue;
+				}
+				else
+				{
+					if(zenglApi_DebugSetBreak(VM_ARG,filename,line,newCondition,log,count,disabled) == -1)
+						printf("C命令设置条件断点error:%s",zenglApi_GetErrorString(VM_ARG));
+					else
+						printf("C命令设置条件断点成功");
+					printf("\n");
+				}
+			}
+			break;
+		case 'L':
+			{
+				int index;
+				char * newLog;
+				char * filename = ZL_EXP_NULL;
+				char * condition = ZL_EXP_NULL;
+				char * log = ZL_EXP_NULL;
+				int count;
+				int line;
+				ZL_EXP_BOOL disabled;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					index = atoi(arg);
+				else
+				{
+					printf("L命令缺少断点索引参数\n");
+					continue;
+				}
+				arg = getDebugArg(str,&start,ZL_EXP_FALSE);
+				tmplen = arg != ZL_EXP_NULL ? strlen(arg) : 0;
+				if(arg != ZL_EXP_NULL && tmplen > 0)
+				{
+					if(arg[tmplen - 1] != ';' && str_count < str_size - 1)
+					{
+						arg[tmplen] = ';';
+						arg[tmplen+1] = STRNULL;
+					}
+					newLog = arg;
+				}
+				else
+					newLog = ZL_EXP_NULL;
+				if(zenglApi_DebugGetBreak(VM_ARG,index,&filename,&line,&condition,&log,&count,&disabled,ZL_EXP_NULL) == -1)
+				{
+					printf("L命令error:无效的断点索引\n");
+					continue;
+				}
+				else
+				{
+					if(zenglApi_DebugSetBreak(VM_ARG,filename,line,condition,newLog,count,disabled) == -1)
+						printf("L命令设置日志断点error:%s",zenglApi_GetErrorString(VM_ARG));
+					else
+						printf("L命令设置日志断点成功");
+					printf("\n");
+				}
+			}
+			break;
+		case 'N':
+			{
+				int index;
+				int newCount;
+				char * filename = ZL_EXP_NULL;
+				char * condition = ZL_EXP_NULL;
+				char * log = ZL_EXP_NULL;
+				int count;
+				int line;
+				ZL_EXP_BOOL disabled;
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					index = atoi(arg);
+				else
+				{
+					printf("N命令缺少断点索引参数\n");
+					continue;
+				}
+				arg = getDebugArg(str,&start,ZL_EXP_TRUE);
+				if(arg != ZL_EXP_NULL && strlen(arg) > 0 && main_isNumber(arg))
+					newCount = atoi(arg);
+				else
+				{
+					printf("N命令缺少断点次数参数\n");
+					continue;
+				}
+				if(zenglApi_DebugGetBreak(VM_ARG,index,&filename,&line,&condition,&log,&count,&disabled,ZL_EXP_NULL) == -1)
+				{
+					printf("N命令error:无效的断点索引\n");
+					continue;
+				}
+				else
+				{
+					if(zenglApi_DebugSetBreak(VM_ARG,filename,line,condition,log,newCount,disabled) == -1)
+						printf("N命令设置断点次数error:%s",zenglApi_GetErrorString(VM_ARG));
+					else
+						printf("N命令设置断点次数成功");
+					printf("\n");
+				}
+			}
+			break;
+		case 's':
+			zenglApi_DebugSetSingleBreak(VM_ARG,ZL_EXP_TRUE);
+			exit = 1;
+			break;
+		case 'S':
+			zenglApi_DebugSetSingleBreak(VM_ARG,ZL_EXP_FALSE);
+			exit = 1;
+			break;
+		case 'c':
+			exit = 1;
+			break;
+		case 'h':
+			printf(" p 调试变量信息 usage:p express\n"
+				" b 设置断点 usage:b filename lineNumber\n"
+				" B 查看断点列表 usage:B\n"
+				" T 查看脚本函数的堆栈调用信息 usage:T\n"
+				" d 删除某断点 usage:d breakIndex\n"
+				" D 禁用某断点 usage:D breakIndex\n"
+				" C 设置条件断点 usage:C breakIndex condition-express\n"
+				" L 设置日志断点 usage:L breakIndex log-express\n"
+				" N 设置断点次数 usage:N breakIndex count\n"
+				" s 单步步入 usage:s\n"
+				" S 单步步过 usage:S\n"
+				" r 执行到返回 usage:r\n"
+				" c 继续执行 usage:c\n");
+			break;
+		default:
+			printf("无效的命令\n");
+			break;
+		}
+	} //while(!exit)
+	if(str != ZL_EXP_NULL)
+		zenglApi_FreeMem(VM_ARG,str);
+	return 0;
+}
+
+ZL_EXP_INT main_debug_conditionError(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * error)
+{
+	char * condition;
+	zenglApi_DebugGetBreak(VM_ARG,breakIndex,ZL_EXP_NULL,ZL_EXP_NULL,&condition,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL);
+	printf("\n%s [%d] <%d %s> error:%s\n",filename,line,breakIndex,condition,error);
+	return 0;
+}
 
 /*
 	将用户输入的数据写入到ReadStr全局字符串动态数组中。
@@ -87,7 +652,7 @@ ZL_EXP_VOID main_builtin_printf(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		switch(arg.type)
 		{
 		case ZL_EXP_FAT_INT:
-			printf("%d",arg.val.integer);
+			printf("%ld",arg.val.integer);
 			break;
 		case ZL_EXP_FAT_FLOAT:
 			printf("%.16g",arg.val.floatnum);
@@ -134,7 +699,7 @@ ZL_EXP_VOID main_builtin_random(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		srand(random_seed);
 		random_seed = rand();
 	}
-	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_INT,ZL_EXP_NULL,random_seed,0);
+	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_INT,ZL_EXP_NULL,(long)random_seed,0);
 }
 
 /*array模块函数，用于创建zengl脚本的动态数组*/
@@ -198,7 +763,7 @@ ZL_EXP_VOID main_print_array(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK memblock
 		switch(mblk_val.type)
 		{
 		case ZL_EXP_FAT_INT:
-			printf("[%d] %d\n",i-1,mblk_val.val.integer);
+			printf("[%d] %ld\n",i-1,mblk_val.val.integer);
 			break;
 		case ZL_EXP_FAT_FLOAT:
 			printf("[%d] %.16g\n",i-1,mblk_val.val.floatnum);
@@ -312,6 +877,24 @@ ZL_EXP_VOID main_builtin_get_extraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,(ZL_EXP_CHAR *)zenglApi_GetExtraData(VM_ARG,extraName),0,0);
 }
 
+/*debug调试模块函数*/
+ZL_EXP_VOID main_builtin_debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZL_EXP_CHAR * debug_str;
+	if(argcount != 1)
+		zenglApi_Exit(VM_ARG,"debug函数必须有一个参数");
+	zenglApi_GetFunArg(VM_ARG,1,&arg); //获取第一个参数为脚本名
+	if(arg.type != ZL_EXP_FAT_STR)
+		zenglApi_Exit(VM_ARG,"debug函数第一个参数必须是字符串，表示调试字符串");
+	debug_str = arg.val.str;
+	if(zenglApi_Debug(VM_ARG,debug_str) == -1)
+	{
+		zenglApi_Exit(VM_ARG,"%s",zenglApi_GetErrorString(VM_ARG));
+	}
+	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_INT,ZL_EXP_NULL,0,0);
+}
+
 /*sdl模块函数*/
 ZL_EXP_VOID main_sdl_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
@@ -341,6 +924,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"debug",main_builtin_debug);
 }
 
 ZL_EXP_VOID main_sdl_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
@@ -361,6 +945,7 @@ void main_exit(void * VM,char * err_format,...)
 	vprintf(err_format,arg);
 	va_end(arg);
 	zenglApi_Close(VM);
+	fclose(debuglog);
 	#ifdef ZL_EXP_OS_IN_WINDOWS
 		system("pause");
 	#endif
@@ -561,7 +1146,7 @@ int main_output_rc4_source(char * src_filename,char * dest_filename,char * rc4_k
 int main(int argc,char * argv[])
 {
 	int len = 0;
-	int testint;
+	long testint;
 	//int * testint_ptr;
 	//double testdouble;
 	char * teststr = 0;
@@ -581,7 +1166,7 @@ int main(int argc,char * argv[])
 
 	if(argc < 2)
 	{
-		printf("usage: %s <filename> ... (用法错误，应该是：程序名 + zengl脚本文件名的形式)\n",argv[0]);
+		printf("usage: %s <filename> ... (用法错误，应该是：程序名 + zengl脚本文件名的形式，在后面加-d参数可以开启调试)\n",argv[0]);
 		#ifdef ZL_EXP_OS_IN_WINDOWS
 			system("pause");
 		#endif
@@ -613,17 +1198,23 @@ int main(int argc,char * argv[])
 
 	//zenglApi_SetSourceRC4Key(VM,rc4_key_str,rc4_key_len);
 
+	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
+		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
+
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
 		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
 
 	if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
-		printf("after run , the i is %d\n",testint);
+		printf("after run , the i is %ld\n",testint);
 
 	zenglApi_Reset(VM);
+
+	zenglApi_SetFlags(VM,(ZENGL_EXPORT_VM_MAIN_ARG_FLAGS)(ZL_EXP_CP_AF_IN_DEBUG_MODE));
 
 	zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
 
 	printf("\n[next test zenglApi_RunStr]: \n");
+	//zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE);
 	if(zenglApi_RunStr(VM,run_str,run_str_len,"runstr") == -1) //编译执行字符串脚本
 		main_exit(VM,"错误：编译runstr失败：%s\n",zenglApi_GetErrorString(VM));
 

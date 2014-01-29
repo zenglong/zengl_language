@@ -124,6 +124,10 @@ SOURCE=.\zenglApi_BltModFuns.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\zenglDebug.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\zenglrun_func.c
 # End Source File
 # Begin Source File

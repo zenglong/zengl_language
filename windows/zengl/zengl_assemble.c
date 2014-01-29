@@ -238,7 +238,7 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 			state = ZL_ST_DOWN;
 			break;
 		case ZL_ST_INNUM: //解释同上
-			inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
+			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 							ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -274,7 +274,7 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 								inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 				break;
 			case ZL_TK_NUM:
-				inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+				inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
 								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 								ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -349,7 +349,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -403,7 +403,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
@@ -601,7 +601,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
@@ -696,7 +696,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -864,7 +864,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 					}
 					break; //case ZL_TK_DOT: case ZL_TK_ARRAY_ITEM: //加加减减遇到数组元素或者类的成员时的处理
 				case ZL_TK_NUM: //如果直接对整数使用++,--则直接对结果进行加一，减一。
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -970,7 +970,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 								inst_op_data.type , inst_op_data.val.mem); //对应汇编指令 类似 "PRINT (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 								ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
 								ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "PRINT 123"
@@ -1013,6 +1013,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 		case ZL_ST_ASM_CODE_INIF: //if-elif-else 控制语句的汇编代码输出
 			if(nodes[nodenum].childs.count >= 2)
 			{
+				ZL_INT LastNodeNum;
 				chnum = nodes[nodenum].childs.childnum;
 				if(chnum[0] == -1)
 				{
@@ -1028,10 +1029,11 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 					i = chnum[1];
 					while(i>0)  //循环生成if第一个执行块里的所有语句的汇编代码。
 					{
+						LastNodeNum = i;
 						compile->AsmGenCodes(VM_ARG,i);
 						i = nodes[i].nextnode;
 					}
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,LastNodeNum,
 						ZL_R_IT_JMP,ZL_R_DT_NONE,0,
 						ZL_R_DT_LDADDR,compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_IF_END)); //对应汇编指令 "JMP adr%d" 运行完执行块里的代码后，就JMP无条件跳转到if-elif-else语句的结束位置。
 					compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_ADDR,ZL_TRUE),compile->gencode_struct.pc); //记录下IF_ADDR 这个标示符跳转地址对应的汇编指令的位置。如果第一个判断为false就跳转到这里。
@@ -1382,7 +1384,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 										inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 						break;
 					case ZL_TK_NUM:
-						inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+						inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 						run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 										ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 										ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -1560,7 +1562,7 @@ assign: //加赋值，减赋值等运算符在生成加减等汇编代码后，就会跳到此处来生成赋值语
 									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 					break;
 				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
+					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
 									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
 									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
@@ -1999,6 +2001,7 @@ ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
 	ZL_INT * chnum = ZL_NULL;
 	ZL_INT nodenum;
+	ZL_INT lastNodeNum;
 	if(num < ZL_AST_CHILD_NODE_SIZE)
 		nodenum = ifchnum->childnum[num];
 	else
@@ -2039,10 +2042,11 @@ ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_
 		nodenum = ifchnum->extchilds[num + 1 - ZL_AST_CHILD_NODE_SIZE];
 	while(nodenum > 0)  //循环生成elif下面的代码块的汇编指令
 	{
+		lastNodeNum = nodenum;
 		compile->AsmGenCodes(VM_ARG,nodenum);
 		nodenum = nodes[nodenum].nextnode;
 	}
-	run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+	run->AddInst(VM_ARG,compile->gencode_struct.pc++,lastNodeNum,
 			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
 			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_END,ZL_FALSE)); //对应汇编指令 "JMP adr%d" elif代码块执行完毕后，JMP无条件跳转到if-elif-else的结束位置
 	compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_ADDR,ZL_TRUE),compile->gencode_struct.pc); //elif判断表达式为false时的跳转位置
@@ -2116,7 +2120,8 @@ ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasmin
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
-	ZL_INT * chnum = ZL_NULL,* extnum = ZL_NULL,i,num,min=0,max=0;
+	ZL_INT * chnum = ZL_NULL,* extnum = ZL_NULL,i;
+	ZL_LONG num,min=0,max=0;
 	ZENGL_AST_CHILD_NODE_TYPE * childs = &nodes[nodenum].childs;
 	(*hasminmax) = ZL_FALSE;
 	(*hasdefault) = ZL_FALSE;
@@ -2154,7 +2159,7 @@ ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasmin
 }
 
 /*返回节点的字符串信息的整数形式*/
-ZL_INT zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum)
+ZL_LONG zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
@@ -2163,14 +2168,14 @@ ZL_INT zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum)
 	case ZL_TK_NUM:
 	case ZL_TK_FLOAT:
 	case ZL_TK_STR:
-		return ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
+		return ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
 		break;
 	}
 	return 0;
 }
 
 /*将case对应的比较数字添加到跳转表中*/
-ZL_VOID zengl_AsmAddCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_INT num)
+ZL_VOID zengl_AsmAddCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_LONG num)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	if(!table->isInit)

@@ -192,6 +192,11 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 			{
 				state = ZL_ST_INSTR;
 				startStr_ch = ch;
+				if(compile->tokenInfo.str == ZL_NULL) //如果没有初始化，就通过makeTokenStr来初始化，再由freeTokenStr重置游标
+				{
+					compile->makeTokenStr(VM_ARG,ch);
+					compile->freeTokenStr(VM_ARG);
+				}
 				compile->tokenInfo.str[0] = ZL_STRNULL;
 			}
 			else

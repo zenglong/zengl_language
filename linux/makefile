@@ -11,8 +11,8 @@ STATIC_CFLAGS = $(CFLAGS) -fvisibility=hidden -fPIC
 
 ZENGL_LIB_CFLAGS_LIB = -lzengl
 
-SRCS = zengl_main.c zengl_parser.c zengl_symbol.c zengl_locals.c zengl_assemble.c zengl_ld.c zenglrun_main.c zenglrun_func.c zenglApi.c zenglApi_BltModFuns.c
-OBJS = zengl_main.o zengl_parser.o zengl_symbol.o zengl_locals.o zengl_assemble.o zengl_ld.o zenglrun_main.o zenglrun_func.o zenglApi.o zenglApi_BltModFuns.o 
+SRCS = zengl_main.c zengl_parser.c zengl_symbol.c zengl_locals.c zengl_assemble.c zengl_ld.c zenglrun_main.c zenglrun_func.c zenglApi.c zenglApi_BltModFuns.c zenglDebug.c
+OBJS = zengl_main.o zengl_parser.o zengl_symbol.o zengl_locals.o zengl_assemble.o zengl_ld.o zenglrun_main.o zenglrun_func.o zenglApi.o zenglApi_BltModFuns.o zenglDebug.o
 RUNOBJS = main.o
 
 zengl: $(RUNOBJS) encrypt.o libzengl.so

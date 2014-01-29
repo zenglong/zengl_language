@@ -269,6 +269,17 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM,	//解释器运行时错误：zenglApi_AllocMem中的size参数无效
 	ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM,		//解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效
 	ZL_ERR_VM_API_INVALID_SCRIPT_STR_WHEN_RUNSTR,		//解释器运行时错误：zenglApi_RunStr接口中的字符串脚本无效
+	ZL_ERR_VM_API_DEBUGVM_OPEN_FAILED,			//解释器运行时错误：%s中的DeubugVM分配失败
+	ZL_ERR_VM_API_INVALID_DEBUG_STR,			//解释器运行时错误：%s中的debug_str调试字符串无效
+	ZL_ERR_VM_API_DEBUG_ERR,					//DebugErr:%s
+	ZL_ERR_VM_API_INIT_DEBUG_BREAK_FAILED,		//解释器运行时错误：调试器断点初始化失败
+	ZL_ERR_VM_API_SET_DEBUG_BREAK_FAILED,		//解释器运行时错误：调试器设置断点失败
+	ZL_ERR_VM_API_INVALID_BREAK_LOCATION,		//无效的断点位置
+	ZL_ERR_VM_API_DEBUG_TRACE_INVALID_ARGS,		//调试器进行脚本函数追踪时，提供给API接口'%s'的参数无效
+	ZL_ERR_VM_API_INVALID_PTR_WHEN_REALLOC,		//解释器运行时错误：zenglApi_ReAllocMem中的ptr指针参数无效
+	ZL_ERR_VM_API_FILENAME_TOO_LONG, //解释器运行时错误：文件路径信息太长
+	ZL_ERR_VM_API_FILENAME_TOO_LONG_WHEN_MERGE, //解释器运行时错误：合并后的文件路径信息太长
+	ZL_ERR_VM_API_INVALID_ARG,	//解释器运行时错误：提供给API接口'%s'的参数无效
 }ZENGL_ERRORNO;
 /*各种错误的枚举定义结束*/
 

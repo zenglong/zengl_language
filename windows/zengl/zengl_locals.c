@@ -270,6 +270,17 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: VM Api err , invalid size arg in zenglApi_AllocMem (解释器运行时错误：zenglApi_AllocMem中的size参数无效)\n", //ZL_ERR_VM_API_INVALID_SIZE_WHEN_ALLOCMEM
 	"\n err: VM Api err , invalid ptr arg in zenglApi_FreeMem (解释器运行时错误：zenglApi_FreeMem中的ptr指针参数无效)\n", //ZL_ERR_VM_API_INVALID_PTR_WHEN_FREEMEM
 	"\n err: VM Api err , invalid script string in zenglApi_RunStr (解释器运行时错误：zenglApi_RunStr接口中的字符串脚本无效)\n", //ZL_ERR_VM_API_INVALID_SCRIPT_STR_WHEN_RUNSTR
+	"\n err: VM Api err , DeubugVM open failed in %s (解释器运行时错误：%s中的DeubugVM分配失败)\n", //ZL_ERR_VM_API_DEBUGVM_OPEN_FAILED
+	"\n err: VM Api err , invalid debug_str in %s (解释器运行时错误：%s中的debug_str调试字符串无效)\n", //ZL_ERR_VM_API_INVALID_DEBUG_STR
+	"DebugErr:%s", //ZL_ERR_VM_API_DEBUG_ERR
+	"\n err: VM Api err , debug break point init failed (解释器运行时错误：调试器断点初始化失败)\n", //ZL_ERR_VM_API_INIT_DEBUG_BREAK_FAILED
+	"\n err: VM Api err , debug break point set failed (解释器运行时错误：调试器设置断点失败)\n", //ZL_ERR_VM_API_SET_DEBUG_BREAK_FAILED
+	"\n err: VM Api err , invalid break point location (无效的断点位置)\n", //ZL_ERR_VM_API_INVALID_BREAK_LOCATION
+	"\n err: VM Api err , invalid args in %s (调试器进行脚本函数追踪时，提供给API接口'%s'的参数无效)\n", //ZL_ERR_VM_API_DEBUG_TRACE_INVALID_ARGS
+	"\n err: VM Api err , invalid ptr arg in zenglApi_ReAllocMem (解释器运行时错误：zenglApi_ReAllocMem中的ptr指针参数无效)\n", //ZL_ERR_VM_API_INVALID_PTR_WHEN_REALLOC
+	"\n err: VM Api err , filename <'%s'> is too long (解释器运行时错误：文件路径信息太长)\n", //ZL_ERR_VM_API_FILENAME_TOO_LONG
+	"\n err: VM Api err , filename <'%s'> + <'%s'> is too long (解释器运行时错误：合并后的文件路径信息太长)\n", //ZL_ERR_VM_API_FILENAME_TOO_LONG_WHEN_MERGE
+	"\n err: VM Api err , invalid args in %s (解释器运行时错误：提供给API接口'%s'的参数无效)\n", //ZL_ERR_VM_API_INVALID_ARG
 };
 #endif
 
@@ -416,6 +427,8 @@ ZL_CONST ZL_CHAR * ZL_Run_Inst_Type_String[] = {
 	"BIT_RIGHT",		//ZL_R_IT_BIT_RIGHT
 	"BIT_LEFT",			//ZL_R_IT_BIT_LEFT
 	"BIT_REVERSE",		//ZL_R_IT_BIT_REVERSE
+	"BREAK",			//ZL_R_IT_BREAK
+	"SINGLE_BREAK",		//ZL_R_IT_SINGLE_BREAK
 	"END",				//ZL_R_IT_END
 };
 
@@ -428,4 +441,5 @@ ZL_CONST ZL_CHAR * ZL_Run_Register_Type_String[] = {
 	"LOC",		//ZL_R_RT_LOC
 	"ARGTMP",	//ZL_R_RT_ARGTMP
 	"ARRAY_ITEM",//ZL_R_RT_ARRAY_ITEM
+	"DEBUG",	//ZL_R_RT_DEBUG
 };

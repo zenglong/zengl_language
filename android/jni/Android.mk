@@ -19,7 +19,7 @@ ZENGL_PATH := ../../linux
 
 include $(CLEAR_VARS)
 LOCAL_MODULE    := zengl
-LOCAL_SRC_FILES := $(ZENGL_PATH)/zengl_main.c  $(ZENGL_PATH)/zengl_parser.c  $(ZENGL_PATH)/zengl_symbol.c  $(ZENGL_PATH)/zengl_locals.c  $(ZENGL_PATH)/zengl_assemble.c  $(ZENGL_PATH)/zengl_ld.c  $(ZENGL_PATH)/zenglrun_main.c  $(ZENGL_PATH)/zenglrun_func.c  $(ZENGL_PATH)/zenglApi.c  $(ZENGL_PATH)/zenglApi_BltModFuns.c
+LOCAL_SRC_FILES := $(ZENGL_PATH)/zengl_main.c  $(ZENGL_PATH)/zengl_parser.c  $(ZENGL_PATH)/zengl_symbol.c  $(ZENGL_PATH)/zengl_locals.c  $(ZENGL_PATH)/zengl_assemble.c  $(ZENGL_PATH)/zengl_ld.c  $(ZENGL_PATH)/zenglrun_main.c  $(ZENGL_PATH)/zenglrun_func.c  $(ZENGL_PATH)/zenglApi.c  $(ZENGL_PATH)/zenglApi_BltModFuns.c $(ZENGL_PATH)/zenglDebug.c
 
 LOCAL_CFLAGS    := -DZL_LANG_EN_WITH_CH -DZL_EXP_OS_IN_ARM_GCC
 include $(BUILD_STATIC_LIBRARY)

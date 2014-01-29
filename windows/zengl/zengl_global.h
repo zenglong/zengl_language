@@ -108,6 +108,7 @@ typedef clock_t ZL_CLOCK_T;
 #define ZENGL_SYS_STRNCPY strncpy //字符串拷贝函数
 #define ZENGL_SYS_STRCHR strchr //在字符串中查找某字符
 #define ZENGL_SYS_STR_TO_NUM atoi //将字符串转为整数
+#define ZENGL_SYS_STR_TO_LONG_NUM atol //将字符串转为长整数
 #define ZENGL_SYS_STR_TO_FLOAT atof //将字符串转为浮点数
 #define ZENGL_SYS_TIME_CLOCK clock //获取CPU执行的tick滴答值，用于统计执行时间
 #define ZENGL_SYS_JMP_LONGJMP_TO longjmp //长跳转，用于出错时跳转
@@ -129,6 +130,7 @@ typedef enum _ZENGL_API_STATES{
 	ZL_API_ST_MODULES_INIT,
 	ZL_API_ST_MOD_INIT_HANDLE,
 	ZL_API_ST_MOD_FUN_HANDLE,
+	ZL_API_ST_DEBUG_HANDLE,
 }ZENGL_API_STATES;
 /*API接口的各种状态枚举定义结束*/
 
@@ -602,7 +604,7 @@ typedef struct _ZENGL_ASM_STACKLIST_TYPE{
 }ZENGL_ASM_STACKLIST_TYPE; //为了解决if,for结构的嵌入式问题，需要在生成汇编代码时引入模拟堆栈。
 
 typedef struct _ZENGL_ASM_CASE_JMP_TABLE_MEMBER{
-	ZL_INT caseNum;
+	ZL_LONG caseNum;
 	ZL_INT caseAddr;
 }ZENGL_ASM_CASE_JMP_TABLE_MEMBER; //switch...case结构跳转表的成员
 
@@ -812,7 +814,7 @@ typedef struct _ZENGL_AST_SCAN_STACKLIST_TYPE{
 #define ZL_R_MEM_POOL_SIZE 40	//解释器内存池初始化和动态扩容的大小
 #define ZL_R_MEM_FREE_POOL_SIZE 20 //解释器内存释放池初始化和动态扩容的大小
 #define ZL_R_INST_DATA_STRING_POOL_SIZE 1024 //指令操作数字符串池初始化和动态扩容的大小
-#define ZL_R_REGLIST_SIZE 8		//寄存器的数目包括默认初始值
+#define ZL_R_REGLIST_SIZE 9		//寄存器的数目包括默认初始值
 #define ZL_R_MODULE_TABLE_SIZE 20 //模块动态数组初始化和动态扩容的大小
 #define ZL_R_MOD_FUN_TABLE_SIZE 50 //模块函数动态数组初始化和动态扩容的大小
 #define ZL_R_EXTRA_DATA_TABLE_SIZE 10 //用户额外数据动态数组初始化和动态扩容的大小
@@ -919,6 +921,8 @@ typedef enum _ZENGL_RUN_INST_TYPE{
 	ZL_R_IT_BIT_RIGHT,		//BIT_RIGHT指令
 	ZL_R_IT_BIT_LEFT,		//BIT_LEFT指令
 	ZL_R_IT_BIT_REVERSE,	//BIT_REVERSE指令
+	ZL_R_IT_BREAK,			//BREAK指令
+	ZL_R_IT_SINGLE_BREAK,	//SINGLE_BREAK指令
 	ZL_R_IT_END,			//END指令
 }ZENGL_RUN_INST_TYPE; //指令类型
 
@@ -943,6 +947,7 @@ typedef enum _ZENGL_RUN_REG_TYPE{
 	ZL_R_RT_LOC,	//LOC寄存器
 	ZL_R_RT_ARGTMP,	//ARGTMP寄存器
 	ZL_R_RT_ARRAY_ITEM, //ARRAY_ITEM寄存器
+	ZL_R_RT_DEBUG,	//DEBUG调试寄存器
 	ZL_R_RT_PC,		//PC寄存器
 }ZENGL_RUN_REG_TYPE; //寄存器类型
 
@@ -1042,7 +1047,7 @@ typedef struct _ZENGL_RUN_RUNTIME_OP_DATA{
 	ZL_INT str_Index;	//str_Index是下面struct里的str指针在内存池中的索引，可以加快一些内存池的操作。
 	ZL_INT memblk_Index;//memblk_Index是下面struct里的memblock在内存池中的索引。
 	struct{
-		ZL_INT dword;
+		ZL_LONG dword; //使用long类型，方便64位移植
 		ZL_VOID * str;
 		ZL_VOID * memblock;
 		ZL_DOUBLE qword;
@@ -1065,7 +1070,7 @@ typedef struct _ZENGL_RUN_VIRTUAL_MEM_STRUCT{
 	struct{
 		ZL_CHAR byte;
 		ZL_WCHAR_T word;
-		ZL_INT dword;
+		ZL_LONG dword; //使用long类型，方便64位移植
 		ZL_VOID * str;
 		ZL_VOID * memblock;
 		ZL_DOUBLE qword;
@@ -1130,6 +1135,51 @@ typedef struct _ZENGL_RUN_EXTRA_DATA_TABLE{
 
 /********************************************************************************
 		上面是和虚拟机解释器相关的结构体和枚举等定义
+********************************************************************************/
+
+/********************************************************************************
+		下面是和虚拟机调试器相关的结构体和枚举等定义
+********************************************************************************/
+
+#define ZL_DBG_BREAK_POINT_SIZE 10 //存放断点的动态数组初始化和动态扩容的大小
+
+typedef enum _ZENGL_DEBUG_FLAG{
+	ZL_DBG_FLAG_RESTORE_BREAK = 1, //需要恢复断点标志
+	ZL_DBG_FLAG_SET_SINGLE_STEP_IN = 2, //需要设置单步步入标志
+	ZL_DBG_FLAG_SET_SINGLE_STEP_OUT = 4, //需要设置单步步过标志
+}ZENGL_DEBUG_FLAG;
+
+typedef struct _ZENGL_DEBUG_BREAK_POINT_MEMBER{
+	ZL_BOOL isvalid;
+	ZL_BOOL disabled; //是否禁用断点
+	ZL_BOOL needRestore; //是否需要恢复断点
+	ZL_INT pc; //断点在解释器中对应的指令PC值
+	ZL_INT line; //断点所在行号
+	ZL_INT count; //断点执行次数
+	ZL_CHAR * filename; //断点所在的源脚本文件名
+	ZL_CHAR * condition; //条件断点对应的条件语句
+	ZL_CHAR * log; //日志断点对应的调试内容
+	ZL_LONG orig_inst_src_num; //断点对应的原指令的src里的num值
+	ZENGL_RUN_INST_TYPE orig_inst_type; //断点对应的原指令
+}ZENGL_DEBUG_BREAK_POINT_MEMBER;
+
+typedef struct _ZENGL_DEBUG_BREAK_POINT_LIST{
+	ZL_BOOL isInit;
+	ZL_INT size;
+	ZL_INT count;
+	ZL_INT mempool_index;
+	ZENGL_DEBUG_BREAK_POINT_MEMBER * members;
+}ZENGL_DEBUG_BREAK_POINT_LIST; //调试器断点列表
+
+typedef struct _ZENGL_DEBUG_SINGLE_BREAK{
+	ZL_BOOL isvalid;
+	ZL_INT compare_pc;
+	ZL_INT orig_pc;
+	ZENGL_RUN_INST_TYPE orig_inst_type;
+}ZENGL_DEBUG_SINGLE_BREAK; //调试器单步执行时的中断结构
+
+/********************************************************************************
+		上面是和虚拟机调试器相关的结构体和枚举等定义
 ********************************************************************************/
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1275,8 +1325,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* AsmGCContinue_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成 对应 zengl_AsmGCContinue_Codes
 	ZL_VOID (* AsmScanCaseMinMax)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点 对应 zengl_AsmScanCaseMinMax
-	ZL_INT (* GetNodeInt)(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式 对应 zengl_GetNodeInt
-	ZL_VOID (* AsmAddCaseJmpTable)(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_INT num); //将case对应的比较数字添加到跳转表中 对应 zengl_AsmAddCaseJmpTable
+	ZL_LONG (* GetNodeInt)(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式 对应 zengl_GetNodeInt
+	ZL_VOID (* AsmAddCaseJmpTable)(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_LONG num); //将case对应的比较数字添加到跳转表中 对应 zengl_AsmAddCaseJmpTable
 	ZL_VOID (* AsmInitCaseJmpTable)(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table); //初始化switch case的跳转表 对应 zengl_AsmInitCaseJmpTable
 	ZL_VOID (* AsmSortCaseJmpTable)(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_INT nodenum); //将switch...case跳转表进行从小到大的排序 对应 zengl_AsmSortCaseJmpTable
 	/*定义在zengl_ld.c中的相关函数*/
@@ -1360,7 +1410,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZENGL_RUN_INST_LIST inst_list; //汇编指令动态数组
 	ZENGL_RUN_VIRTUAL_MEM_LIST vmem_list; //虚拟全局内存动态数组
 	ZENGL_RUN_VIRTUAL_MEM_LIST vstack_list; //虚拟栈空间动态数组，里面存放着虚拟机运行时的堆栈数据，如局部变量，参数等
-	ZENGL_RUN_RUNTIME_OP_DATA reg_list[ZL_R_REGLIST_SIZE]; //静态数组里面存放着所有寄存器的运行时值。
+	ZENGL_RUN_RUNTIME_OP_DATA reg_list[ZL_R_REGLIST_SIZE]; //reg_list数组里面存放着所有寄存器的运行时值。
 	ZENGL_RUN_INFO_STRING_TYPE infoFullString;  //里面存放了完整的经过解析后的调试信息字符串
 	ZENGL_RUN_INFO_STRING_TYPE printFullString; //里面存放了完整解析后的用于PRINT之类的指令的输出字符串
 	ZENGL_RUN_INFO_STRING_TYPE errorFullString; //里面存放了完整的经过解析后的错误信息的字符串
@@ -1377,6 +1427,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* init)(ZL_VOID * VM_ARG); //解释器初始化 对应 zenglrun_init
 	ZL_VOID * (* memAlloc)(ZL_VOID * VM_ARG,ZL_INT size,ZL_INT * index); //为内存池分配内存和指针的函数 对应 zenglrun_memAlloc
 	ZL_VOID * (* memReAlloc)(ZL_VOID * VM_ARG , ZL_VOID * point , ZL_INT size, ZL_INT * index); //调整point指针的大小为size，同时设置index为该指针在内存池中的索引。对应 zenglrun_memReAlloc
+	ZL_INT (* memFindPtrIndex)(ZL_VOID * VM_ARG , ZL_VOID * point); //根据point指针从内存池中查找指针对应的索引值 对应 zenglrun_memFindPtrIndex
 	ZL_VOID * (* memReUsePtr)(ZL_VOID * VM_ARG,ZL_VOID * point,ZL_INT size,ZL_INT * index); //根据需求的size大小，对内存池的指针进行调整大小等重利用操作 对应 zenglrun_memReUsePtr
 	ZL_VOID (* exit)(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //解释器退出函数 对应 zenglrun_exit
 	ZL_VOID (* exit_forApiSetErrThenStop)(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数 对应 zenglrun_exit_forApiSetErrThenStop
@@ -1443,7 +1494,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* memblock_freeall_local)(ZL_VOID * VM_ARG); //释放栈中参数部分和局部变量部分的所有内存块 对应 zenglrun_memblock_freeall_local
 	ZL_VOID (* FreeAllForReUse)(ZL_VOID * VM_ARG); //重利用虚拟机时，释放掉全局虚拟内存，栈内存等里面的内存块和引用 对应 zenglrun_FreeAllForReUse
 	ZL_VOID (* op_switch)(ZL_VOID * VM_ARG); //SWITCH指令的处理 对应 zenglrun_op_switch
-	ZL_INT (* getRegInt)(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式 对应 zenglrun_getRegInt
+	ZL_LONG (* getRegInt)(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式 对应 zenglrun_getRegInt
 	ZL_INT (* main)(ZL_VOID * VM_ARG);	//解释器的入口函数 对应 zenglrun_main
 
 	/*下面是用户自定义的函数*/
@@ -1453,11 +1504,57 @@ typedef struct _ZENGL_RUN_TYPE
 }ZENGL_RUN_TYPE;
 /*虚拟机的解释器结构体定义结束*/
 
+struct _ZENGL_VM_TYPE;  
+typedef struct _ZENGL_VM_TYPE ZENGL_VM_TYPE;  
+
+/*虚拟机调试器结构*/
+typedef struct _ZENGL_DEBUG_TYPE
+{
+	ZENGL_VM_TYPE * DeubugVM; //调试用的内置虚拟机
+	ZENGL_VM_TYPE * DeubugPVM; //调试虚拟机的父虚拟机
+	ZL_INT orig_run_totalsize;
+	ZL_INT orig_vm_totalsize;
+	ZL_INT api_call_pc; //使用zenglApi_Call时执行的脚本函数的第一条指令的PC值
+	ZL_INT api_call_arg; //使用zenglApi_Call时的初始ARG
+	ZL_BOOL break_start; //是否在脚本的第一个指令处设置断点
+	ZL_BOOL output_debug_info; //是否输出调试字符串的符号表等信息
+	ZL_INT flag; //一些标志，用于判断是否需要恢复断点及是否需要设置单步执行的标志
+	ZENGL_DEBUG_BREAK_POINT_LIST BreakPoint; //调试器的断点
+	ZENGL_DEBUG_SINGLE_BREAK singleBreak; //单步调试的中断结构
+	/*定义在zenglDebug.c中的相关函数*/
+	ZL_INT (* Compile)(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //调试器的编译部分 对应 zenglDebug_Compile
+	ZL_INT (* Run)(ZL_VOID * VM_ARG); //调试器的解释执行部分 对应 zenglDebug_Run
+	ZENGL_TOKENTYPE (* ReplaceDefConst)(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE token); //调试器里替换宏常量的函数 对应 zenglDebug_ReplaceDefConst
+	ZL_INT (* lookupDefTable)(ZL_VOID * VM_ARG, ZL_CHAR * name); //调试器查找宏定义的替换函数 对应 zenglDebug_lookupDefTable
+	ZENGL_RUN_INST_OP_DATA (* SymLookupID)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过节点索引来查找该节点的变量标示符在自定义的虚拟内存中的内存地址 对应 zenglDebug_SymLookupID
+	ZL_INT (* SymLookupID_ForDot)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时 对应 zenglDebug_SymLookupID_ForDot
+	ZL_INT (* SymLookupClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息 对应 zenglDebug_SymLookupClass
+	ZL_INT (* SymLookupClassMember)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息 对应 zenglDebug_SymLookupClassMember
+	ZL_INT (* LookupModFunTable)(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引 对应 zenglDebug_LookupModFunTable
+	ZL_INT (* LookupFunID)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值 对应 zenglDebug_LookupFunID
+	ZL_INT (* SetFunInfo)(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境 对应 zenglDebug_SetFunInfo
+	ZL_INT (* GetTraceInfo)(ZL_VOID * VM_ARG,ZL_CHAR * ApiName,ZL_INT * argArg,ZL_INT * argLOC,ZL_INT * argPC,
+							   ZL_CHAR ** fileName,ZL_INT * line,ZL_CHAR ** className,ZL_CHAR ** funcName); //调试器从栈中获取脚本函数的调用情况 对应 zenglDebug_GetTraceInfo
+	ZL_INT (* InitBreak)(ZL_VOID * VM_ARG); //初始化调试器的存放断点的动态数组 对应 zenglDebug_InitBreak
+	ZL_INT (* SetBreak)(ZL_VOID * VM_ARG,ZL_INT pc,ZL_CHAR * filename,ZL_INT line,ZL_CHAR * condition,ZL_CHAR * log,ZL_INT count,ZL_BOOL disabled); //给调试器设置断点 对应 zenglDebug_SetBreak
+	ZL_INT (* BreakStart)(ZL_VOID * VM_ARG); //将解释器第一条指令设为仅执行一次的断点 对应 zenglDebug_BreakStart
+	ZL_INT (* DelBreak)(ZL_VOID * VM_ARG,ZL_INT index); //删除index索引对应的调试断点 对应 zenglDebug_DelBreak
+	ZL_INT (* RestoreBreaks)(ZL_VOID * VM_ARG); //断点原指令执行完后，要恢复该指令对应的断点 对应 zenglDebug_RestoreBreaks
+	ZL_INT (* CheckCondition)(ZL_VOID * VM_ARG,ZL_CHAR * condition); //检测断点是否到达指定中断的条件 对应 zenglDebug_CheckCondition
+	ZL_INT (* RestoreSingleBreak)(ZL_VOID * VM_ARG); //恢复单步中断对应的原始指令 对应 zenglDebug_RestoreSingleBreak
+	ZL_INT (* ChkAndSetSingleBreak)(ZL_VOID * VM_ARG); //根据需要判断是否需要给下一条指令设置单步中断 对应 zenglDebug_ChkAndSetSingleBreak
+	/*调试器要调用的用户自定义函数*/
+	ZL_INT (* userdef_debug_break)(ZL_VOID * VM_ARG,ZL_CHAR * filename,ZL_INT line,ZL_INT breakIndex,ZL_CHAR * log); //用户自定义的断点调试函数
+	ZL_INT (* userdef_debug_conditionError)(ZL_VOID * VM_ARG,ZL_CHAR * filename,ZL_INT line,ZL_INT breakIndex,ZL_CHAR * error); //用户自定义的条件断点中条件出错时的调用函数
+}ZENGL_DEBUG_TYPE;
+/*虚拟机调试器结构定义结束*/
+
 /*虚拟机结构体定义*/
-typedef struct _ZENGL_VM_TYPE
+struct _ZENGL_VM_TYPE
 {
 	ZENGL_COMPILE_TYPE compile;
 	ZENGL_RUN_TYPE run;
+	ZENGL_DEBUG_TYPE debug;
 	ZENGL_ERRORNO errorno;
 	ZL_CONST ZL_CHAR ** errorString;
 	ZL_BOOL isCompileError;
@@ -1478,7 +1575,7 @@ typedef struct _ZENGL_VM_TYPE
 	/*虚拟机相关的自定义函数*/
 	ZL_VOID (* rc4InitState)(ZL_VOID * VM_ARG,ZL_CHAR * key,ZL_INT len); //RC4使用初始密钥来初始化state状态盒子 对应 zenglVM_rc4InitState
 	ZL_VOID (* init)(ZL_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //虚拟机初始化函数 对应 zenglVM_init
-}ZENGL_VM_TYPE;
+};
 /*虚拟机结构体定义结束*/
 
 //下面是定义在zengl_locals.c中的全局变量
@@ -1581,8 +1678,8 @@ ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //break语句的汇
 ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成
 ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点
-ZL_INT zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式
-ZL_VOID zengl_AsmAddCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_INT num); //将case对应的比较数字添加到跳转表中
+ZL_LONG zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式
+ZL_VOID zengl_AsmAddCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_LONG num); //将case对应的比较数字添加到跳转表中
 ZL_VOID zengl_AsmInitCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table); //初始化switch case的跳转表
 ZL_VOID zengl_AsmSortCaseJmpTable(ZL_VOID * VM_ARG,ZENGL_ASM_CASE_JMP_TABLE * table,ZL_INT nodenum); //将switch...case跳转表进行从小到大的排序
 
@@ -1647,6 +1744,7 @@ ZL_BOOL zengl_CheckIsBitAnd(ZL_VOID * VM_ARG); //初步判断当前的"&"符号是否是按位
 ZL_VOID zenglrun_init(ZL_VOID * VM_ARG); //解释器初始化
 ZL_VOID * zenglrun_memAlloc(ZL_VOID * VM_ARG,ZL_INT size,ZL_INT * index); //为内存池分配内存和指针的函数
 ZL_VOID * zenglrun_memReAlloc(ZL_VOID * VM_ARG , ZL_VOID * point , ZL_INT size, ZL_INT * index); //调整point指针的大小为size，同时设置index为该指针在内存池中的索引。
+ZL_INT zenglrun_memFindPtrIndex(ZL_VOID * VM_ARG , ZL_VOID * point); //根据point指针从内存池中查找指针对应的索引值
 ZL_VOID * zenglrun_memReUsePtr(ZL_VOID * VM_ARG,ZL_VOID * point,ZL_INT size,ZL_INT * index); //根据需求的size大小，对内存池的指针进行调整大小等重利用操作
 ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...); //解释器退出函数
 ZL_VOID zenglrun_exit_forApiSetErrThenStop(ZL_VOID * VM_ARG); //专门为zenglApi_SetErrThenStop这个API接口定制的退出函数
@@ -1714,7 +1812,30 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG); //释放栈中参数部分和局部变量部分的所有内存块
 ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG); //重利用虚拟机时，释放掉全局虚拟内存，栈内存等里面的内存块和引用
 ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG); //SWITCH指令的处理
-ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式
+ZL_LONG zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式
 ZL_INT zenglrun_main(ZL_VOID * VM_ARG);	//解释器的入口函数
+
+//下面是定义在zenglDebug.c中的函数
+ZL_INT zenglDebug_Compile(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //调试器的编译部分
+ZL_INT zenglDebug_Run(ZL_VOID * VM_ARG); //调试器的解释执行部分
+ZENGL_TOKENTYPE zenglDebug_ReplaceDefConst(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE token); //调试器里替换宏常量的函数
+ZL_INT zenglDebug_lookupDefTable(ZL_VOID * VM_ARG, ZL_CHAR * name); //调试器查找宏定义的替换函数
+ZENGL_RUN_INST_OP_DATA zenglDebug_SymLookupID(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过节点索引来查找该节点的变量标示符在自定义的虚拟内存中的内存地址
+ZL_INT zenglDebug_SymLookupID_ForDot(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时
+ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息
+ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息
+ZL_INT zenglDebug_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引
+ZL_INT zenglDebug_LookupFunID(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值
+ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境
+ZL_INT zenglDebug_GetTraceInfo(ZL_VOID * VM_ARG,ZL_CHAR * ApiName,ZL_INT * argArg,ZL_INT * argLOC,ZL_INT * argPC,
+							   ZL_CHAR ** fileName,ZL_INT * line,ZL_CHAR ** className,ZL_CHAR ** funcName); //调试器从栈中获取脚本函数的调用情况
+ZL_INT zenglDebug_InitBreak(ZL_VOID * VM_ARG); //初始化调试器的存放断点的动态数组
+ZL_INT zenglDebug_SetBreak(ZL_VOID * VM_ARG,ZL_INT pc,ZL_CHAR * filename,ZL_INT line,ZL_CHAR * condition,ZL_CHAR * log,ZL_INT count,ZL_BOOL disabled); //给调试器设置断点
+ZL_INT zenglDebug_BreakStart(ZL_VOID * VM_ARG); //将解释器第一条指令设为仅执行一次的断点
+ZL_INT zenglDebug_DelBreak(ZL_VOID * VM_ARG,ZL_INT index); //删除index索引对应的调试断点
+ZL_INT zenglDebug_RestoreBreaks(ZL_VOID * VM_ARG); //断点原指令执行完后，要恢复该指令对应的断点
+ZL_INT zenglDebug_CheckCondition(ZL_VOID * VM_ARG,ZL_CHAR * condition); //检测断点是否到达指定中断的条件
+ZL_INT zenglDebug_RestoreSingleBreak(ZL_VOID * VM_ARG); //恢复单步中断对应的原始指令
+ZL_INT zenglDebug_ChkAndSetSingleBreak(ZL_VOID * VM_ARG); //根据需要判断是否需要给下一条指令设置单步中断
 
 #endif /* _ZENGL_GLOBAL_H_ */

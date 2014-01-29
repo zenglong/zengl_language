@@ -24,8 +24,8 @@
 #define _ZENGL_EXPORT_FUNCTIONS_H_
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
-#define ZL_EXP_MINOR_VERSION 3 //zengl子版本号
-#define ZL_EXP_REVISION 2      //zengl修正版本号
+#define ZL_EXP_MINOR_VERSION 4 //zengl子版本号
+#define ZL_EXP_REVISION 0      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
@@ -33,13 +33,19 @@
 	#define ZL_EXP_CHAR char
 #endif
 #define ZL_EXP_INT int
+#define ZL_EXP_LONG long
 #define ZL_EXP_DOUBLE double
 #define ZL_EXP_NULL 0 //指针为0的宏定义
+#define ZL_EXP_FALSE 0 //逻辑假
+#define ZL_EXP_TRUE 1 //逻辑真
+typedef unsigned char ZL_EXP_BOOL; //定义bool类型
 
 typedef ZL_EXP_VOID (* ZL_VM_API_MODS_INIT)(ZL_EXP_VOID * VM_ARG); //全局模块初始化函数，会在run解释器入口处执行
 typedef ZL_EXP_VOID (* ZL_VM_API_MOD_INIT_FUNC)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID); //单个模块初始化函数，use指令执行时会调用该函数
 typedef ZL_EXP_VOID (* ZL_VM_API_MOD_FUN_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount); //脚本中的模块函数在执行时调用的用户自定义函数
 typedef ZL_EXP_INT (* ZL_VM_API_INFO_FUN_HANDLE)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //一些调试信息或print指令等调用的用户自定义的函数指针
+typedef ZL_EXP_INT (* ZL_VM_API_DEBUG_BREAK_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * log); //用户自定义的断点调试函数
+typedef ZL_EXP_INT (* ZL_VM_API_DEBUG_CON_ERROR_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * error); //用户自定义的条件断点中条件出错时的调用函数
 
 typedef enum _ZENGL_EXPORT_VM_MAIN_ARG_FLAGS{
 	ZL_EXP_CP_AF_IN_DEBUG_MODE = 0x1,		//保留编译器内存中的语法树符号表等资源，以供解释器调试等用途
@@ -95,7 +101,7 @@ typedef struct _ZENGL_EXPORT_ADDR{
 typedef struct _ZENGL_EXPORT_MOD_FUN_ARG{
 	ZENGL_EXPORT_MOD_FUN_ARG_TYPE type;
 	struct{
-		ZL_EXP_INT integer; //当函数调用的参数为整数时
+		ZL_EXP_LONG integer; //当函数调用的参数为整数时
 		ZL_EXP_DOUBLE floatnum; //浮点数
 		ZL_EXP_CHAR * str; //字符串
 		ZENGL_EXPORT_MEMBLOCK memblock; //内存块类型
@@ -113,7 +119,7 @@ typedef struct _ZENGL_EXPORT_VM_MAIN_ARGS{
 	ZL_EXP_INT flags; //用户自定义的一些编译器或解释器的选项
 }ZENGL_EXPORT_VM_MAIN_ARGS;
 
-/*以下为zenglApi接口的声明，目前一共有39个API接口函数(不包括底部声明的那些内建模块函数)*/
+/*以下为zenglApi接口的声明，目前一共有50个API接口函数(不包括底部声明的那些内建模块函数)*/
 
 /*通过zenglApi_Load可以加载并执行script_file脚本*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Load(ZL_EXP_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args);
@@ -150,7 +156,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetFlags(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_MAIN
 ZL_EXPORT ZL_EXP_INT zenglApi_SetHandle(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_FLAGS_HANDLE_TYPE handleType,ZL_EXP_VOID * handle);
 
 /*API接口，将用户自定义的参数压入虚拟栈中*/
-ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum);
+ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_LONG arg_integer,ZL_EXP_DOUBLE arg_floatnum);
 
 /*API接口，调用脚本中的某函数*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_file,ZL_EXP_CHAR * function_name,ZL_EXP_CHAR * class_name);
@@ -159,7 +165,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Call(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * script_fil
 ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetValueAsString(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName);
 
 /*API接口，通过此接口获取某个变量值的整数格式*/
-ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_INT * retValue);
+ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_LONG * retValue);
 
 /*API接口，通过此接口获取某个变量值的浮点数格式*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsDouble(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_DOUBLE * retValue);
@@ -182,7 +188,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * 
 
 /*设置模块函数的返回值*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetRetVal(ZL_EXP_VOID * VM_ARG,
-										 ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum);
+										 ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_LONG arg_integer,ZL_EXP_DOUBLE arg_floatnum);
 
 /*API接口，将返回值设为内存块*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetRetValAsMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock);
@@ -239,8 +245,44 @@ ZL_EXPORT ZL_EXP_VOID * zenglApi_AllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT size);
 /*API接口，将AllocMem分配的资源手动释放掉，防止资源越滚越大*/
 ZL_EXPORT ZL_EXP_INT zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr);
 
+/*API接口，将ptr指针的大小调整为size尺寸*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_ReAllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr,ZL_EXP_INT size);
+
+/*API接口，由fileName构建相对于当前脚本的完整路径信息，生成的路径信息存放到用户提供的destPathBuffer缓冲区域*/
+ZL_EXPORT ZL_EXP_INT zenglApi_makePathFileName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * fileName,ZL_EXP_CHAR * destPathBuffer,ZL_EXP_INT bufferSize);
+
 /*API接口，获取当前运行模块函数的用户自定义名称*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetModFunName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR ** modfun_name);
+
+/*API接口，调试接口*/
+ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str);
+
+/*API接口，获取调试寄存器里的调试结果*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetDebug(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+
+/*API接口，设置调试断点*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,
+											ZL_EXP_CHAR * condition,ZL_EXP_CHAR * log,ZL_EXP_INT count,ZL_EXP_BOOL disabled);
+
+/*API接口，设置调试断点的扩展函数，直接根据指令PC值来进行设置*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreakEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT pc,ZL_EXP_CHAR * condition,ZL_EXP_CHAR * log,ZL_EXP_INT count,ZL_EXP_BOOL disabled);
+
+/*API接口，获取index索引对应的断点信息*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT index,ZL_EXP_CHAR ** filename,ZL_EXP_INT * line,
+											ZL_EXP_CHAR ** condition,ZL_EXP_CHAR ** log,ZL_EXP_INT * count,ZL_EXP_BOOL * disabled,ZL_EXP_INT * pc);
+
+/*API接口，删除index索引对应的断点*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugDelBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT index);
+
+/*API接口，设置调试断点触发时调用的用户自定义函数*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreakHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * handle,ZL_EXP_VOID * conditionErrorHandle,ZL_EXP_BOOL break_start,ZL_EXP_BOOL OutputDebugInfo);
+
+/*API接口，设置单步中断，isStepIn参数不为0则为单步步入，否则为单步步过*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetSingleBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_BOOL isStepIn);
+
+/*API接口，获取脚本函数的堆栈调用信息*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetTrace(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT * argArg,ZL_EXP_INT * argLOC,ZL_EXP_INT * argPC,
+											ZL_EXP_CHAR ** fileName,ZL_EXP_INT * line,ZL_EXP_CHAR ** className,ZL_EXP_CHAR ** funcName);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

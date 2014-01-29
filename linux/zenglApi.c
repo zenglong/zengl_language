@@ -258,6 +258,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zenglrun_init,
 			zenglrun_memAlloc,
 			zenglrun_memReAlloc,
+			zenglrun_memFindPtrIndex,
 			zenglrun_memReUsePtr,
 			zenglrun_exit,
 			zenglrun_exit_forApiSetErrThenStop,
@@ -326,6 +327,44 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			ZL_NULL, //userdef_run_print
 			ZL_NULL  //userdef_run_error
 			}, //初始化虚拟机的解释器
+
+			{
+				ZL_NULL, //DeubugVM
+				ZL_NULL, //DeubugPVM
+				0,		 //orig_run_totalsize
+				0,		 //orig_vm_totalsize
+				0,		 //api_call_pc
+				0,		 //api_call_arg
+				ZL_FALSE,//break_start
+				ZL_FALSE,//output_debug_info
+				0,		 //flag
+				{0},	 //BreakPoint
+				{0},	 //singleBreak
+				/*定义在zenglDebug.c中的相关函数*/
+				zenglDebug_Compile,
+				zenglDebug_Run,
+				zenglDebug_ReplaceDefConst,
+				zenglDebug_lookupDefTable,
+				zenglDebug_SymLookupID,
+				zenglDebug_SymLookupID_ForDot,
+				zenglDebug_SymLookupClass,
+				zenglDebug_SymLookupClassMember,
+				zenglDebug_LookupModFunTable,
+				zenglDebug_LookupFunID,
+				zenglDebug_SetFunInfo,
+				zenglDebug_GetTraceInfo,
+				zenglDebug_InitBreak,
+				zenglDebug_SetBreak,
+				zenglDebug_BreakStart,
+				zenglDebug_DelBreak,
+				zenglDebug_RestoreBreaks,
+				zenglDebug_CheckCondition,
+				zenglDebug_RestoreSingleBreak,
+				zenglDebug_ChkAndSetSingleBreak,
+				/*调试器要调用的用户自定义函数*/
+				ZL_NULL, //userdef_debug_break
+				ZL_NULL  //userdef_debug_conditionError
+			}, //初始化虚拟机的调试器
 
 			ZL_NO_ERR_SUCCESS,
 			ZL_Error_String,
@@ -641,7 +680,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetHandle(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_VM_FLA
 }
 
 /*API接口，将用户自定义的参数压入虚拟栈中*/
-ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum)
+ZL_EXPORT ZL_EXP_INT zenglApi_Push(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_LONG arg_integer,ZL_EXP_DOUBLE arg_floatnum)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
@@ -850,7 +889,7 @@ ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetValueAsString(ZL_EXP_VOID * VM_ARG,ZL_EXP_CH
 	switch(run->vmem_list.mem_array[memloc].runType)
 	{
 	case ZL_R_RDT_INT:
-		ZENGL_SYS_SPRINTF(tmpstr,"%d",run->vmem_list.mem_array[memloc].val.dword);
+		ZENGL_SYS_SPRINTF(tmpstr,"%ld",run->vmem_list.mem_array[memloc].val.dword);
 		tmpmem.val.str = (ZL_VOID *)tmpstr;
 		run->VMemListOps(VM_ARG,ZL_R_VMOPT_SETMEM_STR,memloc,tmpmem);
 		run->vmem_list.mem_array[memloc].runType = ZL_R_RDT_INT;
@@ -872,7 +911,7 @@ ZL_EXPORT ZL_EXP_CHAR * zenglApi_GetValueAsString(ZL_EXP_VOID * VM_ARG,ZL_EXP_CH
 }
 
 /*API接口，通过此接口获取某个变量值的整数格式*/
-ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_INT * retValue)
+ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * valueName,ZL_EXP_LONG * retValue)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
@@ -920,11 +959,11 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetValueAsInt(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * v
 		return 0;
 		break;
 	case ZL_R_RDT_FLOAT:
-		(*retValue) = (ZL_INT)run->vmem_list.mem_array[memloc].val.qword;
+		(*retValue) = (ZL_LONG)run->vmem_list.mem_array[memloc].val.qword;
 		return 0;
 		break;
 	case ZL_R_RDT_STR:
-		(*retValue) = ZENGL_SYS_STR_TO_NUM((ZL_CONST ZL_EXP_CHAR *)run->vmem_list.mem_array[memloc].val.str);
+		(*retValue) = ZENGL_SYS_STR_TO_LONG_NUM((ZL_CONST ZL_EXP_CHAR *)run->vmem_list.mem_array[memloc].val.str);
 		return 0;
 		break;
 	}
@@ -1151,6 +1190,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,Z
 		return -1;
 		break;
 	}
+	if(retval == ZL_NULL)
+		return 0;
 	run = &VM->run;
 	argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
 	if(argnum < 1 || argnum > argcount)
@@ -1256,12 +1297,16 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Exit(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * errorStr, 
 		VM->isRunError = ZL_TRUE;
 	if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
 	{
+		ZL_INT run_totalsize;
+		ZL_INT vm_totalsize;
+		run_totalsize = VM->debug.orig_run_totalsize != 0 ? VM->debug.orig_run_totalsize : run->totalsize;
+		vm_totalsize = VM->debug.orig_vm_totalsize != 0 ? VM->debug.orig_vm_totalsize : VM->totalsize;
 		VM->end_time = ZENGL_SYS_TIME_CLOCK();
 		VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
 		run->info(VM_ARG,"\n run time:%.16g s totalsize: %.16g Kbyte\n VM time:%.16g s totalsize: %.16g Kbyte\n\n",(ZL_DOUBLE)run->total_time / CLOCKS_PER_SEC,
-		(ZL_FLOAT)run->totalsize / 1024,
+		(ZL_FLOAT)run_totalsize / 1024,
 		(ZL_DOUBLE)VM->total_time / CLOCKS_PER_SEC,
-		(ZL_FLOAT)VM->totalsize / 1024); //for debug
+		(ZL_FLOAT)vm_totalsize / 1024); //for debug
 	}
 	if(VM->isinApiRun == ZL_FALSE)
 	{
@@ -1333,7 +1378,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetErrThenStop(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * 
 
 /*API接口，设置模块函数的返回值*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetRetVal(ZL_EXP_VOID * VM_ARG,
-										 ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_INT arg_integer,ZL_EXP_DOUBLE arg_floatnum)
+										 ZENGL_EXPORT_MOD_FUN_ARG_TYPE type,ZL_EXP_CHAR * arg_str,ZL_EXP_LONG arg_integer,ZL_EXP_DOUBLE arg_floatnum)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run;
@@ -1457,6 +1502,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMB
 		return -1;
 		break;
 	}
+	if(retval == ZL_NULL)
+		return 0;
 	run = &VM->run;
 	run->realloc_memblock(VM_ARG,(ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->ptr,index-1);
 	switch(retval->type)
@@ -1523,6 +1570,7 @@ ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZEN
 	switch(VM->ApiState)
 	{
 	case ZL_API_ST_MOD_FUN_HANDLE:
+	case ZL_API_ST_DEBUG_HANDLE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -1595,6 +1643,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argn
 		return -1;
 		break;
 	}
+	if(retval == ZL_NULL)
+		return 0;
 	run = &VM->run;
 	argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
 	if(argnum < 1 || argnum > argcount)
@@ -1662,6 +1712,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArg(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,Z
 		return -1;
 		break;
 	}
+	if(setval == ZL_NULL)
+		return 0;
 	run = &VM->run;
 	argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
 	if(argnum < 1 || argnum > argcount)
@@ -1738,6 +1790,8 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArgEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum
 		return -1;
 		break;
 	}
+	if(setval == ZL_NULL)
+		return 0;
 	run = &VM->run;
 	argcount = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword - ZENGL_RUN_REGVAL(ZL_R_RT_ARG).dword - 1;
 	if(argnum < 1 || argnum > argcount)
@@ -1852,6 +1906,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_
 	switch(VM->ApiState)
 	{
 	case ZL_API_ST_MOD_FUN_HANDLE:
+	case ZL_API_ST_DEBUG_HANDLE:
 		break;
 	default:
 		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
@@ -2142,6 +2197,99 @@ ZL_EXPORT ZL_EXP_INT zenglApi_FreeMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr)
 	return 0;
 }
 
+/*API接口，将ptr指针的大小调整为size尺寸*/
+ZL_EXPORT ZL_EXP_VOID * zenglApi_ReAllocMem(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * ptr,ZL_EXP_INT size)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZL_INT index;
+
+	if(VM_ARG == ZL_NULL || VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return ZL_NULL;
+	run = &VM->run;
+	if(ptr == ZL_NULL)
+	{
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_PTR_WHEN_REALLOC);
+		return ZL_NULL;
+	}
+	index = run->memFindPtrIndex(VM_ARG,ptr);
+	if(index == -1)
+	{
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_PTR_WHEN_REALLOC);
+		return ZL_NULL;
+	}
+	return run->memReAlloc(VM_ARG,ptr,size,&index);
+}
+
+/*API接口，由fileName构建相对于当前脚本的完整路径信息，生成的路径信息存放到用户提供的destPathBuffer缓冲区域*/
+ZL_EXPORT ZL_EXP_INT zenglApi_makePathFileName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * fileName,ZL_EXP_CHAR * destPathBuffer,ZL_EXP_INT bufferSize)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_AST_NODE_TYPE * nodes;
+	ZL_EXP_CHAR * sourceFileName;
+	ZL_INT i,len;
+	ZL_INT cpylen=-1;
+	ZL_CHAR * ApiName = "zenglApi_makePathFileName";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	if(fileName == ZL_NULL || destPathBuffer == ZL_NULL || bufferSize <= 0)
+	{
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_ARG, ApiName , ApiName);
+		return -1;
+	}
+	compile = &VM->compile;
+	run = &VM->run;
+	nodes = compile->AST_nodes.nodes;
+	sourceFileName = nodes[ZL_R_CUR_INST.nodenum].filename;
+	len = ZENGL_SYS_STRLEN(sourceFileName);
+	for(i=len-1;i>=0;i--)
+	{
+		if(sourceFileName[i] == '/')
+		{
+			cpylen = i+1;
+			break;
+		}
+	}
+	len = ZENGL_SYS_STRLEN(fileName);
+	if(cpylen > 0)
+	{
+		if(cpylen >= bufferSize)
+		{
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_FILENAME_TOO_LONG,sourceFileName);
+			return -1;
+		}
+		ZENGL_SYS_STRNCPY(destPathBuffer,sourceFileName,cpylen);
+		if(cpylen + len >= bufferSize)
+		{
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_FILENAME_TOO_LONG_WHEN_MERGE,sourceFileName,fileName);
+			return -1;
+		}
+		ZENGL_SYS_STRNCPY(destPathBuffer + cpylen,fileName,len);
+		destPathBuffer[cpylen + len] = ZL_STRNULL;
+	}
+	else
+	{
+		if(len >= bufferSize)
+		{
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_FILENAME_TOO_LONG,fileName);
+			return -1;
+		}
+		ZENGL_SYS_STRNCPY(destPathBuffer,fileName,len);
+		destPathBuffer[len] = ZL_STRNULL;
+	}
+	return 0;
+}
+
 /*API接口，获取当前运行模块函数的用户自定义名称*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetModFunName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR ** modfun_name)
 {
@@ -2162,4 +2310,356 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetModFunName(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR ** 
 	run = &VM->run;
 	(*modfun_name) = run->InstDataStringPoolGetPtr(VM_ARG,run->ModFunTable.mod_funs[run->CurRunModFunIndex].strIndex);
 	return 0;
+}
+
+/*API接口，调试接口*/
+ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_VM_TYPE * DebugVM = ZL_NULL;
+	ZL_INT retcode;
+	ZL_CHAR * ApiName = "zenglApi_Debug";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	if(VM->debug.DeubugVM == ZL_NULL)
+	{
+		DebugVM = VM->debug.DeubugVM = (ZENGL_VM_TYPE *)zenglApi_Open();
+		if(DebugVM == ZL_NULL)
+		{
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_DEBUGVM_OPEN_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		//设置调试器编译时需要的存在于父虚拟机中的资源
+		ZENGL_SYS_MEM_COPY(&DebugVM->compile.HashTable,&VM->compile.HashTable,ZL_SYM_HASH_TOTAL_SIZE * sizeof(ZL_INT));
+		DebugVM->compile.def_table = VM->compile.def_table;
+		DebugVM->compile.SymGlobalTable = VM->compile.SymGlobalTable;
+		DebugVM->compile.SymLocalTable = VM->compile.SymLocalTable;
+		DebugVM->compile.SymClassTable = VM->compile.SymClassTable;
+		DebugVM->compile.SymClassMemberTable = VM->compile.SymClassMemberTable;
+		//将编译过程中的查询符号信息的函数重定向到调试器自定义的函数
+		DebugVM->compile.ReplaceDefConst = DebugVM->debug.ReplaceDefConst;
+		DebugVM->compile.lookupDefTable = DebugVM->debug.lookupDefTable;
+		DebugVM->compile.SymLookupID = DebugVM->debug.SymLookupID;
+		DebugVM->compile.SymLookupID_ForDot = DebugVM->debug.SymLookupID_ForDot;
+		DebugVM->compile.SymLookupClass = DebugVM->debug.SymLookupClass;
+		DebugVM->compile.SymLookupClassMember = DebugVM->debug.SymLookupClassMember;
+		DebugVM->run.LookupModFunTable = DebugVM->debug.LookupModFunTable;
+	}
+	if(debug_str == ZL_NULL)
+	{
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_DEBUG_STR, ApiName , ApiName);
+		return -1;
+	}
+	DebugVM->debug.DeubugPVM = VM;
+	ZENGL_SYS_MEM_COPY(DebugVM->vm_main_args,VM->vm_main_args,sizeof(ZENGL_EXPORT_VM_MAIN_ARGS));
+	if(VM->debug.output_debug_info == ZL_FALSE)
+		DebugVM->vm_main_args->flags &= ~(ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO);
+	else
+		DebugVM->vm_main_args->flags |= (ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO);
+	DebugVM->isinApiRun = ZL_TRUE;
+	if(DebugVM->run.mempool.isInit == ZL_FALSE)
+		DebugVM->run.init(DebugVM); //编译器中需要对解释器输出汇编指令，所以在此初始化解释器
+	DebugVM->compile.source.run_str = debug_str;
+	DebugVM->compile.source.run_str_len = ZENGL_SYS_STRLEN(debug_str);
+	DebugVM->debug.SetFunInfo(DebugVM); //设置调试所在的函数或类函数环境
+	DebugVM->compile.AsmGCStackPush(DebugVM,DebugVM->compile.SymClassTable.global_classid,ZL_ASM_STACK_ENUM_FUN_CLASSID);
+	retcode = DebugVM->debug.Compile(DebugVM,ApiName,DebugVM->vm_main_args);
+	DebugVM->compile.AsmGCStackPop(DebugVM,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
+	if(retcode == 0) //如果编译成功，则进入解释器
+	{
+		DebugVM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
+		DebugVM->debug.Run(DebugVM);
+		DebugVM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
+	}
+	if(retcode == -1)
+	{
+		VM->run.SetApiErrorEx(VM_ARG, ZL_ERR_VM_API_DEBUG_ERR, zenglApi_GetErrorString(DebugVM));
+		zenglApi_Close(DebugVM);
+		VM->debug.DeubugVM = ZL_NULL;
+		return -1;
+	}
+	zenglApi_Close(DebugVM);
+	VM->debug.DeubugVM = ZL_NULL;
+	return 0;
+}
+
+/*API接口，获取调试寄存器里的调试结果*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetDebug(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MOD_FUN_ARG * retval)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZL_CHAR * ApiName = "zenglApi_GetDebug";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	run = &VM->run;
+	if(retval == ZL_NULL)
+		return 0;
+	switch(run->reg_list[ZL_R_RT_DEBUG].runType)
+	{
+	case ZL_R_RDT_NONE:
+		retval->type = ZL_EXP_FAT_NONE;
+		retval->val.integer = run->reg_list[ZL_R_RT_DEBUG].val.dword;
+		break;
+	case ZL_R_RDT_INT:
+		retval->type = ZL_EXP_FAT_INT;
+		retval->val.integer = run->reg_list[ZL_R_RT_DEBUG].val.dword;
+		break;
+	case ZL_R_RDT_FLOAT:
+		retval->type = ZL_EXP_FAT_FLOAT;
+		retval->val.floatnum = run->reg_list[ZL_R_RT_DEBUG].val.qword;
+		break;
+	case ZL_R_RDT_STR:
+		retval->type = ZL_EXP_FAT_STR;
+		retval->val.str = (ZL_CHAR *)run->reg_list[ZL_R_RT_DEBUG].val.str;
+		break;
+	case ZL_R_RDT_MEM_BLOCK: //内存块
+		retval->type = ZL_EXP_FAT_MEMBLOCK;
+		retval->val.memblock.ptr = run->reg_list[ZL_R_RT_DEBUG].val.memblock;
+		retval->val.memblock.index = run->reg_list[ZL_R_RT_DEBUG].memblk_Index;
+		break;
+	case ZL_R_RDT_ADDR: //全局变量引用
+		retval->type = ZL_EXP_FAT_ADDR;
+		retval->val.addr.index = run->reg_list[ZL_R_RT_DEBUG].val.dword;
+		break;
+	case ZL_R_RDT_ADDR_LOC: //局部变量引用
+		retval->type = ZL_EXP_FAT_ADDR_LOC;
+		retval->val.addr.index = run->reg_list[ZL_R_RT_DEBUG].val.dword;
+		break;
+	case ZL_R_RDT_ADDR_MEMBLK: //内存块引用
+		retval->type = ZL_EXP_FAT_ADDR_MEMBLK;
+		retval->val.addr.index = run->reg_list[ZL_R_RT_DEBUG].val.dword;
+		retval->val.addr.memblock.ptr = run->reg_list[ZL_R_RT_DEBUG].val.memblock;
+		retval->val.addr.memblock.index = run->reg_list[ZL_R_RT_DEBUG].memblk_Index;
+		break;
+	}
+	return 0;
+}
+
+/*API接口，设置调试断点*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,
+											ZL_EXP_CHAR * condition,ZL_EXP_CHAR * log,ZL_EXP_INT count,ZL_EXP_BOOL disabled)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_DEBUG_TYPE * debug;
+	ZENGL_AST_NODE_TYPE * nodes;
+	ZL_INT i;
+	ZL_INT ret;
+	ZL_BOOL disable_Inst = ZL_FALSE;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	compile = &VM->compile;
+	run = &VM->run;
+	debug = &VM->debug;
+	nodes = compile->AST_nodes.nodes;
+	for(i=0;i < run->inst_list.count;i++)
+	{
+		if(line == nodes[run->inst_list.insts[i].nodenum].line_no &&
+			ZENGL_SYS_STRLEN(filename) == ZENGL_SYS_STRLEN(nodes[run->inst_list.insts[i].nodenum].filename) &&
+			filename[0] == nodes[run->inst_list.insts[i].nodenum].filename[0] &&
+			ZENGL_SYS_STRCMP(filename,nodes[run->inst_list.insts[i].nodenum].filename) == 0)
+		{
+			switch(run->inst_list.insts[i].type)
+			{
+			case ZL_R_IT_PUSH:
+			case ZL_R_IT_PUSH_LOC:
+			case ZL_R_IT_RESET:
+				disable_Inst = ZL_TRUE;
+				break;
+			}
+			if(disable_Inst)
+			{
+				disable_Inst = ZL_FALSE;
+				continue;
+			}
+			if((ret = debug->SetBreak(VM_ARG,i,nodes[run->inst_list.insts[i].nodenum].filename,line,condition,log,count,disabled)) == -1)
+				return -1;
+			return ret;
+		}
+	}
+	run->SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_BREAK_LOCATION);
+	return -1;
+}
+
+/*API接口，设置调试断点的扩展函数，直接根据指令PC值来进行设置*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreakEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT pc,ZL_EXP_CHAR * condition,ZL_EXP_CHAR * log,ZL_EXP_INT count,ZL_EXP_BOOL disabled)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_DEBUG_TYPE * debug;
+	ZENGL_AST_NODE_TYPE * nodes;
+	ZL_INT ret;
+	ZL_CHAR * ApiName = "zenglApi_DebugSetBreakEx";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	compile = &VM->compile;
+	run = &VM->run;
+	debug = &VM->debug;
+	nodes = compile->AST_nodes.nodes;
+	switch(run->inst_list.insts[pc].type)
+	{
+	case ZL_R_IT_END:
+		return 0;
+		break;
+	}
+	ret = debug->SetBreak(VM_ARG,pc,nodes[run->inst_list.insts[pc].nodenum].filename,nodes[run->inst_list.insts[pc].nodenum].line_no,condition,log,count,disabled);
+	return ret;
+}
+
+/*API接口，获取index索引对应的断点信息*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT index,ZL_EXP_CHAR ** filename,ZL_EXP_INT * line,
+											ZL_EXP_CHAR ** condition,ZL_EXP_CHAR ** log,ZL_EXP_INT * count,ZL_EXP_BOOL * disabled,ZL_EXP_INT * pc)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_DEBUG_TYPE * debug;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	debug = &VM->debug;
+	if(index == -1)
+	{
+		if(count != ZL_NULL)
+			(*count) = debug->BreakPoint.count;
+		return debug->BreakPoint.size;
+	}
+
+	if(debug->BreakPoint.count > 0 && index >= 0 && index < debug->BreakPoint.size && debug->BreakPoint.members[index].isvalid == ZL_TRUE)
+	{
+		if(filename != ZL_NULL)
+			(*filename) = debug->BreakPoint.members[index].filename;
+		if(line != ZL_NULL)
+			(*line) = debug->BreakPoint.members[index].line;
+		if(condition != ZL_NULL)
+			(*condition) = debug->BreakPoint.members[index].condition;
+		if(log != ZL_NULL)
+			(*log) = debug->BreakPoint.members[index].log;
+		if(count != ZL_NULL)
+			(*count) = debug->BreakPoint.members[index].count;
+		if(disabled != ZL_NULL)
+			(*disabled) = debug->BreakPoint.members[index].disabled;
+		if(pc != ZL_NULL)
+			(*pc) = debug->BreakPoint.members[index].pc;
+		return 0;
+	}
+	return -1;
+}
+
+/*API接口，删除index索引对应的断点*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugDelBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT index)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_DEBUG_TYPE * debug;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	debug = &VM->debug;
+	if(debug->BreakPoint.count > 0 && index >= 0 && index < debug->BreakPoint.size && debug->BreakPoint.members[index].isvalid == ZL_TRUE)
+	{
+		debug->DelBreak(VM_ARG,index);
+		return 0;
+	}
+	return -1;
+}
+
+/*API接口，设置调试断点触发时调用的用户自定义函数*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetBreakHandle(ZL_EXP_VOID * VM_ARG,ZL_EXP_VOID * handle,ZL_EXP_VOID * conditionErrorHandle,ZL_EXP_BOOL break_start,ZL_EXP_BOOL OutputDebugInfo)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_DEBUG_TYPE * debug;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	debug = &VM->debug;
+	if(handle != ZL_NULL)
+		debug->userdef_debug_break = (ZL_VM_API_DEBUG_BREAK_HANDLE)handle;
+	if(conditionErrorHandle != ZL_NULL)
+		debug->userdef_debug_conditionError = (ZL_VM_API_DEBUG_CON_ERROR_HANDLE)conditionErrorHandle;
+	if(break_start == ZL_EXP_FALSE)
+		debug->break_start = ZL_FALSE;
+	else
+		debug->break_start = ZL_TRUE;
+	if(OutputDebugInfo == ZL_EXP_FALSE)
+		debug->output_debug_info = ZL_FALSE;
+	else
+		debug->output_debug_info = ZL_TRUE;
+	return 0;
+}
+
+/*API接口，设置单步中断，isStepIn参数不为0则为单步步入，否则为单步步过*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetSingleBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_BOOL isStepIn)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_DEBUG_TYPE * debug;
+	ZL_CHAR * ApiName = "zenglApi_DebugSetSingleBreak";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	run = &VM->run;
+	debug = &VM->debug;
+	if(isStepIn)
+	{
+		debug->flag &= ~ZL_DBG_FLAG_SET_SINGLE_STEP_OUT;
+		debug->flag |= ZL_DBG_FLAG_SET_SINGLE_STEP_IN;
+	}
+	else
+	{
+		debug->flag &= ~ZL_DBG_FLAG_SET_SINGLE_STEP_IN;
+		debug->flag |= ZL_DBG_FLAG_SET_SINGLE_STEP_OUT;
+	}
+	if(debug->singleBreak.isvalid)
+		debug->RestoreSingleBreak(VM_ARG);
+	debug->singleBreak.compare_pc = ZL_R_CUR_INST.pc;
+	return 0;
+}
+
+/*API接口，获取脚本函数的堆栈调用信息*/
+ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetTrace(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT * argArg,ZL_EXP_INT * argLOC,ZL_EXP_INT * argPC,
+											ZL_EXP_CHAR ** fileName,ZL_EXP_INT * line,ZL_EXP_CHAR ** className,ZL_EXP_CHAR ** funcName)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_DEBUG_TYPE * debug;
+	ZL_CHAR * ApiName = "zenglApi_DebugGetTrace";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	debug = &VM->debug;
+	return debug->GetTraceInfo(VM_ARG,ApiName,argArg,argLOC,argPC,fileName,line,className,funcName);
 }

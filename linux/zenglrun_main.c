@@ -505,7 +505,7 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 				run->info(VM_ARG,"loc(%d) ",op_data.val.mem);
 				break;
 			case ZL_R_DT_NUM:
-				run->info(VM_ARG,"%d ",op_data.val.num);
+				run->info(VM_ARG,"%ld ",op_data.val.num);
 				break;
 			case ZL_R_DT_FLOAT:
 				run->info(VM_ARG,"%.16g ",op_data.val.floatnum);
@@ -514,10 +514,10 @@ ZL_VOID zenglrun_printInstList(ZL_VOID * VM_ARG,ZL_CHAR * head_title)
 				run->info(VM_ARG,"\"%s\" ",run->InstData_StringPool.ptr + op_data.val.str_Index);
 				break;
 			case ZL_R_DT_LDADDR: //伪地址
-				run->info(VM_ARG,"adr%d ",op_data.val.num);
+				run->info(VM_ARG,"adr%ld ",op_data.val.num);
 				break;
 			case ZL_R_DT_LDFUNID: //函数调用时，使用的函数ID，链接替换时会先转为伪地址
-				run->info(VM_ARG,"funid%d ",op_data.val.num);
+				run->info(VM_ARG,"funid%ld ",op_data.val.num);
 				break;
 			}
 		} //for(j=1;j<=2;j++)
@@ -538,12 +538,15 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_RUN_TYPE * run = &VM->run;
+	ZENGL_DEBUG_TYPE * debug = &VM->debug;
 	ZENGL_RUN_RUNTIME_OP_DATA src; //临时变量，用于存放源操作数等。
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT tmpmem;  //临时的虚拟内存变量。
 	ZL_CHAR tmpchar[30]; //临时字符串数组
 	ZENGL_API_STATES origState;
+
 	while(ZL_R_CUR_INST.type != ZL_R_IT_END && run->isUserWantStop == ZL_FALSE) //根据PC寄存器的值来读取对应的汇编指令，如果当前指令不是END指令且用户没有要求停止脚本，就继续运行。
 	{
+start:
 		if(ZL_R_CUR_INST.isvalid == ZL_FALSE || 
 			ZL_R_CUR_INST.pc != ZL_R_REG_PC)
 			run->exit(VM_ARG,ZL_ERR_RUN_INST_INVALID_PC,ZL_R_CUR_INST.pc,ZL_R_REG_PC);
@@ -774,7 +777,7 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 			switch(src.runType)
 			{
 			case ZL_R_RDT_INT: //打印整数
-				run->print(VM_ARG,"%d",src.val.dword);
+				run->print(VM_ARG,"%ld",src.val.dword);
 				break;
 			case ZL_R_RDT_FLOAT: //打印浮点数
 				run->print(VM_ARG,"%.16g",src.val.qword);
@@ -801,7 +804,7 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 				switch(ZENGL_RUN_REG(ZL_R_RT_BX).runType)
 				{
 				case ZL_R_RDT_INT: //加法指令，AX 为字符串，BX为整数，将整数转为字符串，再添加到AX字符串的末尾
-					ZENGL_SYS_SPRINTF(tmpchar,"%d",ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword);
+					ZENGL_SYS_SPRINTF(tmpchar,"%ld",ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword);
 					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = (run->strcat)(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar);
 					break;
 				case ZL_R_RDT_FLOAT: //加法指令，AX 为字符串，BX为浮点数，将浮点数转为字符串，再添加到AX字符串的末尾
@@ -819,7 +822,7 @@ ZL_VOID zenglrun_RunInsts(ZL_VOID * VM_ARG)
 				switch(ZENGL_RUN_REG(ZL_R_RT_AX).runType)
 				{
 				case ZL_R_RDT_INT: //加法指令，BX为字符串，AX为整数，将AX转为字符串，再和BX字符串相连接。
-					ZENGL_SYS_SPRINTF(tmpchar,"%d",ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword);
+					ZENGL_SYS_SPRINTF(tmpchar,"%ld",ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword);
 					run->memFreeIndex(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index); //释放AX里原来的字符串指针
 					ZENGL_RUN_REGVAL(ZL_R_RT_AX).str = run->strcat2(VM_ARG,ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,
 															&ZENGL_RUN_REG(ZL_R_RT_AX).str_Index,tmpchar,ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
@@ -1262,10 +1265,77 @@ run_ret:
 		case ZL_R_IT_BIT_REVERSE:
 			run->op_bits(VM_ARG); //按位与，或，异或等位运算指令的处理程式
 			break;
+		case ZL_R_IT_BREAK: //如果是调试断点
+			{
+				ZL_INT conRet = 0;
+				ZL_BOOL hasCon = ZL_FALSE;
+				ZL_INT debug_break = ZL_R_CUR_INST.src.val.num;
+				if(debug->BreakPoint.members[debug_break].disabled == ZL_FALSE)
+				{
+					if(debug->BreakPoint.members[debug_break].condition != ZL_NULL)
+					{
+						if((conRet = debug->CheckCondition(VM_ARG,debug->BreakPoint.members[debug_break].condition)) == -1)
+							debug->userdef_debug_conditionError(VM_ARG,debug->BreakPoint.members[debug_break].filename,
+										debug->BreakPoint.members[debug_break].line,debug_break,zenglApi_GetErrorString(VM_ARG));
+						conRet = conRet == -1 ? 1 : conRet;
+						hasCon = ZL_TRUE;
+					}
+					if(hasCon == ZL_FALSE || conRet == 1)
+					{
+						if(debug->userdef_debug_break != ZL_NULL)
+						{
+							origState = VM->ApiState;
+							VM->ApiState = ZL_API_ST_DEBUG_HANDLE;
+							debug->userdef_debug_break(VM_ARG,debug->BreakPoint.members[debug_break].filename,
+											debug->BreakPoint.members[debug_break].line,debug_break,debug->BreakPoint.members[debug_break].log);
+							VM->ApiState = origState;
+						}
+					}
+				}
+				if(ZL_R_CUR_INST.type == ZL_R_IT_BREAK)
+				{
+					ZL_R_CUR_INST.type = debug->BreakPoint.members[debug_break].orig_inst_type;
+					ZL_R_CUR_INST.src.val.num = debug->BreakPoint.members[debug_break].orig_inst_src_num;
+					debug->BreakPoint.members[debug_break].needRestore = ZL_TRUE;
+				}
+				debug->flag =  debug->flag | ZL_DBG_FLAG_RESTORE_BREAK;
+			}
+			goto start; //恢复原来的指令后，goto start来执行原来的指令
+			break;
+		case ZL_R_IT_SINGLE_BREAK:
+			{
+				ZENGL_COMPILE_TYPE * compile = &VM->compile;
+				ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+				ZL_INT tmp;
+				tmp = ZL_R_CUR_INST.nodenum;
+				origState = VM->ApiState;
+				VM->ApiState = ZL_API_ST_DEBUG_HANDLE;
+				debug->userdef_debug_break(VM_ARG,nodes[tmp].filename,nodes[tmp].line_no,-1,ZL_NULL);
+				VM->ApiState = origState;
+				if(ZL_R_CUR_INST.type == ZL_R_IT_SINGLE_BREAK)
+				{
+					debug->RestoreSingleBreak(VM_ARG);
+				}
+			}
+			goto start; //恢复原来的指令后，goto start来执行原来的指令
+			break;
+		case ZL_R_IT_END:
+			ZL_R_REG_PC--;
+			break;
 		default:
 			run->exit(VM_ARG,ZL_ERR_RUN_INVALID_INST_TYPE,ZL_R_REG_PC);
 			break;
 		} //switch(ZL_R_CUR_INST.type) //根据当前的指令类型执行不同的操作
+		if(debug->flag != 0)
+		{
+			if((debug->flag & ZL_DBG_FLAG_RESTORE_BREAK) == ZL_DBG_FLAG_RESTORE_BREAK)
+				debug->RestoreBreaks(VM_ARG); //执行完原来指令后，恢复调试断点
+			if(((debug->flag & ZL_DBG_FLAG_SET_SINGLE_STEP_IN) == ZL_DBG_FLAG_SET_SINGLE_STEP_IN) ||
+			   ((debug->flag & ZL_DBG_FLAG_SET_SINGLE_STEP_OUT) == ZL_DBG_FLAG_SET_SINGLE_STEP_OUT))
+			{
+				debug->ChkAndSetSingleBreak(VM_ARG); //根据需要设置单步中断
+			}
+		}
 		ZL_R_REG_PC++; //增加PC寄存器的值。
 	} //while(ZL_R_CUR_INST.type != ZL_R_IT_END)
 }
@@ -1305,7 +1375,7 @@ ZENGL_RUN_RUNTIME_OP_DATA_TYPE zenglrun_op_minis(ZL_VOID * VM_ARG)
 		switch(ZENGL_RUN_REG(ZL_R_RT_BX).runType)
 		{
 		case ZL_R_RDT_INT: //AX字符串，BX为整数，将AX通过atoi的C库函数转为整数，再和BX相减，结果存放于AX中，同时将AX类型设为ZL_R_RDT_INT整形数类型。
-			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_SYS_STR_TO_LONG_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
 			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword -= ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
 			ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
 			break;
@@ -1325,7 +1395,7 @@ ZENGL_RUN_RUNTIME_OP_DATA_TYPE zenglrun_op_minis(ZL_VOID * VM_ARG)
 		switch(ZENGL_RUN_REG(ZL_R_RT_AX).runType)
 		{
 		case ZL_R_RDT_INT:
-			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = ZENGL_SYS_STR_TO_LONG_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
 			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword -= ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword;
 			ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
 			break;
@@ -1400,11 +1470,11 @@ ZL_VOID zenglrun_op_bits(ZL_VOID * VM_ARG)
 	switch(ZENGL_RUN_REG(ZL_R_RT_AX).runType)
 	{
 	case ZL_R_RDT_FLOAT:
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword;
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = (ZL_LONG)ZENGL_RUN_REGVAL(ZL_R_RT_AX).qword;
 		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
 		break;
 	case ZL_R_RDT_STR:
-		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
+		ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = ZENGL_SYS_STR_TO_LONG_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
 		ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
 		break;
 	case ZL_R_RDT_INT:
@@ -1419,11 +1489,11 @@ ZL_VOID zenglrun_op_bits(ZL_VOID * VM_ARG)
 		switch(ZENGL_RUN_REG(ZL_R_RT_BX).runType)
 		{
 		case ZL_R_RDT_FLOAT:
-			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = (ZL_INT)ZENGL_RUN_REGVAL(ZL_R_RT_BX).qword;
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = (ZL_LONG)ZENGL_RUN_REGVAL(ZL_R_RT_BX).qword;
 			ZENGL_RUN_REG(ZL_R_RT_BX).runType = ZL_R_RDT_INT;
 			break;
 		case ZL_R_RDT_STR:
-			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
+			ZENGL_RUN_REGVAL(ZL_R_RT_BX).dword = ZENGL_SYS_STR_TO_LONG_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_BX).str);
 			ZENGL_RUN_REG(ZL_R_RT_BX).runType = ZL_R_RDT_INT;
 			break;
 		case ZL_R_RDT_INT:
@@ -1596,7 +1666,7 @@ ZL_VOID zenglrun_op_addminisget(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 	case ZL_R_RDT_STR:
 		{
 			ZL_CHAR tmpstr[40];
-			ZL_INT tmpint;
+			ZL_LONG tmpint;
 			ZL_DOUBLE tmpfloat;
 			ZL_BOOL	isfloat;
 			if(ZENGL_SYS_STRCHR(tmpmem->val.str,'.') == ZL_NULL)
@@ -1619,7 +1689,7 @@ ZL_VOID zenglrun_op_addminisget(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 			}
 			else
 			{
-				tmpint = ZENGL_SYS_STR_TO_NUM(tmpmem->val.str);
+				tmpint = ZENGL_SYS_STR_TO_LONG_NUM(tmpmem->val.str);
 				switch(type)
 				{
 				case ZL_R_IT_ADDGET:
@@ -1629,7 +1699,7 @@ ZL_VOID zenglrun_op_addminisget(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 					tmpint--;
 					break;
 				}
-				ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+				ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 			}
 			tmpmem->val.str = tmpstr;
 			ZENGL_RUN_VMEM_OP(memtype,ZL_R_VMOPT_ADDMEM_STR,ZL_R_VMOPT_SETMEM_STR,*tmpmem,src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
@@ -1681,7 +1751,7 @@ ZL_VOID zenglrun_op_getaddminis(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 	case ZL_R_RDT_STR:
 		{
 			ZL_CHAR tmpstr[40];
-			ZL_INT tmpint;
+			ZL_LONG tmpint;
 			ZL_DOUBLE tmpfloat;
 			ZL_BOOL	isfloat;
 			ZENGL_RUN_REG(ZL_R_RT_AX).runType = tmpmem->runType;
@@ -1706,7 +1776,7 @@ ZL_VOID zenglrun_op_getaddminis(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 			}
 			else
 			{
-				tmpint = ZENGL_SYS_STR_TO_NUM(tmpmem->val.str);
+				tmpint = ZENGL_SYS_STR_TO_LONG_NUM(tmpmem->val.str);
 				switch(type)
 				{
 				case ZL_R_IT_GETADD:
@@ -1716,7 +1786,7 @@ ZL_VOID zenglrun_op_getaddminis(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * 
 					tmpint--;
 					break;
 				}
-				ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+				ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 			}
 			tmpmem->val.str = tmpstr;
 			ZENGL_RUN_VMEM_OP(memtype,ZL_R_VMOPT_ADDMEM_STR,ZL_R_VMOPT_SETMEM_STR,*tmpmem,src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
@@ -1756,7 +1826,7 @@ ZL_VOID zenglrun_op_addminisone(ZL_VOID * VM_ARG,ZENGL_RUN_INST_TYPE type)
 	case ZL_R_RDT_STR: //如果是字符串，先转为整数或浮点数，再进行加加减减运算，最后再将结果以字符串的形式返回。
 		{
 			ZL_CHAR tmpstr[40];
-			ZL_INT tmpint;
+			ZL_LONG tmpint;
 			ZL_DOUBLE tmpfloat;
 			ZL_BOOL	isfloat;
 			if(ZENGL_SYS_STRCHR(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str,'.') == ZL_NULL)
@@ -1779,7 +1849,7 @@ ZL_VOID zenglrun_op_addminisone(ZL_VOID * VM_ARG,ZENGL_RUN_INST_TYPE type)
 			}
 			else
 			{
-				tmpint = ZENGL_SYS_STR_TO_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
+				tmpint = ZENGL_SYS_STR_TO_LONG_NUM(ZENGL_RUN_REGVAL(ZL_R_RT_AX).str);
 				switch(type)
 				{
 				case ZL_R_IT_ADDONE:
@@ -1789,7 +1859,7 @@ ZL_VOID zenglrun_op_addminisone(ZL_VOID * VM_ARG,ZENGL_RUN_INST_TYPE type)
 					tmpint--;
 					break;
 				}
-				ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+				ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 			}
 			run->RegAssignStr(VM_ARG,ZL_R_RT_AX,tmpstr);
 		}
@@ -2339,6 +2409,9 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 	(*tmpmem) = run->VMemBlockOps(VM_ARG,ZL_R_VMOPT_GETMEM,ptr,index,tmpmem); //根据内存块和索引值得到具体的内存
 	switch(tmpmem->runType) //根据内存里的值进行加加，减减运算，并同步设置AX返回值
 	{
+	case ZL_R_RDT_NONE:
+		tmpmem->runType = ZL_R_RDT_INT;
+		tmpmem->val.dword = 0;
 	case ZL_R_RDT_INT:
 		switch(op)
 		{
@@ -2394,12 +2467,12 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 	case ZL_R_RDT_STR:
 		{
 			ZL_CHAR tmpstr[40];
-			ZL_INT tmpint;
+			ZL_LONG tmpint;
 			ZL_DOUBLE tmpfloat;
 			ZL_BOOL	isfloat;
 			if(ZENGL_SYS_STRCHR(tmpmem->val.str,'.') == ZL_NULL)
 			{
-				tmpint = ZENGL_SYS_STR_TO_NUM(tmpmem->val.str);
+				tmpint = ZENGL_SYS_STR_TO_LONG_NUM(tmpmem->val.str);
 				isfloat = ZL_FALSE;
 			}
 			else
@@ -2417,7 +2490,7 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 						tmpint++;
 					else
 						tmpint--;
-					ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+					ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 				}
 				else
 				{
@@ -2432,7 +2505,7 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 				break;
 			default:
 				if(isfloat == ZL_FALSE)
-					ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+					ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 				else
 					ZENGL_SYS_SPRINTF(tmpstr,"%.16g",tmpfloat);
 				break;
@@ -2449,7 +2522,7 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 						tmpint++;
 					else
 						tmpint--;
-					ZENGL_SYS_SPRINTF(tmpstr,"%d",tmpint);
+					ZENGL_SYS_SPRINTF(tmpstr,"%ld",tmpint);
 				}
 				else
 				{
@@ -2576,7 +2649,7 @@ ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG)
 ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
-	ZL_INT count=0,min=0,max=0,num,golast,table;
+	ZL_LONG count=0,min=0,max=0,num,golast,table;
 	golast = ZL_R_CUR_INST.src.val.num; //SWITCH指令的源操作数是当在switch跳转表中找不到对应的值时，需要跳转的默认位置或结束位置
 	table = ZL_R_CUR_INST.dest.val.num; //目标操作数是当前switch...case结构的跳转地址表所在的汇编代码位置
 	if(ZENGL_RUN_INST(ZL_R_REG_PC+1).type == ZL_R_IT_LONG)
@@ -2649,7 +2722,7 @@ ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG)
 }
 
 /*返回寄存器值的整数形式*/
-ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg)
+ZL_LONG zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	switch(ZENGL_RUN_REG(reg).runType)
@@ -2658,10 +2731,10 @@ ZL_INT zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg)
 		return ZENGL_RUN_REGVAL(reg).dword;
 		break;
 	case ZL_R_RDT_FLOAT:
-		return (ZL_INT)(ZENGL_RUN_REGVAL(reg).qword);
+		return (ZL_LONG)(ZENGL_RUN_REGVAL(reg).qword);
 		break;
 	case ZL_R_RDT_STR:
-		return ZENGL_SYS_STR_TO_NUM((ZL_CHAR *)ZENGL_RUN_REGVAL(reg).str);
+		return ZENGL_SYS_STR_TO_LONG_NUM((ZL_CHAR *)ZENGL_RUN_REGVAL(reg).str);
 		break;
 	}
 	return 0;
@@ -2685,6 +2758,10 @@ ZL_INT zenglrun_main(ZL_VOID * VM_ARG)
 			((ZL_VM_API_MODS_INIT)VM->vm_main_args->userdef_module_init)(VM_ARG); //调用用户自定义的模块初始化函数
 			VM->ApiState = origState;
 		}
+		VM->debug.api_call_pc = ZL_R_REG_PC; //zenglApi_Call调用时的初始指令PC值就会大于0，其他的zenglApi_Run之类的初始指令PC值为0
+		VM->debug.api_call_arg = run->reg_list[ZL_R_RT_ARG].val.dword; //zenglApi_Call调用时的初始arg值大于0，其他的zenglApi_Run之类的初始arg值为0
+		if(VM->debug.break_start == ZL_TRUE && VM->debug.userdef_debug_break != ZL_NULL)
+			VM->debug.BreakStart(VM);
 		run->RunInsts(VM_ARG);
 		if(VM->isUseApiSetErrThenStop == ZL_TRUE) //如果通过zenglApi_SetErrThenStop接口来停止虚拟机的，就通过exit_forApiSetErrThenStop来退出
 			run->exit_forApiSetErrThenStop(VM_ARG);

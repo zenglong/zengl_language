@@ -198,6 +198,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zenglDebug.c"
+				>
+			</File>
+			<File
 				RelativePath=".\zenglrun_func.c"
 				>
 			</File>

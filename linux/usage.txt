@@ -1,3 +1,21 @@
+  zengl v1.4.0 , 添加zenglApi_Debug，zenglApi_GetDebug，zenglApi_DebugSetBreak，
+  zenglApi_DebugSetBreakEx，zenglApi_DebugGetBreak，zenglApi_DebugDelBreak，
+  zenglApi_DebugSetBreakHandle，zenglApi_DebugSetSingleBreak，zenglApi_DebugGetTrace
+  一共9个和调试有关的接口，通过这些接口实现了调试变量信息，设置断点，查看脚本函数的堆栈调用信息，设置条件断点，设置日志断点，
+  设置断点次数，单步步入，单步步过，执行到返回等交互式调试功能。
+
+  调试接口的具体使用方法可以参考main.c里的代码。另外还添加了zenglApi_ReAllocMem和zenglApi_makePathFileName两个辅助接口。
+
+  将脚本变量的整数类型由int改为long，这样在64位linux系统里，long就是和指针一样的64位的大小，方便64位移植，防止GCC编译出现指针到int类型大小转换的警告。
+
+  修复数组元素或类成员没初始化时，加加减减无效的BUG。
+
+  由该版本和SDL库，得到一个zengl_SDL项目，可以用zengl编写一些简单的类似俄罗斯方块，21点之类的小游戏，详情见zengl_SDL项目。
+
+  作者：zenglong
+  时间：2014年1月29日
+  官网：www.zengl.com
+  
   zengl v1.3.2 , 修复字符串脚本解析时可能出现的结尾字符死循环问题。
   
   将用户自定义的函数指针在用户API接口部分统一设置为void *指针类型，这样一方面可以解决v1.3.1所产生的函数指针兼容问题，另一方面有利于以后扩展和调整用户自定义函数的参数。
@@ -155,6 +173,7 @@
 生成libzengl.so main.o encrypt.o 和 zengl 以及 encrypt
 
 接着运行./zengl test.zl即可测试main.c程序(该程序是测试zengl用的，在这里生成的zengl核心文件只有libzengl.so动态链接库)
+还可以使用./zengl test.zl -d即在后面加个-d参数来进行脚本调试。
 
 要测试RC4脚本加密程序，可以运行 ./encrypt test.zl encrypt_script/test.zl rc4key_334566_hello_world -t rc4
 要测试普通的异或加密程序 可以运行 ./encrypt test.zl encrypt_script/test.zl xorkey_334566_hello_world -t xor

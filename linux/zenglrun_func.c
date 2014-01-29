@@ -197,6 +197,21 @@ realloc_point:
 	return point;
 }
 
+/*根据point指针从内存池中查找指针对应的索引值*/
+ZL_INT zenglrun_memFindPtrIndex(ZL_VOID * VM_ARG , ZL_VOID * point)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run = &VM->run;
+	ZL_INT i;
+
+	for(i=0;i<run->mempool.size;i++)
+	{
+		if(run->mempool.points[i].point == point)
+			return i;
+	}
+	return -1;
+}
+
 /*
 	根据需求的size大小，对内存池的指针进行调整大小等重利用操作。与memReAlloc区别在于，本函数只调整大小，没有内存copy的开销
 */
@@ -327,12 +342,16 @@ ZL_VOID zenglrun_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 			VM->isRunError = ZL_TRUE;
 		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
 		{
+			ZL_INT run_totalsize;
+			ZL_INT vm_totalsize;
+			run_totalsize = VM->debug.orig_run_totalsize != 0 ? VM->debug.orig_run_totalsize : run->totalsize;
+			vm_totalsize = VM->debug.orig_vm_totalsize != 0 ? VM->debug.orig_vm_totalsize : VM->totalsize;
 			VM->end_time = ZENGL_SYS_TIME_CLOCK();
 			VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
 			run->info(VM_ARG,"\n run time:%.16g s totalsize: %.16g Kbyte\n VM time:%.16g s totalsize: %.16g Kbyte\n",(ZL_DOUBLE)run->total_time / CLOCKS_PER_SEC,
-			(ZL_FLOAT)run->totalsize / 1024,
+			(ZL_FLOAT)run_totalsize / 1024,
 			(ZL_DOUBLE)VM->total_time / CLOCKS_PER_SEC,
-			(ZL_FLOAT)VM->totalsize / 1024); //for debug
+			(ZL_FLOAT)vm_totalsize / 1024); //for debug
 		}
 		if(VM->isinApiRun == ZL_FALSE)
 		{
@@ -372,12 +391,16 @@ ZL_VOID zenglrun_exit_forApiSetErrThenStop(ZL_VOID * VM_ARG)
 	VM->isRunError = ZL_TRUE;
 	if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下
 	{
+		ZL_INT run_totalsize;
+		ZL_INT vm_totalsize;
+		run_totalsize = VM->debug.orig_run_totalsize != 0 ? VM->debug.orig_run_totalsize : run->totalsize;
+		vm_totalsize = VM->debug.orig_vm_totalsize != 0 ? VM->debug.orig_vm_totalsize : VM->totalsize;
 		VM->end_time = ZENGL_SYS_TIME_CLOCK();
 		VM->total_time = VM->end_time - VM->start_time; //得到虚拟机总的执行时间
 		run->info(VM_ARG,"\n run time:%.16g s totalsize: %.16g Kbyte\n VM time:%.16g s totalsize: %.16g Kbyte\n",(ZL_DOUBLE)run->total_time / CLOCKS_PER_SEC,
-		(ZL_FLOAT)run->totalsize / 1024,
+		(ZL_FLOAT)run_totalsize / 1024,
 		(ZL_DOUBLE)VM->total_time / CLOCKS_PER_SEC,
-		(ZL_FLOAT)VM->totalsize / 1024); //for debug
+		(ZL_FLOAT)vm_totalsize / 1024); //for debug
 	}
 	if(VM->isinApiRun == ZL_FALSE)
 	{

@@ -961,7 +961,7 @@ ZL_INT zengl_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid)
 
 	while(tmpindex != 0 && compile->SymFunTable.funs[tmpindex].isvalid == ZL_TRUE &&
 		 (classid != compile->SymFunTable.funs[tmpindex].classid ||
-		  ZENGL_SYS_STRCMP(name,compile->TokenStringPoolGetPtr(VM_ARG,compile->SymFunTable.funs[tmpindex].nameIndex)) != 0)) //循环查找同名函数或类函数，如果同名则产生语法错误
+		  ZENGL_SYS_STRCMP(name,compile->TokenStringPoolGetPtr(VM_ARG,compile->SymFunTable.funs[tmpindex].nameIndex)) != 0)) //循环查找同名函数或类函数
 		tmpindex = compile->SymFunTable.funs[tmpindex].next;
 	if(tmpindex == 0)
 		return 0; //如果没找到，说明不是用户自定义的函数，那么有可能是模块里的函数。
@@ -1034,7 +1034,7 @@ ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum)
 				{
 				case ZL_TK_NUM:
 					tmpInstType = ZL_R_DT_NUM;
-					tmpInstData = (ZL_DOUBLE)ZENGL_SYS_STR_TO_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					tmpInstData = (ZL_DOUBLE)ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 					break;
 				case ZL_TK_FLOAT:
 					tmpInstType = ZL_R_DT_FLOAT;
@@ -1422,7 +1422,7 @@ ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum)
 			{
 			case ZL_TK_ID:
 			case ZL_TK_ARRAY_ITEM:
-				if(nodes[nodenum].parentnode != ZL_TK_DOT) //变量，数组元素，且不是以类成员的形式出现的时候，就可以加入局部符号表
+				if(nodes[nodenum].parentnode == -1 || nodes[nodes[nodenum].parentnode].toktype != ZL_TK_DOT) //变量，数组元素，且不是以类成员的形式出现的时候，就可以加入局部符号表
 				{
 					if(compile->SymInsertHashTableForLocal(VM_ARG,nodenum,ZL_SYM_ENUM_LOCAL_TYPE_LOCAL) == ZL_TRUE) //如果是脚本函数的局部变量，就将其加入到SymLocalTable局部变量符号表动态数组中，并将其标示为ZL_SYM_ENUM_LOCAL_TYPE_LOCAL
 					{
