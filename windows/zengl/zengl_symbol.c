@@ -161,7 +161,10 @@ ZL_VOID zengl_ScanInsertGlobalSym(ZL_VOID * VM_ARG,ZL_INT arg_nodenum)
 				nodes[tmpstack.nodenum].toktype == ZL_TK_ARRAY_ITEM)
 		{
 			parentnum = nodes[tmpstack.nodenum].parentnode;
-			if(nodes[parentnum].toktype == ZL_TK_DOT) //如果ID的父节点是点运算符，则交由SymInsertDotID处理
+			/*下面的parentnum一定要进行大于等于0的测试，
+			 * 如果小于0，则在android下会出现terminated by signal (11)的错误，
+			 * 此错误由ndk-stack工具发现*/
+			if(parentnum >=0 && nodes[parentnum].toktype == ZL_TK_DOT) //如果ID的父节点是点运算符，则交由SymInsertDotID处理
 				compile->SymInsertDotID(VM_ARG,tmpstack.nodenum,parentnum);
 			else
 				compile->SymInsertHashTableForGlobal(VM_ARG,tmpstack.nodenum);
