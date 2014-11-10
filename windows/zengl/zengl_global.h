@@ -30,16 +30,23 @@
 #ifndef _ZENGL_GLOBAL_H_
 #define _ZENGL_GLOBAL_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include <string.h>
-#include <time.h>
-#include "setjmp.h"
-#include "zengl_locals.h"
-#include "zengl_exportfuns.h"
+#ifdef ZL_EXP_OS_IN_ZENGLOX
+	#include <stdlib.h>
+	#include "setjmp.h"
+	#include "zengl_locals.h"
+	#include "zengl_exportfuns.h"
+#else
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <memory.h>
+	#include <stdarg.h>
+	#include <ctype.h>
+	#include <string.h>
+	#include <time.h>
+	#include "setjmp.h"
+	#include "zengl_locals.h"
+	#include "zengl_exportfuns.h"
+#endif
 
 /*一些宏定义*/
 #define ZL_VM_SIGNER 0x4D564C5A //判断虚拟机结构体是否是有效结构体的signer标志，即ZLVM四个英文字母的ASCII码，由低字节向高字节排列

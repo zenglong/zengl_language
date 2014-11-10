@@ -1,3 +1,6 @@
+  zengl v1.5.0 , 添加了一个zenglOX目录，该目录内的makefile和相关的源文件都是针对zenglOX操作系统的(可以参考zenglOX v2.3.0的官方文章)，需要在zenglOX的源代码中进行编译，
+  其他的windows目录、android目录内的zengl_exportfuns.h及zengl_global.h头文件也进行了同步，这样就可以和linux目录内的源代码保持一致。
+  
   zengl v1.4.1 , 修复zengl_symbol.c里zengl_ScanInsertGlobalSym函数在插入变量符号信息时，当parentnum为-1时，可能出现的nodes[parentnum]数组访问异常，
   该Bug由android SDK里的ndk-stack工具发现，该BUG有时候会导致程序直接挂掉，在android日志里就是提示terminated by signal (11)的错误。
 
