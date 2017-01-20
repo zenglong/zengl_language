@@ -191,6 +191,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: run main err , division by zero , pc=%d (解释器运行时错误：除法运算时，发生除零错误)\n", //ZL_ERR_RUN_DIVIDE_BY_ZERO
 	"\n source code info: [ %s ] %d:%d <'%s'>\n", //ZL_ERR_RUN_SOURCE_CODE_INFO
 	"\n err: compile assemble err , AsmGCStackList alloc failure in zengl_AsmGCStackInit (编译器异常：汇编堆栈动态数组分配内存初始化失败)\n", //ZL_ERR_CP_ASM_GCSTACK_LIST_MALLOC_FAILED
+	"\n err: compile assemble err , AsmGCLoopStackList alloc failure in zengl_AsmGCLoopStackInit (编译器异常：汇编模拟堆栈动态数组分配内存初始化失败)\n", //ZL_ERR_CP_ASM_GC_LOOP_STACK_LIST_MALLOC_FAILED
 	"\n err: compile ld err , LDAddrList alloc failure in zengl_LDAddrListInit (编译器异常：链接地址动态数组分配内存初始化失败)\n", //ZL_ERR_CP_LD_ADDR_LIST_MALLOC_FAILED
 	"\n err: compile ld err , LDAddrList index loc must unique pc:%d (编译器异常：链接地址必须唯一，一个伪地址对应一个汇编代码位置)\n", //ZL_ERR_CP_LD_INDEX_ADDR_MUST_UNIQUE
 	"\n err: compile ld err , invalid LDAddrList index : adr%d (编译器异常：无效的伪地址:adr%d)\n", //ZL_ERR_CP_LD_INVALID_ADDR_INDEX

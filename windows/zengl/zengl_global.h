@@ -548,6 +548,7 @@ typedef struct _ZENGL_SYM_FUN_TABLE{
 
 #define ZL_ASM_ADDR_TYPE_NUM 22 //为ZL_ASM_STACK_ENUM_IF_ADDR,ZL_ASM_STACK_ENUM_IF_END,ZL_ASM_STACK_ENUM_FOR_ADDR,ZL_ASM_STACK_ENUM_FOR_END...等元素，以后增加时数目要对应增加！
 #define ZL_ASM_STACK_LIST_SIZE 20 //生成汇编代码时因为处理嵌入式if等结构需要引入堆栈结构，这里是堆栈动态数组的初始化和动态扩容大小。
+#define ZL_ASM_LOOP_STACK_LIST_SIZE 20 //用于代替递归调用而设置的汇编模拟堆栈动态数组的初始化与动态扩容的大小
 #define ZL_ASM_CASE_JMP_TABLE_SIZE 15 //switch...case的跳转表的初始值和扩容大小
 
 typedef enum _ZENGL_ASM_STACK_ENUM{
@@ -609,6 +610,20 @@ typedef struct _ZENGL_ASM_STACKLIST_TYPE{
 	ZL_INT ends[ZL_ASM_ADDR_TYPE_NUM]; //汇编堆栈根据ends字段以及上面ASM_STACK_TYPE里的before_index又划分出if地址构成的链表和for等结构的地址构成的链表。
 	ZENGL_ASM_STACK_TYPE * stacks;
 }ZENGL_ASM_STACKLIST_TYPE; //为了解决if,for结构的嵌入式问题，需要在生成汇编代码时引入模拟堆栈。
+
+typedef struct _ZENGL_ASM_LOOP_STACK_TYPE{
+	ZL_INT nodenum; // 压入模拟栈的AST节点号
+	ZL_INT orig_nodenum; // 原始节点号
+	ZL_INT extData[1]; // 压入栈的额外数据
+	ZENGL_STATES state; // 压入模拟栈的状态码
+}ZENGL_ASM_LOOP_STACK_TYPE; // 汇编模拟堆栈(配合循环来替代递归调用)中每个元素的结构定义
+
+typedef struct _ZENGL_ASM_LOOP_STACKLIST_TYPE{
+	ZL_BOOL isInit;
+	ZL_INT size;
+	ZL_INT count;
+	ZENGL_ASM_LOOP_STACK_TYPE * stacks; // 模拟栈动态数组的指针值
+}ZENGL_ASM_LOOP_STACKLIST_TYPE; // 通过设置模拟栈，来解决zengl_AsmGenCodes递归调用过多而可能导致的内存栈溢出问题
 
 typedef struct _ZENGL_ASM_CASE_JMP_TABLE_MEMBER{
 	ZL_LONG caseNum;
@@ -1232,6 +1247,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	/*和zengl_assemble.c汇编代码生成相关的成员*/
 	ZENGL_ASM_GENCODE_STRUCT gencode_struct; //在zengl_AsmGenCodes函数中会用到的一些变量，统一放在一个结构体中
 	ZENGL_ASM_STACKLIST_TYPE AsmGCStackList; //assemble生成汇编代码时需要用到的解决内部嵌套问题的堆栈
+	ZENGL_ASM_LOOP_STACKLIST_TYPE AsmGCLoopStackList; // 通过模拟堆栈配合循环操作，来替代函数的递归调用
 	ZL_INT AsmGCAddrNum; //ifadr,ifend,foradr,forend等的计数器。
 	ZL_BOOL AsmGCIsInClass; //判断是否在生成class类结构的汇编代码过程中。
 	ZENGL_RUN_INST_OP_DATA memDataForDot; //用于生成点运算符的汇编指令

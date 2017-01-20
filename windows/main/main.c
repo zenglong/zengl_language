@@ -1204,7 +1204,7 @@ int main(int argc,char * argv[])
 	if(zenglApi_Run(VM,argv[1]) == -1) //±‡“Î÷¥––zenglΩ≈±æ
 		main_exit(VM,"¥ÌŒÛ£∫±‡“Î<%s> ß∞‹£∫%s\n",argv[1],zenglApi_GetErrorString(VM));
 
-	if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
+	/*if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
 		printf("after run , the i is %ld\n",testint);
 
 	zenglApi_Reset(VM);
@@ -1248,7 +1248,7 @@ int main(int argc,char * argv[])
 	zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
 
 	if(zenglApi_Run(VM,"test2.zl") == -1) //±‡“Î÷¥––zenglΩ≈±æ
-		main_exit(VM,"¥ÌŒÛ£∫±‡“Î<test2.zl> ß∞‹£∫%s\n",zenglApi_GetErrorString(VM));
+		main_exit(VM,"¥ÌŒÛ£∫±‡“Î<test2.zl> ß∞‹£∫%s\n",zenglApi_GetErrorString(VM));*/
 
 	zenglApi_Close(VM);
 

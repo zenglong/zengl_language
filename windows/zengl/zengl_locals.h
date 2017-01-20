@@ -190,6 +190,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_RUN_DIVIDE_BY_ZERO,	//解释器运行时错误：除法运算时，发生除零错误
 	ZL_ERR_RUN_SOURCE_CODE_INFO,//source code info: %s %d:%d <'%s'>
 	ZL_ERR_CP_ASM_GCSTACK_LIST_MALLOC_FAILED,		//编译器异常：汇编堆栈动态数组分配内存初始化失败
+	ZL_ERR_CP_ASM_GC_LOOP_STACK_LIST_MALLOC_FAILED,		//编译器异常：汇编模拟堆栈动态数组分配内存初始化失败
 	ZL_ERR_CP_LD_ADDR_LIST_MALLOC_FAILED,	//编译器异常：链接地址动态数组分配内存初始化失败
 	ZL_ERR_CP_LD_INDEX_ADDR_MUST_UNIQUE,	//编译器异常：链接地址必须唯一，一个伪地址对应一个汇编代码位置
 	ZL_ERR_CP_LD_INVALID_ADDR_INDEX,		//编译器异常：无效的伪地址:adr%d
