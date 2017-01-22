@@ -159,7 +159,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_AsmGCStackPush,
 			zengl_AsmGCStackPop,
 			zengl_AsmGCStackInit,
-			zengl_AsmGCElif,
+			//zengl_AsmGCElif,
 			zengl_AsmGCBreak_Codes,
 			zengl_AsmGCContinue_Codes,
 			zengl_AsmScanCaseMinMax,

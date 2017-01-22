@@ -1146,7 +1146,7 @@ int main_output_rc4_source(char * src_filename,char * dest_filename,char * rc4_k
 int main(int argc,char * argv[])
 {
 	int len = 0;
-	long testint;
+	//long testint;
 	//int * testint_ptr;
 	//double testdouble;
 	char * teststr = 0;
