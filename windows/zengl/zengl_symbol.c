@@ -1198,6 +1198,22 @@ ZL_VOID zengl_SymScanClassStatement(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_s
 	}while(compile->AST_TreeScanStackList.count > 0); //如果堆栈中还有元素，说明还有节点没处理完，只有当堆栈里的元素个数为0时则表示所有AST里的节点都处理完了，就可以跳出循环返回了
 }
 
+
+typedef enum _ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS{
+	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_START,
+	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_FIRST_PLACE,
+	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_SECOND_PLACE,
+} ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS;
+
+typedef struct _ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL{
+	ZL_INT nodenum;
+	ZL_INT classid;
+	ZL_INT start_scan_num;
+	ZL_BOOL initScan;
+	ZENGL_AST_SCAN_STACK_TYPE tmpstack;
+	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS status;
+} ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL;
+
 /*
     扫描类引用时的节点，将类成员转为数组的索引压入栈中。
 	如test.test2[3].name.val
@@ -1211,61 +1227,100 @@ ZL_VOID zengl_SymScanClassStatement(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_s
 	先在点运算符的第一个子节点中查找类id，然后使用该类id找到第二个子节点即类成员的
 	索引，接着将索引PUSH压入栈。
 */
-ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
+ZENGL_STATES zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
-	ZENGL_AST_SCAN_STACK_TYPE tmpstack;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL * stackVal;
+	if(loopStackTop != ZL_NULL) // 不为NULL，说明是从zengl_AsmGenCode_Dot进来的，就将自己压入汇编模拟栈，下次在汇编输出主循环时，就会直接进入当前函数
+	{
+		ZENGL_ASM_LOOP_STACK_TYPE * dot_loopStackTop;
+		ZENGL_ASMGC_DOT_STACK_VAL * dot_loopStackTop_stackVal;
+		zengl_AsmGCLoopStackPush(VM_ARG, nodenum, ZL_ST_ASM_CODE_INDOT_SYM_SCAN);
+		dot_loopStackTop = loopStackTop;
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+		stackVal = (ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL));
+		stackVal->nodenum = nodenum;
+		stackVal->classid = 0;
+		stackVal->start_scan_num = 0;
+		stackVal->initScan = ZL_TRUE;
+		dot_loopStackTop_stackVal = (ZENGL_ASMGC_DOT_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[dot_loopStackTop->stackValIndex]);
+		dot_loopStackTop_stackVal->status = ZENGL_ASMGC_DOT_STATUS_FINISH_SCAN_DOT;
+		stackVal->status = ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_START;
+	}
+	else // 否则就是从汇编输出的主循环直接进来的
+	{
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+		stackVal = (ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+	}
+	
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_START:
+		break;
+	case ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_FIRST_PLACE:
+		goto first_place;
+	case ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_SECOND_PLACE:
+		goto second_place;
+	}
+
+	/*ZENGL_AST_SCAN_STACK_TYPE tmpstack;
 	ZL_INT classid = 0;
 	ZL_INT start_scan_num = 0;
-	ZL_BOOL initScan = ZL_TRUE;
+	ZL_BOOL initScan = ZL_TRUE;*/
+
 	if(compile->AST_TreeScanStackList.count < 0)
 		compile->exit(VM_ARG,ZL_ERR_CP_SYM_AST_TREE_SCAN_STACK_INVALID_COUNT);
 	else
-		start_scan_num = compile->AST_TreeScanStackList.count; //像obj.key[i % obj.keylen]这样的表达式，当扫描obj.key数组元素时，会递归进去扫描obj.keylen，所以AST_TreeScanStackList.count不一定为0，可以大于0
-	if(nodenum == -1)
+		stackVal->start_scan_num = compile->AST_TreeScanStackList.count; //像obj.key[i % obj.keylen]这样的表达式，当扫描obj.key数组元素时，会递归进去扫描obj.keylen，所以AST_TreeScanStackList.count不一定为0，可以大于0
+	if(stackVal->nodenum == -1)
 	{
-		return;
+		//return;
+		goto end;
 	}
-	compile->push_AST_TreeScanStack(VM_ARG,nodenum); //先将节点压入栈，形成扫描节点路径的起始点
+	compile->push_AST_TreeScanStack(VM_ARG,stackVal->nodenum); //先将节点压入栈，形成扫描节点路径的起始点
 	do{
-		tmpstack = compile->pop_AST_TreeScanStack(VM_ARG,ZL_FALSE); //返回前面压入栈的节点信息。参数ZL_FALSE表示只返回信息，暂不将节点从堆栈中删除
-		if(tmpstack.nodenum < 0) //如-1之类的空节点则跳过
+		stackVal->tmpstack = compile->pop_AST_TreeScanStack(VM_ARG,ZL_FALSE); //返回前面压入栈的节点信息。参数ZL_FALSE表示只返回信息，暂不将节点从堆栈中删除
+		if(stackVal->tmpstack.nodenum < 0) //如-1之类的空节点则跳过
 		{
 			compile->pop_AST_TreeScanStack(VM_ARG,ZL_TRUE);
 			continue;
 		}
-		if(tmpstack.curchild == 0) //curchild为0时，表示还没开始扫描子节点，就对当前节点进行处理。
+		if(stackVal->tmpstack.curchild == 0) //curchild为0时，表示还没开始扫描子节点，就对当前节点进行处理。
 		{
-			nodenum = tmpstack.nodenum;
-			switch(nodes[nodenum].toktype)
+			stackVal->nodenum = stackVal->tmpstack.nodenum;
+			switch(nodes[stackVal->nodenum].toktype)
 			{
 			case ZL_TK_ID:
 			case ZL_TK_ARRAY_ITEM:
-				if(classid == 0) //第一次查找时，如test.test2[3].name.val当扫描test时classid就为0
+				if(stackVal->classid == 0) //第一次查找时，如test.test2[3].name.val当扫描test时classid就为0
 				{
-					if(initScan != ZL_TRUE)
+					if(stackVal->initScan != ZL_TRUE)
 					{
-						compile->parser_curnode = nodenum;
+						compile->parser_curnode = stackVal->nodenum;
 						compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYM_SCAN_DOT_FOR_CLASS_ID_ZERO_WHEN_NOT_INIT);
 					}
 					else
-						initScan = ZL_FALSE;
-					classid = compile->SymLookupID_ForDot(VM_ARG,nodenum); //找到根类的类id
-					if(classid == 0)
+						stackVal->initScan = ZL_FALSE;
+					stackVal->classid = compile->SymLookupID_ForDot(VM_ARG,stackVal->nodenum); //找到根类的类id
+					if(stackVal->classid == 0)
 					{
-						compile->parser_curnode = nodenum;
+						compile->parser_curnode = stackVal->nodenum;
 						compile->parser_errorExit(VM_ARG,ZL_ERR_SYNTAX_SYM_CAN_NOT_FIND_CLASS_INFO_FOR_ID);
 					}
-					if(nodes[nodenum].toktype == ZL_TK_ARRAY_ITEM)
+					if(nodes[stackVal->nodenum].toktype == ZL_TK_ARRAY_ITEM)
 					{
-						ZL_INT * chnum = nodes[nodenum].childs.childnum;
+						ZL_INT * chnum = nodes[stackVal->nodenum].childs.childnum;
 						if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || 
 							ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 						{
 							compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_NONE,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE);
-							compile->AsmGenCodes(VM_ARG,chnum[0]);
+							//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+							zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
+							stackVal->status = ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_FIRST_PLACE; return ZL_ST_START;
+first_place:
 							compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE);
 						}
 						else if(chnum[0] != -1)
@@ -1282,20 +1337,23 @@ ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 				} //if(classid == 0)
 				else
 				{
-					ZL_INT classMemberIndex = compile->SymLookupClassMember(VM_ARG,nodenum,classid);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+					ZL_INT classMemberIndex = compile->SymLookupClassMember(VM_ARG,stackVal->nodenum,stackVal->classid);
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->nodenum,
 						ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
 						ZL_R_DT_NUM,compile->SymClassMemberTable.members[classMemberIndex].index); //对应汇编指令 类似 "PUSH %d" 取得类成员的索引，并压入栈
 					//classid = compile->SymClassMemberTable.members[classMemberIndex].classid; //使用该类成员的类id，为获取后面的成员的索引做准备
-					classid = compile->SymClassMemberTable.members[classMemberIndex].cls_stmt_classid; //应该使用声明该成员时所使用的类ID信息，而非该成员所在的类结构，因为该成员的成员是声明类里的成员！
-					if(nodes[nodenum].toktype == ZL_TK_ARRAY_ITEM) //如果该类成员是一个数组元素如上例：test.test2[3].name.val中test2就是一个数组，则将数组里的索引3也压入栈，该操作在AsmGenCodes函数里自动完成
+					stackVal->classid = compile->SymClassMemberTable.members[classMemberIndex].cls_stmt_classid; //应该使用声明该成员时所使用的类ID信息，而非该成员所在的类结构，因为该成员的成员是声明类里的成员！
+					if(nodes[stackVal->nodenum].toktype == ZL_TK_ARRAY_ITEM) //如果该类成员是一个数组元素如上例：test.test2[3].name.val中test2就是一个数组，则将数组里的索引3也压入栈，该操作在zengl_AsmGCLoopStackPush并返回后，会由汇编输出主循环自动完成
 					{
-						ZL_INT * chnum = nodes[nodenum].childs.childnum;
+						ZL_INT * chnum = nodes[stackVal->nodenum].childs.childnum;
 						if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || 
 							ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 						{
 							compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_NONE,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE);
-							compile->AsmGenCodes(VM_ARG,chnum[0]);
+							//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+							zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
+							stackVal->status = ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STATUS_SECOND_PLACE; return ZL_ST_START;
+second_place:
 							compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE);
 						}
 						else if(chnum[0] != -1)
@@ -1315,27 +1373,30 @@ ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 				break;
 			default:
 				compile->exit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_TOKEN,
-							nodes[nodenum].line_no,
-							nodes[nodenum].col_no,
-							nodes[nodenum].filename,
-							compile->getTokenStr(VM_ARG,nodes,nodenum));
+							nodes[stackVal->nodenum].line_no,
+							nodes[stackVal->nodenum].col_no,
+							nodes[stackVal->nodenum].filename,
+							compile->getTokenStr(VM_ARG,nodes,stackVal->nodenum));
 				break;
 			} //switch(nodes[nodenum].toktype)
 		} //if(tmpstack.curchild == 0)
-		if(tmpstack.curchild < tmpstack.childcnt) //如果curchild小于childcnt子节点数，就说明子节点没处理完，则继续处理子节点信息。
+		if(stackVal->tmpstack.curchild < stackVal->tmpstack.childcnt) //如果curchild小于childcnt子节点数，就说明子节点没处理完，则继续处理子节点信息。
 		{
-			if(tmpstack.curchild < ZL_AST_CHILD_NODE_SIZE) //根据curchild索引判断是基本子节点还是扩展子节点。
-				nodenum = nodes[tmpstack.nodenum].childs.childnum[tmpstack.curchild];
+			if(stackVal->tmpstack.curchild < ZL_AST_CHILD_NODE_SIZE) //根据curchild索引判断是基本子节点还是扩展子节点。
+				stackVal->nodenum = nodes[stackVal->tmpstack.nodenum].childs.childnum[stackVal->tmpstack.curchild];
 			else
-				nodenum = nodes[tmpstack.nodenum].childs.extchilds[tmpstack.curchild -
+				stackVal->nodenum = nodes[stackVal->tmpstack.nodenum].childs.extchilds[stackVal->tmpstack.curchild -
 																   ZL_AST_CHILD_NODE_SIZE];
 			compile->AST_TreeScanStackList.stacks[compile->AST_TreeScanStackList.count - 1].curchild++; //将curchild加一，下次就会处理下一个子节点信息。
-			compile->push_AST_TreeScanStack(VM_ARG,nodenum); //将子节点压入栈
+			compile->push_AST_TreeScanStack(VM_ARG,stackVal->nodenum); //将子节点压入栈
 			continue; //continue后会跳到do...while开头，然后pop_TreeStack，从而根据前面压入栈的子节点信息进行处理。
 		}
 		else
 			compile->pop_AST_TreeScanStack(VM_ARG,ZL_TRUE); //如果没有子节点或者子节点也已扫描完，则弹出当前节点。
-	}while(compile->AST_TreeScanStackList.count > start_scan_num); //如果堆栈中还有元素，说明还有节点没处理完，只有当堆栈里的元素个数为start_scan_num时则表示所有当前AST里的节点都处理完了，就可以跳出循环返回了
+	}while(compile->AST_TreeScanStackList.count > stackVal->start_scan_num); //如果堆栈中还有元素，说明还有节点没处理完，只有当堆栈里的元素个数为start_scan_num时则表示所有当前AST里的节点都处理完了，就可以跳出循环返回了
+end:
+	zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+	return zengl_AsmGCLoopStackFinishTopSimple(VM_ARG);
 }
 
 /*

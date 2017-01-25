@@ -294,7 +294,8 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INARRAY_ITEM,//ÓÃÓÚÉú³ÉÊı×éÔªËØµÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INCLASS,		//ÓÃÓÚÉú³Éclass½á¹¹µÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INCLASS_STATEMENT,//ÓÃÓÚÉú³ÉÀàÉùÃ÷Óï¾äµÄ»ã±àÖ¸Áî
-	ZL_ST_ASM_CODE_INDOT,		//ÓÃÓÚÉú³ÉÀà³ÉÔ±µãÔËĞĞ·ûµÄ»ã±àÖ¸Áî
+	ZL_ST_ASM_CODE_INDOT,		//ÓÃÓÚÉú³ÉÀà³ÉÔ±µãÔËËã·ûµÄ»ã±àÖ¸Áî
+	ZL_ST_ASM_CODE_INDOT_SYM_SCAN, //ÓÃÓÚÉú³É¶ÔµãÔËËã·û½øĞĞÉ¨ÃèÊ±µÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INSWITCH,	//ÓÃÓÚÉú³Éswitch½á¹¹µÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INWHILE,		//ÓÃÓÚÉú³Éwhile½á¹¹µÄ»ã±àÖ¸Áî
 	ZL_ST_ASM_CODE_INDOWHILE,	//ÓÃÓÚÉú³Édo...dowhileÑ­»·½á¹¹µÄ»ã±àÖ¸Áî
@@ -616,8 +617,8 @@ typedef struct _ZENGL_ASM_LOOP_STACK_TYPE{
 	ZL_INT nodenum; // Ñ¹ÈëÄ£ÄâÕ»µÄAST½ÚµãºÅ
 	ZL_INT orig_nodenum; // Ô­Ê¼½ÚµãºÅ
 	ZL_INT extData[1]; // Ñ¹ÈëÕ»µÄ¶îÍâÊı¾İ
-	ZL_VOID * stackVal; // ½Ï¶àµÄ¶îÍâÊı¾İ±£´æµ½stackValÖĞ
-	ZL_INT stackValCnt; // ±£´æÔÚstackValÖĞµÄ¶îÍâÊı¾İµÄ³ß´ç´óĞ¡(ÒÔ×Ö½ÚÎªµ¥Î»)
+	ZL_INT stackValIndex; // ½Ï¶àµÄ¶îÍâÊı¾İ±£´æµ½stackValsÖĞ£¬stackValIndexÎªstackValsÖĞµÄ×Ö½ÚË÷ÒıÖµ£¬Ö®ËùÒÔ´æ´¢Ë÷ÒıÖµ£¬ÊÇÒòÎªstackValsÔÚÀ©ÈİÊ±£¬ÆäÖ¸ÕëÓĞ¿ÉÄÜ»á·¢Éú¸Ä±ä£¬Òò´ËÖ»ÄÜ´æ´¢Ë÷Òı£¬ÔÙÓÉË÷ÒıÈ·¶¨¾ßÌåµÄÎ»ÖÃ
+	ZL_INT stackValCnt; // ±£´æÔÚstackValsÖĞµÄ¶îÍâÊı¾İµÄ³ß´ç´óĞ¡(ÒÔ×Ö½ÚÎªµ¥Î»)
 	ZENGL_STATES state; // Ñ¹ÈëÄ£ÄâÕ»µÄ×´Ì¬Âë
 }ZENGL_ASM_LOOP_STACK_TYPE; // »ã±àÄ£Äâ¶ÑÕ»(ÅäºÏÑ­»·À´Ìæ´úµİ¹éµ÷ÓÃ)ÖĞÃ¿¸öÔªËØµÄ½á¹¹¶¨Òå
 
@@ -643,6 +644,16 @@ typedef struct _ZENGL_ASM_CASE_JMP_TABLE{
 	ZL_INT count;
 	ZENGL_ASM_CASE_JMP_TABLE_MEMBER * member;
 }ZENGL_ASM_CASE_JMP_TABLE; //switch...case½á¹¹µÄÌø×ª±í
+
+typedef enum _ZENGL_ASMGC_DOT_STATUS{
+	ZENGL_ASMGC_DOT_STATUS_START,
+	ZENGL_ASMGC_DOT_STATUS_FINISH_SCAN_DOT,
+	ZENGL_ASMGC_DOT_STATUS_FINISH_FUNCALL
+} ZENGL_ASMGC_DOT_STATUS;
+
+typedef struct _ZENGL_ASMGC_DOT_STACK_VAL{
+	ZENGL_ASMGC_DOT_STATUS status;
+} ZENGL_ASMGC_DOT_STACK_VAL;
 
 /********************************************************************************
 		ÉÏÃæÊÇºÍzengl_assemble.c»ã±à´úÂëÉú³ÉÏà¹ØµÄ½á¹¹ÌåºÍÃ¶¾ÙµÈ¶¨Òå
@@ -1337,7 +1348,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* SymScanFunArg)(ZL_VOID * VM_ARG,ZL_INT nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄ²ÎÊı ¶ÔÓ¦ zengl_SymScanFunArg
 	ZL_VOID (* SymScanFunGlobal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT global_nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄglobal¹Ø¼ü×ÖÉùÃ÷µÄÈ«¾Ö±äÁ¿ ¶ÔÓ¦ zengl_SymScanFunGlobal
 	ZL_VOID (* SymScanClassStatement)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_statement_nodenum); //É¨ÃèÀàÉùÃ÷Óï¾äÀïÉùÃ÷µÄ±äÁ¿ ¶ÔÓ¦ zengl_SymScanClassStatement
-	ZL_VOID (* SymScanDotForClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //É¨ÃèÀàÒıÓÃÊ±µÄ½Úµã£¬½«Àà³ÉÔ±×ªÎªÊı×éµÄË÷ÒıÑ¹ÈëÕ»ÖĞ ¶ÔÓ¦ zengl_SymScanDotForClass
+	ZENGL_STATES (* SymScanDotForClass)(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg); //É¨ÃèÀàÒıÓÃÊ±µÄ½Úµã£¬½«Àà³ÉÔ±×ªÎªÊı×éµÄË÷ÒıÑ¹ÈëÕ»ÖĞ ¶ÔÓ¦ zengl_SymScanDotForClass
 	ZL_VOID (* SymScanUseRsv)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT use_nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞuse¹Ø¼ü×ÖÉùÃ÷µÄÄ£¿éÃû ¶ÔÓ¦ zengl_SymScanUseRsv
 	ZL_VOID (* SymScanFunLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄ¾Ö²¿±äÁ¿ ¶ÔÓ¦ zengl_SymScanFunLocal
 	ZL_BOOL (* SymInsertHashTableForLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ºÍ²ÎÊı²åÈëµ½¾Ö²¿±äÁ¿·ûºÅ±íÖĞ£¬²¢½«·ûºÅ±í¶¯Ì¬Êı×éµÄË÷Òı¼ÓÈëµ½¹şÏ£±íÖĞ ¶ÔÓ¦ zengl_SymInsertHashTableForLocal
@@ -1351,8 +1362,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT (* AsmGCStackPop)(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL isremove); //µ¯³ö»ã±àÕ» ¶ÔÓ¦ zengl_AsmGCStackPop
 	ZL_VOID (* AsmGCStackInit)(ZL_VOID * VM_ARG); //»ã±à¶ÑÕ»³õÊ¼»¯ ¶ÔÓ¦ zengl_AsmGCStackInit
 	//ZL_VOID (* AsmGCElif)(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElifº¯ÊıÓÃÓÚÉú³Éelif´úÂë¿é¶ÔÓ¦µÄ»ã±àÖ¸Áî ¶ÔÓ¦ zengl_AsmGCElif
-	ZL_VOID (* AsmGCBreak_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //breakÓï¾äµÄ»ã±à´úÂëÉú³É ¶ÔÓ¦ zengl_AsmGCBreak_Codes
-	ZL_VOID (* AsmGCContinue_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //continueÓï¾äµÄ»ã±à´úÂëÉú³É ¶ÔÓ¦ zengl_AsmGCContinue_Codes
+	//ZL_VOID (* AsmGCBreak_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //breakÓï¾äµÄ»ã±à´úÂëÉú³É ¶ÔÓ¦ zengl_AsmGCBreak_Codes
+	//ZL_VOID (* AsmGCContinue_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //continueÓï¾äµÄ»ã±à´úÂëÉú³É ¶ÔÓ¦ zengl_AsmGCContinue_Codes
 	ZL_VOID (* AsmScanCaseMinMax)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //É¨Ãèswitch...case £¬ÕÒ³öÆäÖĞµÄcaseµÄ×î´óÖµ£¬×îĞ¡Öµ£¬ÒÔ¼°ÅĞ¶ÏÊÇ·ñÓĞdefaultÄ¬ÈÏ½Úµã ¶ÔÓ¦ zengl_AsmScanCaseMinMax
 	ZL_LONG (* GetNodeInt)(ZL_VOID * VM_ARG,ZL_INT nodenum); //·µ»Ø½ÚµãµÄ×Ö·û´®ĞÅÏ¢µÄÕûÊıĞÎÊ½ ¶ÔÓ¦ zengl_GetNodeInt
@@ -1689,7 +1700,7 @@ ZL_INT zengl_SymLookupFunByName(ZL_VOID * VM_ARG,ZL_CHAR * name,ZL_INT classid);
 ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄ²ÎÊı
 ZL_VOID zengl_SymScanFunGlobal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT global_nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄglobal¹Ø¼ü×ÖÉùÃ÷µÄÈ«¾Ö±äÁ¿
 ZL_VOID zengl_SymScanClassStatement(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_statement_nodenum); //É¨ÃèÀàÉùÃ÷Óï¾äÀïÉùÃ÷µÄ±äÁ¿
-ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //É¨ÃèÀàÒıÓÃÊ±µÄ½Úµã£¬½«Àà³ÉÔ±×ªÎªÊı×éµÄË÷ÒıÑ¹ÈëÕ»ÖĞ
+ZENGL_STATES zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg); //É¨ÃèÀàÒıÓÃÊ±µÄ½Úµã£¬½«Àà³ÉÔ±×ªÎªÊı×éµÄË÷ÒıÑ¹ÈëÕ»ÖĞ
 ZL_VOID zengl_SymScanUseRsv(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT use_nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞuse¹Ø¼ü×ÖÉùÃ÷µÄÄ£¿éÃû
 ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ»À´É¨ÃèÓï·¨Ê÷ÖĞº¯ÊıµÄ¾Ö²¿±äÁ¿
 ZL_BOOL zengl_SymInsertHashTableForLocal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ºÍ²ÎÊı²åÈëµ½¾Ö²¿±äÁ¿·ûºÅ±íÖĞ£¬²¢½«·ûºÅ±í¶¯Ì¬Êı×éµÄË÷Òı¼ÓÈëµ½¹şÏ£±íÖĞ
@@ -1703,6 +1714,11 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum); //¸Ãº¯Êı¸ù¾İAST³éÏóÓ
 ZL_INT zengl_AsmGCStackPush(ZL_VOID * VM_ARG,ZL_INT num,ZENGL_ASM_STACK_ENUM type); //½«Êı×ÖÑ¹Èë»ã±à¶ÑÕ»
 ZL_INT zengl_AsmGCStackPop(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL isremove); //µ¯³ö»ã±àÕ»
 ZL_VOID zengl_AsmGCStackInit(ZL_VOID * VM_ARG); //»ã±à¶ÑÕ»³õÊ¼»¯
+ZL_VOID zengl_AsmGCLoopStackPush(ZL_VOID * VM_ARG, ZL_INT nodenum, ZENGL_STATES state); // ½«ĞÅÏ¢Ñ¹ÈëÄ£Äâ¶ÑÕ»
+ZENGL_STATES zengl_AsmGCLoopStackFinishTop(ZL_VOID * VM_ARG, ZL_INT nodenum); // µ±Ä£ÄâÕ»¶¥µÄÔªËØÉú³ÉÍêËùĞèµÄ»ã±àÖ¸Áîºó£¬¾Í½«Õ»¶¥µ¯³ö£¬Èç¹ûÕ»ÄÚ»¹ÓĞÔªËØµÄ»°£¬¾Í·µ»ØÕ»¶¥ÔªËØµÄ×´Ì¬£¬¼ÌĞøÄ£ÄâÕ»ÅäºÏÑ­»·À´Éú³ÉĞÂµÄÕ»¶¥ÔªËØµÄ»ã±àÖ¸Áî£¬·ñÔò·µ»ØZL_ST_DOWN±íÊ¾Õ»ÄÚÔªËØÈ«´¦ÀíÍê±Ï
+ZENGL_STATES zengl_AsmGCLoopStackFinishTopSimple(ZL_VOID * VM_ARG); // µ±Ä£ÄâÕ»¶¥µÄÔªËØÉú³ÉÍêËùĞèµÄ»ã±àÖ¸Áîºó£¬¾Í½«Õ»¶¥µ¯³ö£¬ÕâÊÇ¼ò»¯µÄ°æ±¾£¬Ã»ÓĞÕë¶ÔÊı×é»òº¯Êıµ÷ÓÃµÄPUSH AX²Ù×÷£¬Ö÷ÒªÓÃÓÚelifÉú³É»ã±àÖ¸ÁîÒÔ¼°É¨ÃèµãÔËËã·ûÊ±Ê¹ÓÃµÄ¡£
+ZL_BYTE * zengl_AsmGCLoopStackValsPush(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop, ZL_INT count); // ½«»ã±àÊä³öº¯ÊıÖĞËùĞèÊ¹ÓÃµÄÒ»Ğ©¾Ö²¿±äÁ¿±£´æµ½Ä£Äâ¶ÑÕ»ÖĞ
+ZL_VOID zengl_AsmGCLoopStackValsPop(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop); // ½«±£´æ¾Ö²¿±äÁ¿ºÍÆäËû¶îÍâÊı¾İµÄÄ£ÄâÕ»µÄÕ»¶¥µ¯³ö
 //ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElifº¯ÊıÓÃÓÚÉú³Éelif´úÂë¿é¶ÔÓ¦µÄ»ã±àÖ¸Áî
 ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //breakÓï¾äµÄ»ã±à´úÂëÉú³É
 ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continueÓï¾äµÄ»ã±à´úÂëÉú³É
