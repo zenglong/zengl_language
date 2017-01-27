@@ -1,0 +1,30 @@
+a = 90;
+b = 11;
+switch(a+b)
+case 11:
+	print 'sum: 11';
+	break;
+case 3:
+	print 'sum: 3';
+	break;
+case 6:
+	print 'sum: 6';
+	break;
+case 7:
+	print 'sum: 7';
+	break;
+case 101:
+	print 'sum: 101';
+	break;
+default:
+	print 'default: hit';
+endswitch
+
+i=0;
+while(i < 10)
+	j = 0;
+	do
+		print 'i:' + i + (i % 2==0 ? ' even' : ' odd') + ' j:' + j++;
+	dowhile(j < 3)
+	i++;
+endwhile

@@ -1,27 +1,27 @@
 /*
-   Copyright 2012 zenglong (made in china)
+Copyright 2012 zenglong (made in china)
 
-   For more information, please see www.zengl.com
+For more information, please see www.zengl.com
 
-   This file is part of zengl language.
+This file is part of zengl language.
 
-   zengl language is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+zengl language is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-   zengl language is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+zengl language is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with zengl language,the copy is in the file licence.txt.  If not,
-   see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with zengl language,the copy is in the file licence.txt.  If not,
+see <http://www.gnu.org/licenses/>.
 */
 
 /**
-	该文件为汇编输出的处理文件。
+该文件为汇编输出的处理文件。
 */
 
 #include "zengl_global.h"
@@ -82,20 +82,35 @@ static ZENGL_STATES zengl_AsmGenCode_Class(ZL_VOID * VM_ARG, ZENGL_STATES state,
 /* 生成通过点运算符访问类成员的汇编指令 */
 static ZENGL_STATES zengl_AsmGenCode_Dot(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
 
+/* 生成switch...case结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_SwitchCase(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
+
+/* 生成while...endwhile循环结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_While(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
+
+/* 生成do...dowhile循环结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_DoWhile(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
+
+/* 生成 ... ? ... : ... 中的冒号运算符的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_Colon(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
+
+/* 生成 ... ? ... : ... 中的问号运算符的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_Question(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg);
+
 /*
- *	break语句的汇编代码生成，break如果在for里则跳出for，如果在switch里则跳出switch
- *	如果在while结构里则跳出while，如果在do...dowhile里则跳出do...dowhile
- */
+*	break语句的汇编代码生成，break如果在for里则跳出for，如果在switch里则跳出switch
+*	如果在while结构里则跳出while，如果在do...dowhile里则跳出do...dowhile
+*/
 static ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum);
 
 /*
- *	continue语句的汇编代码生成，判断是在for还是在while还是在do...dowhile里，然后
- *	根据判断跳到对应结构的开头
- */
+*	continue语句的汇编代码生成，判断是在for还是在while还是在do...dowhile里，然后
+*	根据判断跳到对应结构的开头
+*/
 static ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum);
 
 /*
-	组建汇编代码的主程式
+组建汇编代码的主程式
 */
 ZL_VOID zengl_buildAsmCode(ZL_VOID * VM_ARG)
 {
@@ -115,22 +130,22 @@ ZL_VOID zengl_buildAsmCode(ZL_VOID * VM_ARG)
 		}
 	}
 	run->AddInst(VM_ARG,compile->gencode_struct.pc++,compile->AST_nodes.count - 1,
-				ZL_R_IT_END,ZL_R_DT_NONE,0,
-				ZL_R_DT_NONE,0); //对应汇编指令 "END"
+		ZL_R_IT_END,ZL_R_DT_NONE,0,
+		ZL_R_DT_NONE,0); //对应汇编指令 "END"
 }
 
 /*
-	该函数根据AST抽象语法树的节点索引将某节点转为汇编代码。
-	参数nodenum为节点在AST语法树动态数组里的节点索引。
+该函数根据AST抽象语法树的节点索引将某节点转为汇编代码。
+参数nodenum为节点在AST语法树动态数组里的节点索引。
 */
 ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
-	ZENGL_RUN_INST_OP_DATA inst_op_data;
-	ZL_INT * chnum = ZL_NULL,* extnum = ZL_NULL,i;
-	ZL_INT tmpch;
+	//ZENGL_RUN_INST_OP_DATA inst_op_data;
+	ZL_INT * chnum = ZL_NULL,* extnum = ZL_NULL; //,i;
+	//ZL_INT tmpch;
 	//ZL_INT tmptype;
 	ZENGL_STATES state;
 	//compile->gencode_struct.state = ZL_ST_START;
@@ -417,330 +432,30 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 		case ZL_ST_ASM_CODE_INDOT: //通过点运算符访问类的成员
 			state = zengl_AsmGenCode_Dot(VM_ARG, state, &loopStackTop);
 			break;
-		case ZL_ST_ASM_CODE_INDOT_SYM_SCAN:
+		case ZL_ST_ASM_CODE_INDOT_SYM_SCAN: // 扫描类引用时的节点，将类成员转为数组的索引压入栈中。
 			state = compile->SymScanDotForClass(VM_ARG, 0, &loopStackTop);
 			break;
 		case ZL_ST_ASM_CODE_INSWITCH: //switch...case结构汇编输出
-			if(nodes[nodenum].childs.count >= 1)
-			{
-				ZL_BOOL hasminmax,hasdefault;
-				ZL_INT max,min,num,j;
-				ZENGL_ASM_CASE_JMP_TABLE casejmptable = {0}; //switch...case的跳转表
-				chnum = nodes[nodenum].childs.childnum;
-				extnum = nodes[nodenum].childs.extchilds;
-				switch(nodes[chnum[0]].toktype) //先将要比较的值赋值给AX
-				{
-				case ZL_TK_ID:
-					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
-					break;
-				case ZL_TK_NUM:
-					inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
-					break;
-				case ZL_TK_FLOAT:
-					inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
-					break;
-				case ZL_TK_STR:
-					inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-									ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-									ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
-					break;
-				default:
-					if(ZENGL_AST_ISTOKEXPRESS(chnum[0])) //表达式的结果默认就是存放在AX中的，所以直接AsmGenCodes生成表达式的汇编代码即可
-						compile->AsmGenCodes(VM_ARG,chnum[0]);
-					else
-					{
-						compile->parser_curnode = nodenum;
-						compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-							compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
-							nodes[chnum[0]].line_no,
-							nodes[chnum[0]].col_no,
-							nodes[chnum[0]].filename);
-					}
-					break;
-				} //switch(nodes[chnum[0]].toktype)
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_TABLE);
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT);
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_END);
-				compile->AsmScanCaseMinMax(VM_ARG,nodenum,&hasminmax,&min,&max,&hasdefault,&casejmptable);
-				if(hasdefault == ZL_TRUE) //如果有default则输出SWITCH adr%d(跳转表地址) adr%d(default汇编地址)的汇编格式
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_SWITCH,ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_FALSE));
-				else //如果没有default则输出SWITCH adr%d(跳转表地址) adr%d(switch结构的结束位置)的汇编格式
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_SWITCH,ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE));
-				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_LONG,ZL_R_DT_NUM,casejmptable.count,
-						ZL_R_DT_NUM,casejmptable.count); //对应汇编指令 类似 "LONG %d %d" LONG后面的两个操作数都是当前switch...case跳转表中的case总数
-				if(hasminmax == ZL_TRUE)
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_LONG,ZL_R_DT_NUM,min,
-						ZL_R_DT_NUM,max); //对应汇编指令 类似 "LONG %d %d" LONG后面分别是case中的最小值和最大值
-				i = 1;
-				j = 0;
-				while(i < nodes[nodenum].childs.count)
-				{
-					if(i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
-						tmpch = extnum[i - ZL_AST_CHILD_NODE_SIZE];
-					else
-						tmpch = chnum[i];
-					if(nodes[tmpch].reserve == ZL_RSV_CASE) //生成case块部分的执行代码
-					{
-						casejmptable.member[j++].caseAddr = compile->gencode_struct.pc; //将本case块的执行代码的汇编位置设置到跳转表的caseAddr字段
-						i++;
-						if(i < nodes[nodenum].childs.count)
-						{
-							if(i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
-								tmpch = extnum[i - ZL_AST_CHILD_NODE_SIZE];
-							else
-								tmpch = chnum[i];
-							switch(nodes[tmpch].reserve)
-							{
-							case ZL_RSV_CASE:
-							case ZL_RSV_DEFAULT:
-								break;
-							default:
-								while(tmpch > 0) //循环生成本case块的汇编执行代码
-								{
-									compile->AsmGenCodes(VM_ARG,tmpch);
-									tmpch = nodes[tmpch].nextnode;
-								}
-								i++;
-								break;
-							}
-						}
-						if(i >= nodes[nodenum].childs.count)
-							run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-								ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-								ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 如果当前是最后一个case，且case后无default则JMP跳转到switch...case结束位置，在switch...case结束位置前存放的是跳转表，所以这里必须JMP进行跳转
-					} //if(nodes[tmpch].reserve == ZL_RSV_CASE) 
-					else if(nodes[tmpch].reserve == ZL_RSV_DEFAULT) //生成default块部分的执行代码
-					{
-						compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_FALSE),compile->gencode_struct.pc);
-						i++;
-						if(i < nodes[nodenum].childs.count)
-						{
-							if(i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
-								tmpch = extnum[i - ZL_AST_CHILD_NODE_SIZE];
-							else
-								tmpch = chnum[i];
-							while(tmpch > 0) //生成default块部分的汇编代码
-							{
-								compile->AsmGenCodes(VM_ARG,tmpch);
-								tmpch = nodes[tmpch].nextnode;
-							}
-						}
-						run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-								ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-								ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" JMP跳转到switch...case的结束位置
-						break;
-					} //else if(nodes[tmpch].reserve == ZL_RSV_DEFAULT)
-				} //while(i < nodes[nodenum].childs.count)
-				if(casejmptable.count > 0)
-					compile->AsmSortCaseJmpTable(VM_ARG,&casejmptable,nodenum); //将switch...case的跳转表按从小到大的顺序进行排序，为下面生成跳转表的汇编代码做准备
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),compile->gencode_struct.pc); 
-				if(hasminmax == ZL_TRUE) //如果有case最小值和最大值则说明switch...case中有case节点，就有必要生成跳转表的汇编代码
-				{
-					num = casejmptable.count;
-					for(i=0;i<num;i++)	//循环生成跳转表的汇编代码
-					{
-						if(casejmptable.member[i].caseAddr != 0)
-							run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-								ZL_R_IT_LONG,ZL_R_DT_NUM,casejmptable.member[i].caseAddr,
-								ZL_R_DT_NUM,casejmptable.member[i].caseNum); //对应汇编指令 类似 "LONG %d %d" LONG后面的分别是跳转表中存放的case的执行代码的位置和case的比较数
-						else
-							compile->exit(VM_ARG,ZL_ERR_CP_ASM_CASE_JMP_TABLE_CASEADDR_CAN_NOT_BE_ZERO);
-					}
-				}
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE),compile->gencode_struct.pc); //将switch...case的结束位置加入到链接器中
-				if(hasminmax == ZL_TRUE && casejmptable.member != ZL_NULL)
-					compile->memFreeOnce(VM_ARG,casejmptable.member); //释放掉当前switch...case的跳转表
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_TRUE);
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_TRUE);
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_TRUE);
-				state = ZL_ST_DOWN;
-			} //if(nodes[nodenum].childs.count >= 1)
-			else
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_AT_LEAST_ONE_CHILD);
-			}
-			break; //case ZL_ST_ASM_CODE_INSWITCH:
+			state = zengl_AsmGenCode_SwitchCase(VM_ARG, state, &loopStackTop);
+			break;
 		case ZL_ST_ASM_CODE_INWHILE: //while...endwhile循环结构汇编代码生成
-			if(nodes[nodenum].childs.count == 2)
-			{
-				chnum = nodes[nodenum].childs.childnum;
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_WHILE_ADDR);
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_WHILE_END);
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_FALSE),compile->gencode_struct.pc); //将开头条件判断的汇编位置加入链接动态数组中
-				if(chnum[0] != -1 && ZENGL_AST_ISTOKEXPRESS(chnum[0])) //先生成while括号里的条件判断表达式的汇编码
-				{
-					compile->AsmGenCodes(VM_ARG,chnum[0]);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_JE,ZL_R_DT_NONE,0,
-							ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_FALSE)); //对应汇编指令 类似 "JE adr%d" 根据条件判断是否需要跳出循环
-				}
-				i = chnum[1];
-				while(i > 0) //循环生成while...endwhile里的代码块的汇编码
-				{
-					compile->AsmGenCodes(VM_ARG,i);
-					i = nodes[i].nextnode;
-				}
-				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 循环体执行完后，跳到开头进行条件判断
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_FALSE),compile->gencode_struct.pc); //将while结束位置加入到链接动态数组中
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_TRUE);
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_TRUE);
-				state = ZL_ST_DOWN;
-			}
-			else
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
-			}
-			break; //case ZL_ST_ASM_CODE_INWHILE: //while...endwhile循环结构汇编代码生成
+			state = zengl_AsmGenCode_While(VM_ARG, state, &loopStackTop);
+			break;
 		case ZL_ST_ASM_CODE_INDOWHILE: //do...dowhile循环结构的汇编代码生成
-			if(nodes[nodenum].childs.count == 2)
-			{
-				chnum = nodes[nodenum].childs.childnum;
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_ADDR);
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_CONTINUE);
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_END);
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE),compile->gencode_struct.pc); //将do...dowhile结构开头汇编位置加入到链接动态数组中
-				i = chnum[0];
-				while(i > 0) //循环生成do...dowhile里的代码块的汇编码
-				{
-					compile->AsmGenCodes(VM_ARG,i);
-					i = nodes[i].nextnode;
-				}
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_CONTINUE,ZL_FALSE),compile->gencode_struct.pc); //将continue需要跳转的位置加入到链接动态数组中
-				if(chnum[1] != -1 && ZENGL_AST_ISTOKEXPRESS(chnum[1])) //生成dowhile括号里条件判断表达式的汇编代码
-				{
-					compile->AsmGenCodes(VM_ARG,chnum[1]);
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_JNE,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JNE adr%d"
-				}
-				else
-					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE)); //如果条件判断语句是空的，则JMP无限循环，此时只有break语句才可以跳出循环
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_END,ZL_FALSE),compile->gencode_struct.pc); //将do...dowhile的结束位置加入到链接器的动态数组中
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_TRUE);
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_CONTINUE,ZL_TRUE);
-				compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_END,ZL_TRUE);
-				state = ZL_ST_DOWN;
-			}
-			else
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
-			}
-			break; //case ZL_ST_ASM_CODE_INDOWHILE: //do...dowhile循环结构的汇编代码生成
+			state = zengl_AsmGenCode_DoWhile(VM_ARG, state, &loopStackTop);
+			break;
 		case ZL_ST_ASM_CODE_INCOLON: //如果是 ... ? ... : ... 中的冒号运算符
-			if(nodes[nodenum].childs.count == 2)
-			{
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_QUESTION_END);
-				chnum = nodes[nodenum].childs.childnum;
-				if(nodes[chnum[0]].toktype == ZL_TK_QUESTION_MARK)
-					compile->AsmGenCodes(VM_ARG,chnum[0]);
-				else
-				{
-					compile->parser_curnode = nodenum;
-					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-						compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
-						nodes[chnum[0]].line_no,
-						nodes[chnum[0]].col_no,
-						nodes[chnum[0]].filename);
-				}
-				if(nodes[chnum[1]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[1]))
-					compile->AsmGenCodes(VM_ARG,chnum[1]);
-				else
-				{
-					compile->parser_curnode = nodenum;
-					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-						compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex),
-						nodes[chnum[1]].line_no,
-						nodes[chnum[1]].col_no,
-						nodes[chnum[1]].filename);
-				}
-				/*设置... ? ... : ...整个表达式结束的跳转汇编地址，并将ZL_ASM_STACK_ENUM_QUESTION_END从栈中弹出，
-				因为如果问号前的表达式为TRUE的时候在执行完问号后的表达式后，就应当结束执行，例如a > b ? test(a) : test(b);如果a>b则执行完test(a)就应当结束，
-				而不应该继续执行test(b)了*/
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_END,ZL_TRUE),compile->gencode_struct.pc);
-				state = ZL_ST_DOWN;
-			}
-			else
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
-			}
-			break; //case ZL_ST_ASM_CODE_INCOLON: 
+			state = zengl_AsmGenCode_Colon(VM_ARG, state, &loopStackTop);
+			break;
 		case ZL_ST_ASM_CODE_INQUESTION: //如果是 ... ? ... : ... 中的问号运算符
-			if(nodes[nodes[nodenum].parentnode].toktype != ZL_TK_COLON)
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_QUESTION_NO_COLON_RIGHT);
-			}
-			if(nodes[nodenum].childs.count == 2) //判断节点是否有两个子节点
-			{
-				compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_QUESTION_ADDR);
-				chnum = nodes[nodenum].childs.childnum;  //获取子节点的索引数组
-				if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0]))
-					compile->AsmGenCodes(VM_ARG,chnum[0]);
-				else
-				{
-					compile->parser_curnode = nodenum;
-					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-						compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
-						nodes[chnum[0]].line_no,
-						nodes[chnum[0]].col_no,
-						nodes[chnum[0]].filename);
-				}
-				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_JE,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JE adr%d" 如果判断结果为FALSE(所有等于0或空字符串都代表FALSE)，则跳转执行第二个表达式
-				if(nodes[chnum[1]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[1]))
-					compile->AsmGenCodes(VM_ARG,chnum[1]);
-				else
-				{
-					compile->parser_curnode = nodenum;
-					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
-						compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex),
-						nodes[chnum[1]].line_no,
-						nodes[chnum[1]].col_no,
-						nodes[chnum[1]].filename);
-				}
-				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-						ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 
-				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_ADDR,ZL_TRUE),compile->gencode_struct.pc); //设置问号右边表达式结尾处的跳转汇编地址，并将ZL_ASM_STACK_ENUM_QUESTION_ADDR从栈中弹出
-				state = ZL_ST_DOWN;
-			}
-			else
-			{
-				compile->parser_curnode = nodenum;
-				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
-			}
-			break; //case ZL_ST_ASM_CODE_INQUESTION:
+			state = zengl_AsmGenCode_Question(VM_ARG, state, &loopStackTop);
+			break;
 		}	//switch(state)
 	}	//while(state != ZL_ST_DOWN)
 } //ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 
 /*
-	将数字压入汇编堆栈
+将数字压入汇编堆栈
 */
 ZL_INT zengl_AsmGCStackPush(ZL_VOID * VM_ARG,ZL_INT num,ZENGL_ASM_STACK_ENUM type)
 {
@@ -777,7 +492,7 @@ find_index:
 }
 
 /*
-	弹出汇编栈
+弹出汇编栈
 */
 ZL_INT zengl_AsmGCStackPop(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL isremove)
 {
@@ -809,7 +524,7 @@ ZL_INT zengl_AsmGCStackPop(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL is
 }
 
 /*
-	汇编堆栈初始化
+汇编堆栈初始化
 */
 ZL_VOID zengl_AsmGCStackInit(ZL_VOID * VM_ARG)
 {
@@ -838,9 +553,9 @@ ZL_VOID zengl_AsmGCLoopStackPush(ZL_VOID * VM_ARG, ZL_INT nodenum, ZENGL_STATES 
 	if(compile->AsmGCLoopStackList.count == compile->AsmGCLoopStackList.size) {
 		compile->AsmGCLoopStackList.size += ZL_ASM_LOOP_STACK_LIST_SIZE;
 		compile->AsmGCLoopStackList.stacks = compile->memReAlloc(VM_ARG,compile->AsmGCLoopStackList.stacks,
-																	compile->AsmGCLoopStackList.size * sizeof(ZENGL_ASM_LOOP_STACK_TYPE));
+			compile->AsmGCLoopStackList.size * sizeof(ZENGL_ASM_LOOP_STACK_TYPE));
 		ZENGL_SYS_MEM_SET(compile->AsmGCLoopStackList.stacks + (compile->AsmGCLoopStackList.size - ZL_ASM_LOOP_STACK_LIST_SIZE),0,
-						ZL_ASM_LOOP_STACK_LIST_SIZE * sizeof(ZENGL_ASM_LOOP_STACK_TYPE));
+			ZL_ASM_LOOP_STACK_LIST_SIZE * sizeof(ZENGL_ASM_LOOP_STACK_TYPE));
 	}	
 	compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count].nodenum = nodenum;
 	compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count].orig_nodenum = nodenum;
@@ -1011,7 +726,7 @@ static ZENGL_STATES zengl_AsmGenCode_Fun(ZL_VOID * VM_ARG, ZENGL_STATES state, Z
 		nodenum = orig_nodenum;
 		goto finish_child;
 	}
-	
+
 	if(nodes[nodenum].childs.count == 3)
 	{
 		ZL_INT tmpFunid;	//存放当前函数的函数ID的临时变量
@@ -1036,14 +751,14 @@ static ZENGL_STATES zengl_AsmGenCode_Fun(ZL_VOID * VM_ARG, ZENGL_STATES state, Z
 		}
 		compile->SymFunTable.global_funid = tmpFunid = compile->SymLookupFun(VM_ARG,chnum[0],tmpClassID); //fun第一个子节点是函数名
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-				ZL_R_DT_LDADDR,tmpFunEnd); //对应汇编指令 类似 "JMP adr%d" 跳转到函数结束位置，这样非函数调用的情况下就不会执行函数体
+			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+			ZL_R_DT_LDADDR,tmpFunEnd); //对应汇编指令 类似 "JMP adr%d" 跳转到函数结束位置，这样非函数调用的情况下就不会执行函数体
 		compile->LDAddrListSet(VM_ARG,tmpFunAddr,compile->gencode_struct.pc); //设置当前函数的入口地址对应的实际汇编位置
 		compile->SymFunTable.funs[tmpFunid].LDAdr = tmpFunAddr; //设置函数的入口伪地址
 		tmpFunArgPC = compile->gencode_struct.pc;
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_FUNARG,ZL_R_DT_NONE,0,
-				ZL_R_DT_NUM , 0); //对应汇编指令 "FUNARG %d" 下面会对FUNARG的源操作数进行设置，得到具体参数数目，FUNARG会根据参数数目，在运行时在虚拟堆栈中分配对应数量的内存空间用以存放所有的参数。
+			ZL_R_IT_FUNARG,ZL_R_DT_NONE,0,
+			ZL_R_DT_NUM , 0); //对应汇编指令 "FUNARG %d" 下面会对FUNARG的源操作数进行设置，得到具体参数数目，FUNARG会根据参数数目，在运行时在虚拟堆栈中分配对应数量的内存空间用以存放所有的参数。
 		compile->gencode_struct.localID = 0;
 		compile->SymScanFunArg(VM_ARG,chnum[1]); //根据第二个子节点扫描函数的参数。
 		run->inst_list.insts[tmpFunArgPC].src.val.num = compile->gencode_struct.localID;
@@ -1066,8 +781,8 @@ finish_child:
 		}
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE); //将前面压入的0的classid弹出去
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_RET,ZL_R_DT_NONE,0,
-				ZL_R_DT_NONE,0); //对应汇编指令 "RET"
+			ZL_R_IT_RET,ZL_R_DT_NONE,0,
+			ZL_R_DT_NONE,0); //对应汇编指令 "RET"
 		tmpFunEnd = loopStackTop->extData[0];
 		compile->LDAddrListSet(VM_ARG,tmpFunEnd,compile->gencode_struct.pc); //设置函数的结束地址
 		compile->gencode_struct.is_inFun = ZL_FALSE;
@@ -1156,26 +871,26 @@ static ZENGL_STATES zengl_AsmGenCode_Factor(ZL_VOID * VM_ARG, ZENGL_STATES state
 	case ZL_ST_INID: // 将变量的值存入AX寄存器，以便函数调用等能够通过 PUSH AX 指令将变量的值压入栈，从而供函数等使用
 		inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						inst_op_data.type,inst_op_data.val.mem); //对应的汇编指令 类似 "MOV AX (%d)"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			inst_op_data.type,inst_op_data.val.mem); //对应的汇编指令 类似 "MOV AX (%d)"
 		break;
 	case ZL_ST_INNUM: //解释同上
 		inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_NUM,inst_op_data.val.num); //对应的汇编指令 类似 "MOV AX 123"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_NUM,inst_op_data.val.num); //对应的汇编指令 类似 "MOV AX 123"
 		break;
 	case ZL_ST_INFLOAT: //解释同上
 		inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应的汇编指令 类似 "MOV AX 3.1415926"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应的汇编指令 类似 "MOV AX 3.1415926"
 		break;
 	case ZL_ST_INSTR: //解释同上
 		inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_STR,inst_op_data.val.num); //对应的汇编指令 类似 [MOV AX "hello world"]
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_STR,inst_op_data.val.num); //对应的汇编指令 类似 [MOV AX "hello world"]
 		break;
 	}
 	return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
@@ -1199,16 +914,16 @@ static ZENGL_STATES zengl_AsmGenCode_Assign_FirstChildNode(ZL_VOID * VM_ARG, ZEN
 	case ZL_TK_ID: //判断赋值运算符第一个子节点是否是变量标示符
 		inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[0],
-					ZL_R_IT_MOV , inst_op_data.type , inst_op_data.val.mem,
-					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 类似 "MOV (%d) AX"
+			ZL_R_IT_MOV , inst_op_data.type , inst_op_data.val.mem,
+			ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 类似 "MOV (%d) AX"
 		return ZL_ST_DOWN;
 		break;
 	case ZL_TK_ARRAY_ITEM: //判断第一个子节点是否是数组元素或者是类的成员
 	case ZL_TK_DOT:
 		compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_IN_MOV,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE); //因为数组元素内部还可以嵌入别的数组元素如test[test2[0]]这样的形式，所以通过压栈的方式可以防止嵌套时，内部的数组元素影响外部的数组元素的相关判断
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[0],
-					ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
-					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 下面的AsmGenCodes生成的表达式的结果默认也是存放在AX中的，所以这里先将AX压栈保存
+			ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
+			ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 下面的AsmGenCodes生成的表达式的结果默认也是存放在AX中的，所以这里先将AX压栈保存
 		zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); //生成数组元素或类成员的汇编指令
 		loopStackTop->nodenum = -1;
 		return ZL_ST_START;
@@ -1252,39 +967,39 @@ static ZENGL_STATES zengl_AsmGenCode_Assign(ZL_VOID * VM_ARG, ZENGL_STATES state
 		zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, -1, loopStackTop);
 		goto end;
 	}
-	
+
 	if(nodes[nodenum].childs.count != 2) 
 	{
 		compile->parser_curnode = nodenum;
 		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_ASSIGN_MUST_HAVE_TWO_CHILD);
 	}
-	
+
 	loopStackTop->state = state;
 	switch(nodes[chnum[1]].toktype) //如果第二个子节点为ID变量标示符，就输出MOV AX (变量内存地址) ， 索引0表示第一个子节点，1则是第二个子节点，将该变量内存空间的值赋给AX寄存器
 	{
 	case ZL_TK_ID:
 		inst_op_data = compile->SymLookupID(VM_ARG,chnum[1]);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 		break;
 	case ZL_TK_NUM:
 		inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
 		break;
 	case ZL_TK_FLOAT:
 		inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 		break;
 	case ZL_TK_STR:
 		inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
 		break;
 	default:
 		if(ZENGL_AST_ISTOKEXPRESS(chnum[1]))
@@ -1302,7 +1017,7 @@ second_finish:
 		}
 		break;
 	} //switch(nodes[chnum[1]].toktype)
-	
+
 	state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
 	if(state == ZL_ST_START)
 		return state;
@@ -1364,26 +1079,26 @@ static ZENGL_STATES zengl_AsmGenCode_ForTwo(ZL_VOID * VM_ARG, ZENGL_STATES state
 	case ZL_TK_ID:
 		inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 		break;
 	case ZL_TK_NUM:
 		inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
 		break;
 	case ZL_TK_FLOAT:
 		inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 		break;
 	case ZL_TK_STR:
 		inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-						ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
 		break;
 	default:
 		if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
@@ -1424,43 +1139,43 @@ first_finish:
 	case ZL_TK_ID:
 		inst_op_data = compile->SymLookupID(VM_ARG,chnum[1]);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+			inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
 		break;
 	case ZL_TK_NUM:
 		inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-						ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+			ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
 		break;
 	case ZL_TK_FLOAT:
 		inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-						ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+			ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
 		break;
 	case ZL_TK_STR:
 		inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex);
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[1],
-						ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-						ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+			ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
 		break;
 	default:
 		if(ZENGL_AST_ISTOKEXPRESS(chnum[1]))
 		{
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[1],
-					ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
-					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 先将前面的AX寄存器里的值压入栈，下面第二个节点的汇编指令会将新值覆盖到AX中
+				ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
+				ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 先将前面的AX寄存器里的值压入栈，下面第二个节点的汇编指令会将新值覆盖到AX中
 			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
 			loopStackTop->nodenum = AGC_FOR_TWO_FINISH_SECOND_CHILD; // 将当前循环模拟栈的nodenum设置为-2，下次再进入本函数时，就表示第二个子节点处理完
 			return ZL_ST_START;
 second_finish:
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[1],
-					ZL_R_IT_MOV , ZL_R_DT_REG , ZL_R_RT_BX,
-					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "MOV BX AX" 将AX里存放的表达式的结果转存到BX寄存器中。
+				ZL_R_IT_MOV , ZL_R_DT_REG , ZL_R_RT_BX,
+				ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "MOV BX AX" 将AX里存放的表达式的结果转存到BX寄存器中。
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[1],
-					ZL_R_IT_POP , ZL_R_DT_NONE , 0,
-					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "POP AX" 从虚拟栈中弹出AX值，下面就会利用AX和BX的值进行加减乘除运算。
+				ZL_R_IT_POP , ZL_R_DT_NONE , 0,
+				ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "POP AX" 从虚拟栈中弹出AX值，下面就会利用AX和BX的值进行加减乘除运算。
 		}
 		else
 		{
@@ -1479,8 +1194,8 @@ second_finish:
 	case ZL_TK_PLUS_ASSIGN:
 	case ZL_TK_PLUS:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_PLUS , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "PLUS" 加法汇编码，PLUS指令会将AX 和 BX寄存器的值相加，结果存放在AX中
+			ZL_R_IT_PLUS , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "PLUS" 加法汇编码，PLUS指令会将AX 和 BX寄存器的值相加，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_PLUS_ASSIGN) //如果是+=运算符，在输出加法汇编后，再跳到assign生成赋值语句的汇编
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1491,8 +1206,8 @@ second_finish:
 	case ZL_TK_MINIS_ASSIGN:
 	case ZL_TK_MINIS:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_MINIS , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS" 减法汇编码，MINIS指令会将AX 和 BX寄存器的值相减，结果存放在AX中
+			ZL_R_IT_MINIS , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS" 减法汇编码，MINIS指令会将AX 和 BX寄存器的值相减，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_MINIS_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1503,8 +1218,8 @@ second_finish:
 	case ZL_TK_MOD_ASSIGN:
 	case ZL_TK_MOD: //取余运算符。输出MOD汇编指令
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_MOD , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "MOD" 取余汇编码
+			ZL_R_IT_MOD , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "MOD" 取余汇编码
 		if(nodes[nodenum].toktype == ZL_TK_MOD_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1515,8 +1230,8 @@ second_finish:
 	case ZL_TK_TIMES_ASSIGN:
 	case ZL_TK_TIMES:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_TIMES , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "TIMES" 乘法汇编码 TIMES指令会将AX 和 BX寄存器的值相乘，结果存放在AX中
+			ZL_R_IT_TIMES , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "TIMES" 乘法汇编码 TIMES指令会将AX 和 BX寄存器的值相乘，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_TIMES_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1527,8 +1242,8 @@ second_finish:
 	case ZL_TK_DIVIDE_ASSIGN:
 	case ZL_TK_DIVIDE:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_DIVIDE , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "DIVIDE" 除法汇编码 DIVIDE指令会将AX 和 BX寄存器的值相除，结果存放在AX中
+			ZL_R_IT_DIVIDE , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "DIVIDE" 除法汇编码 DIVIDE指令会将AX 和 BX寄存器的值相除，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_DIVIDE_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1539,8 +1254,8 @@ second_finish:
 	case ZL_TK_BIT_AND_ASSIGN:
 	case ZL_TK_BIT_AND:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_BIT_AND , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_AND" 按位与汇编码 BIT_AND指令会将AX 和 BX寄存器的值进行按位与运算，结果存放在AX中
+			ZL_R_IT_BIT_AND , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_AND" 按位与汇编码 BIT_AND指令会将AX 和 BX寄存器的值进行按位与运算，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_BIT_AND_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1551,8 +1266,8 @@ second_finish:
 	case ZL_TK_BIT_OR_ASSIGN:
 	case ZL_TK_BIT_OR:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_BIT_OR , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_OR" 按位或汇编码 BIT_OR指令会将AX 和 BX寄存器的值进行按位或运算，结果存放在AX中
+			ZL_R_IT_BIT_OR , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_OR" 按位或汇编码 BIT_OR指令会将AX 和 BX寄存器的值进行按位或运算，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_BIT_OR_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1563,8 +1278,8 @@ second_finish:
 	case ZL_TK_BIT_XOR_ASSIGN:
 	case ZL_TK_BIT_XOR:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_BIT_XOR , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_XOR" 按位异或汇编码 BIT_XOR指令会将AX 和 BX寄存器的值进行按位异或运算，结果存放在AX中
+			ZL_R_IT_BIT_XOR , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_XOR" 按位异或汇编码 BIT_XOR指令会将AX 和 BX寄存器的值进行按位异或运算，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_BIT_XOR_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1575,8 +1290,8 @@ second_finish:
 	case ZL_TK_BIT_RIGHT_ASSIGN:
 	case ZL_TK_BIT_RIGHT:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_BIT_RIGHT , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_RIGHT" 右移汇编码 BIT_RIGHT指令会将AX里的值根据BX里的值进行>>右移运算，结果存放在AX中
+			ZL_R_IT_BIT_RIGHT , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_RIGHT" 右移汇编码 BIT_RIGHT指令会将AX里的值根据BX里的值进行>>右移运算，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_BIT_RIGHT_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1587,8 +1302,8 @@ second_finish:
 	case ZL_TK_BIT_LEFT_ASSIGN:
 	case ZL_TK_BIT_LEFT:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_BIT_LEFT , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_LEFT" 左移汇编码 BIT_LEFT指令会将AX里的值根据BX里的值进行<<左移运算，结果存放在AX中
+			ZL_R_IT_BIT_LEFT , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_LEFT" 左移汇编码 BIT_LEFT指令会将AX里的值根据BX里的值进行<<左移运算，结果存放在AX中
 		if(nodes[nodenum].toktype == ZL_TK_BIT_LEFT_ASSIGN)
 		{
 			state = zengl_AsmGenCode_Assign_FirstChildNode(VM_ARG, nodes, nodenum, loopStackTop);
@@ -1598,43 +1313,43 @@ second_finish:
 		break;
 	case ZL_TK_GREAT:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_GREAT , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "GREAT" 大于运算符汇编码，GREAT指令会将AX和BX进行大小比较，结果通常以0或1的值存放在AX中。0表示FALSE，1表示TRUE
+			ZL_R_IT_GREAT , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "GREAT" 大于运算符汇编码，GREAT指令会将AX和BX进行大小比较，结果通常以0或1的值存放在AX中。0表示FALSE，1表示TRUE
 		break;
 	case ZL_TK_LESS:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_LESS , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "LESS" 小于运算符汇编码，LESS指令会将AX和BX进行大小比较，结果通常以0或1的值存放在AX中。
+			ZL_R_IT_LESS , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "LESS" 小于运算符汇编码，LESS指令会将AX和BX进行大小比较，结果通常以0或1的值存放在AX中。
 		break;
 	case ZL_TK_EQUAL:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_EQUAL , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "EQUAL" 等于运算符汇编码
+			ZL_R_IT_EQUAL , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "EQUAL" 等于运算符汇编码
 		break;
 	case ZL_TK_NOT_EQ:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_NOT_EQ , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "NOT_EQ" 不等于运算符汇编码
+			ZL_R_IT_NOT_EQ , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "NOT_EQ" 不等于运算符汇编码
 		break;
 	case ZL_TK_GREAT_EQ:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_GREAT_EQ , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "GREAT_EQ" 大于等于汇编码
+			ZL_R_IT_GREAT_EQ , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "GREAT_EQ" 大于等于汇编码
 		break;
 	case ZL_TK_LESS_EQ:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_LESS_EQ , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "LESS_EQ" 小于等于汇编码
+			ZL_R_IT_LESS_EQ , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "LESS_EQ" 小于等于汇编码
 		break;
 	case ZL_TK_AND:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_AND , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "AND" 与运算符汇编码，与运算一般用于条件判断，相等于PHP和C的&&运算符
+			ZL_R_IT_AND , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "AND" 与运算符汇编码，与运算一般用于条件判断，相等于PHP和C的&&运算符
 		break;
 	case ZL_TK_OR:
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_OR , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "OR" 或运算符汇编码，相当于PHP和C的||运算符
+			ZL_R_IT_OR , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "OR" 或运算符汇编码，相当于PHP和C的||运算符
 		break;
 	} //switch(nodes[nodenum].toktype) //根据运算符节点的类型输出不同的汇编指令
 	if(nodes[nodenum].toktype == ZL_TK_AND) //设置and逻辑与的跳转汇编地址，并将ZL_ASM_STACK_ENUM_AND_ADDR从栈中弹出
@@ -1678,51 +1393,51 @@ static ZENGL_STATES zengl_AsmGenCode_Negative(ZL_VOID * VM_ARG, ZENGL_STATES sta
 	if(nodes[nodenum].childs.count == 1)
 	{
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-					ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-					ZL_R_DT_NUM,0); //对应汇编指令 "MOV AX 0" 将0作为AX，这样就是0减另一个数，结果就是该数的负数了。
+			ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+			ZL_R_DT_NUM,0); //对应汇编指令 "MOV AX 0" 将0作为AX，这样就是0减另一个数，结果就是该数的负数了。
 		switch(nodes[chnum[0]].toktype) //以下为对第一个子节点的判断并输出相应的汇编代码，结果储存在BX寄存器中。
 		{
 		case ZL_TK_ID:
 			inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV BX (%d)"
 			break;
 		case ZL_TK_NUM:
 			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-							ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+				ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV BX 123"
 			break;
 		case ZL_TK_FLOAT:
 			inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-							ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+				ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV BX 3.1415926"
 			break;
 		case ZL_TK_STR:
 			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
-							ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_BX,
+				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV BX "hello world"]
 			break;
 		default:
 			if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 			{
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
-						ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX"
+					ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
+					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX"
 				//compile->AsmGenCodes(VM_ARG,chnum[0]);
 				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 				loopStackTop->nodenum = -1;
 				return ZL_ST_START;
 finish:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_MOV , ZL_R_DT_REG , ZL_R_RT_BX,
-						ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "MOV BX AX"
+					ZL_R_IT_MOV , ZL_R_DT_REG , ZL_R_RT_BX,
+					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "MOV BX AX"
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_POP , ZL_R_DT_NONE , 0,
-						ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "POP AX"
+					ZL_R_IT_POP , ZL_R_DT_NONE , 0,
+					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "POP AX"
 			}
 			else
 			{
@@ -1736,8 +1451,8 @@ finish:
 			break;
 		} //switch(nodes[chnum[0]].toktype)
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-				ZL_R_IT_MINIS , ZL_R_DT_NONE , 0,
-				ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS" 
+			ZL_R_IT_MINIS , ZL_R_DT_NONE , 0,
+			ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS" 
 		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
 	}
 	else
@@ -1779,26 +1494,26 @@ static ZENGL_STATES zengl_AsmGenCode_Reverse(ZL_VOID * VM_ARG, ZENGL_STATES stat
 		case ZL_TK_ID:
 			inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 			break;
 		case ZL_TK_NUM:
 			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
 			break;
 		case ZL_TK_FLOAT:
 			inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 			break;
 		case ZL_TK_STR:
 			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
 			break;
 		default:
 			if(ZENGL_AST_ISTOKEXPRESS(chnum[0])) 
@@ -1824,14 +1539,14 @@ finish:
 		if(state == ZL_ST_ASM_CODE_INREVERSE)
 		{
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_REVERSE,ZL_R_DT_NONE , 0,
-							ZL_R_DT_NONE , 0); //对应汇编指令 "REVERSE" 取反运算符的汇编码，会将AX里的值取反，结果存放于AX中。
+				ZL_R_IT_REVERSE,ZL_R_DT_NONE , 0,
+				ZL_R_DT_NONE , 0); //对应汇编指令 "REVERSE" 取反运算符的汇编码，会将AX里的值取反，结果存放于AX中。
 		}
 		else
 		{
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_BIT_REVERSE,ZL_R_DT_NONE , 0,
-							ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_REVERSE" 按位取反运算符的汇编码，会将AX里的值进行按位取反，结果存放于AX中。
+				ZL_R_IT_BIT_REVERSE,ZL_R_DT_NONE , 0,
+				ZL_R_DT_NONE , 0); //对应汇编指令 "BIT_REVERSE" 按位取反运算符的汇编码，会将AX里的值进行按位取反，结果存放于AX中。
 		}
 		//state = ZL_ST_DOWN; 
 		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
@@ -1876,8 +1591,8 @@ static ZENGL_STATES zengl_AsmGenCode_Address(ZL_VOID * VM_ARG, ZENGL_STATES stat
 		case ZL_TK_ID:
 			inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-						ZL_R_IT_ADDR ,ZL_R_DT_NONE , 0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDR (%d)"
+				ZL_R_IT_ADDR ,ZL_R_DT_NONE , 0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDR (%d)"
 			break;
 		case ZL_TK_ARRAY_ITEM:
 		case ZL_TK_DOT:
@@ -2034,8 +1749,8 @@ loop_in_block:
 		stackVal->nodenum = nodes[stackVal->nodenum].nextnode;
 	}
 	run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->lastNodeNum,
-			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_END,ZL_FALSE)); //对应汇编指令 "JMP adr%d" elif代码块执行完毕后，JMP无条件跳转到if-elif-else的结束位置
+		ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+		ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_END,ZL_FALSE)); //对应汇编指令 "JMP adr%d" elif代码块执行完毕后，JMP无条件跳转到if-elif-else的结束位置
 	compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IF_ADDR,ZL_TRUE),compile->gencode_struct.pc); //elif判断表达式为false时的跳转位置
 	//return ZL_ST_DOWN;
 	zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
@@ -2066,7 +1781,7 @@ static ZENGL_STATES zengl_AsmGenCode_If_Elif_Else(ZL_VOID * VM_ARG, ZENGL_STATES
 	}
 	else
 		stackVal = (ZENGL_ASMGC_IF_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
-	
+
 	chnum = nodes[orig_nodenum].childs.childnum;
 	switch(stackVal->status)
 	{
@@ -2238,14 +1953,14 @@ static ZENGL_STATES zengl_AsmGenCode_PP_MM(ZL_VOID * VM_ARG, ZENGL_STATES state,
 				case ZL_TK_PLUS_PLUS:
 					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_ADDGET, ZL_R_DT_NONE , 0,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDGET (%d)"
+						ZL_R_IT_ADDGET, ZL_R_DT_NONE , 0,
+						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDGET (%d)"
 					break;
 				case ZL_TK_MINIS_MINIS:
 					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_MINIS_GET, ZL_R_DT_NONE , 0,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MINIS_GET (%d)"
+						ZL_R_IT_MINIS_GET, ZL_R_DT_NONE , 0,
+						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MINIS_GET (%d)"
 					break;
 				}
 				break;
@@ -2255,14 +1970,14 @@ static ZENGL_STATES zengl_AsmGenCode_PP_MM(ZL_VOID * VM_ARG, ZENGL_STATES state,
 				case ZL_TK_PLUS_PLUS:
 					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GETADD, ZL_R_DT_NONE , 0,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETADD (%d)"
+						ZL_R_IT_GETADD, ZL_R_DT_NONE , 0,
+						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETADD (%d)"
 					break;
 				case ZL_TK_MINIS_MINIS:
 					inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GET_MINIS, ZL_R_DT_NONE , 0,
-							inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_MINIS (%d)"
+						ZL_R_IT_GET_MINIS, ZL_R_DT_NONE , 0,
+						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_MINIS (%d)"
 					break;
 				}
 				break;
@@ -2319,57 +2034,57 @@ finish_right_mm:
 		case ZL_TK_NUM: //如果直接对整数使用++,--则直接对结果进行加一，减一。
 			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
 			switch(nodes[nodenum].toktype)
 			{
 			case ZL_TK_PLUS_PLUS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
+					ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
 				break;
 			case ZL_TK_MINIS_MINIS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
+					ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
 				break;
 			}
 			break; //case ZL_TK_NUM:
 		case ZL_TK_FLOAT: //如果直接对浮点数使用++,--则直接对结果进行加一，减一。
 			inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 			switch(nodes[nodenum].toktype)
 			{
 			case ZL_TK_PLUS_PLUS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
+					ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
 				break;
 			case ZL_TK_MINIS_MINIS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
+					ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
 				break;
 			}
 			break; //case ZL_TK_FLOAT:
 		case ZL_TK_STR:
 			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-							ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-							ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
 			switch(nodes[nodenum].toktype)
 			{
 			case ZL_TK_PLUS_PLUS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
+					ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
 				break;
 			case ZL_TK_MINIS_MINIS:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
-						ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
+					ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
+					ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
 				break;
 			}
 			break; //case ZL_TK_STR:
@@ -2384,13 +2099,13 @@ finish_express:
 				{
 				case ZL_TK_PLUS_PLUS:
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
-							ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
+						ZL_R_IT_ADDONE, ZL_R_DT_NONE , 0,
+						ZL_R_DT_NONE , 0); //对应汇编指令 "ADDONE"
 					break;
 				case ZL_TK_MINIS_MINIS:
 					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
-							ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
+						ZL_R_IT_MINIS_ONE, ZL_R_DT_NONE , 0,
+						ZL_R_DT_NONE , 0); //对应汇编指令 "MINIS_ONE"
 					break;
 				}
 			}
@@ -2449,26 +2164,26 @@ static ZENGL_STATES zengl_AsmGenCode_Print(ZL_VOID * VM_ARG, ZENGL_STATES state,
 		case ZL_TK_ID: //打印变量等标示符
 			inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, nodenum,
-						ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
-						inst_op_data.type , inst_op_data.val.mem); //对应汇编指令 类似 "PRINT (%d)"
+				ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
+				inst_op_data.type , inst_op_data.val.mem); //对应汇编指令 类似 "PRINT (%d)"
 			break;
 		case ZL_TK_NUM:
 			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
-						ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "PRINT 123"
+				ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
+				ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "PRINT 123"
 			break;
 		case ZL_TK_FLOAT:
 			inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
-						ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "PRINT 3.1415926"
+				ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
+				ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "PRINT 3.1415926"
 			break;
 		case ZL_TK_STR:
 			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
-						ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [PRINT "hello world"]
+				ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
+				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [PRINT "hello world"]
 			break;
 		default:
 			if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
@@ -2478,8 +2193,8 @@ static ZENGL_STATES zengl_AsmGenCode_Print(ZL_VOID * VM_ARG, ZENGL_STATES state,
 				loopStackTop->nodenum = -1; return ZL_ST_START;
 finish_express:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
-						ZL_R_DT_REG,ZL_R_RT_AX); //对应汇编指令 "PRINT AX"
+					ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
+					ZL_R_DT_REG,ZL_R_RT_AX); //对应汇编指令 "PRINT AX"
 			}
 			else
 			{
@@ -2596,8 +2311,8 @@ finish_third_express:
 			;
 		}
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_JMP,ZL_R_DT_NONE,0,
-				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FOR_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 执行完第三个子节点的代码后，跳转到第二个子节点的代码处进行判断是否需要继续循环。
+			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FOR_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 执行完第三个子节点的代码后，跳转到第二个子节点的代码处进行判断是否需要继续循环。
 		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FOR_END,ZL_FALSE),compile->gencode_struct.pc); //for...endfor结束位置
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FOR_ADDR,ZL_TRUE); //生成完for的汇编代码后，将for相关的地址弹出栈。 
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FOR_END,ZL_TRUE);
@@ -2686,11 +2401,13 @@ finish_params:
 			compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
 		}
 		else
+		{
 			compile->exit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_TOKEN,
 				nodes[chnum[0]].line_no,
 				nodes[chnum[0]].col_no,
 				nodes[chnum[0]].filename,
 				compile->getTokenStr(VM_ARG,nodes,chnum[0]));
+		}
 		tmpReturnPC = compile->gencode_struct.pc + 4;
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 			ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
@@ -2711,10 +2428,12 @@ finish_params:
 				ZL_R_IT_CALL,ZL_R_DT_NONE,0,
 				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 "CALL %s" //如果在当前的用户自定义脚本函数哈希表中没有找到函数的信息，就说明该函数不是用户自定义的函数，而是use关键字引入的模块里的函数，所以就输出CALL "函数名"这种汇编格式，这样虚拟机解释器在运行时就会在use引入的模块中查找并调用函数。
 		}
-		else
+		else 
+		{
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 				ZL_R_IT_JMP,ZL_R_DT_NONE,0,
 				ZL_R_DT_LDFUNID,tmpFunID); //对应汇编指令 类似 "JMP funid%d" 如果找到函数的信息，说明是用户自定义的脚本函数，则跳转到目标函数的可执行代码入口处。这里使用的是函数ID，在链接替换时，先由函数ID得到函数伪地址，再由伪地址得到真实汇编位置，这样函数就可以定义在脚本的任意合法位置，如果直接使用伪地址，那么函数就只能定义在函数调用之前
+		}
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL,ZL_TRUE); //FUNCALL生成完毕，可以将之前的压栈弹出。
 		//state = ZL_ST_DOWN; // TODO
 		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
@@ -2770,26 +2489,26 @@ static ZENGL_STATES zengl_AsmGenCode_Return(ZL_VOID * VM_ARG, ZENGL_STATES state
 			case ZL_TK_ID:
 				inst_op_data = compile->SymLookupID(VM_ARG,chnum[0]);
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-								inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+					ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+					inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
 				break;
 			case ZL_TK_NUM:
 				inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-								ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+					ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+					ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
 				break;
 			case ZL_TK_FLOAT:
 				inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex));
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-								ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+					ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+					ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
 				break;
 			case ZL_TK_STR:
 				inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex);
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
-								ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
-								ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+					ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+					ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
 				break;
 			default:
 				if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
@@ -2813,8 +2532,8 @@ finish_express:
 			} //switch(nodes[chnum[0]].toktype)
 		} //else
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_RET,ZL_R_DT_NONE,0,
-				ZL_R_DT_NONE,0); //对应汇编指令 "RET"
+			ZL_R_IT_RET,ZL_R_DT_NONE,0,
+			ZL_R_DT_NONE,0); //对应汇编指令 "RET"
 		//state = ZL_ST_DOWN; // TODO
 		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
 	}
@@ -2856,11 +2575,11 @@ static ZENGL_STATES zengl_AsmGenCode_ArrayItem(ZL_VOID * VM_ARG, ZENGL_STATES st
 		loopStackTop->state = state;
 		compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_TK_ARRAY_ITEM,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL); //将ZL_TK_ARRAY_ITEM压入栈，用于内部嵌套其他数组元素，同时在下面生成子节点的表达式的汇编指令后还会输出PUSH AX，这样数组元素里的表达式的值就可以作为数组索引(索引存储在栈中)。
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
-				ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "PUSH ARRAY_ITEM" 先将原来的ARRAY_ITEM寄存器压入栈。
+			ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
+			ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "PUSH ARRAY_ITEM" 先将原来的ARRAY_ITEM寄存器压入栈。
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-				ZL_R_IT_RESET,ZL_R_DT_NONE,0,
-				ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "RESET ARRAY_ITEM" 设置当前的ARRAY_ITEM寄存器为当前的栈顶。
+			ZL_R_IT_RESET,ZL_R_DT_NONE,0,
+			ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "RESET ARRAY_ITEM" 设置当前的ARRAY_ITEM寄存器为当前的栈顶。
 		chnum = nodes[nodenum].childs.childnum;
 		if(chnum[0] == -1) //等于-1时表示空节点，如test[]
 			;
@@ -2888,44 +2607,44 @@ finish_express:
 		case ZL_ASM_AI_OP_IN_MOV: //如果是类似test[0] = 5这样的赋值语句，就输出SET_ARRAY指令，该指令会用AX里的值来设置数组里的元素。
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_SET_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "SET_ARRAY (%d)"
+				ZL_R_IT_SET_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "SET_ARRAY (%d)"
 			break;
 		case ZL_ASM_AI_OP_IN_ADDR: //如果是类似 &test[0] 这样的引用数组元素的语句，就输出GET_ARRAY_ADDR指令，该指令会得到数组元素的引用信息。
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_GET_ARRAY_ADDR,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_ARRAY_ADDR (%d)"
+				ZL_R_IT_GET_ARRAY_ADDR,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_ARRAY_ADDR (%d)"
 			break;
 		case ZL_ASM_AI_OP_IN_ADDGET: //如果是类似 ++test[0] 这样的先加加后取值的语句，就输出ADDGET_ARRAY指令，将数组元素进行加一操作再返回值。
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_ADDGET_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDGET_ARRAY (%d)"
+				ZL_R_IT_ADDGET_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "ADDGET_ARRAY (%d)"
 			break;
 		case ZL_ASM_AI_OP_IN_MINISGET: //--test[0]之类的语句
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_MINISGET_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MINISGET_ARRAY (%d)"
+				ZL_R_IT_MINISGET_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MINISGET_ARRAY (%d)"
 			break;
 		case ZL_ASM_AI_OP_IN_GETADD: //test[0]++之类的语句
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_GETADD_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETADD_ARRAY (%d)"
+				ZL_R_IT_GETADD_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETADD_ARRAY (%d)"
 			break;
 		case ZL_ASM_AI_OP_IN_GETMINIS: //test[0]--之类的语句
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_GETMINIS_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETMINIS_ARRAY (%d)"
+				ZL_R_IT_GETMINIS_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GETMINIS_ARRAY (%d)"
 			break;
 		default: //a = test[0]之类的获取数组元素的值的语句。
 			inst_op_data = compile->SymLookupID(VM_ARG,nodenum);
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-						ZL_R_IT_GET_ARRAY,ZL_R_DT_NONE,0,
-						inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_ARRAY (%d)"
+				ZL_R_IT_GET_ARRAY,ZL_R_DT_NONE,0,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "GET_ARRAY (%d)"
 			break;
 		} //switch(array_item)
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL,ZL_TRUE); //输出完数组元素的汇编指令后，就可以弹出之前的压栈了。
@@ -3056,11 +2775,11 @@ static ZENGL_STATES zengl_AsmGenCode_Dot(ZL_VOID * VM_ARG, ZENGL_STATES state, Z
 			ZENGL_ASM_ARRAY_ITEM_OP_TYPE array_item;
 			compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_TK_ARRAY_ITEM,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL); //将ZL_TK_ARRAY_ITEM压入栈，用于内部嵌套其他数组元素，同时在下面AsmGenCodes生成表达式后还会输出PUSH AX，这样数组元素里的表达式的值就可以作为数组索引。
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-					ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
-					ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "PUSH ARRAY_ITEM" 先将原来的ARRAY_ITEM寄存器压入栈。
+				ZL_R_IT_PUSH,ZL_R_DT_NONE,0,
+				ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "PUSH ARRAY_ITEM" 先将原来的ARRAY_ITEM寄存器压入栈。
 			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-					ZL_R_IT_RESET,ZL_R_DT_NONE,0,
-					ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "RESET ARRAY_ITEM" 设置当前的ARRAY_ITEM寄存器为当前的栈顶。
+				ZL_R_IT_RESET,ZL_R_DT_NONE,0,
+				ZL_R_DT_REG,ZL_R_RT_ARRAY_ITEM); //对应汇编指令 "RESET ARRAY_ITEM" 设置当前的ARRAY_ITEM寄存器为当前的栈顶。
 			ret_scandot = compile->SymScanDotForClass(VM_ARG,nodenum,&loopStackTop);
 			if(ret_scandot == ZL_ST_START)
 				return ret_scandot;
@@ -3070,38 +2789,38 @@ finish_scan_dot:
 			{
 			case ZL_ASM_AI_OP_IN_MOV: //如果是类似test[0] = 5这样的赋值语句，就输出SET_ARRAY指令，该指令会用AX里的值来设置数组里的元素。
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_SET_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "SET_ARRAY (%d)"
+					ZL_R_IT_SET_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "SET_ARRAY (%d)"
 				break;
 			case ZL_ASM_AI_OP_IN_ADDR: //如果是类似 &test[0] 这样的引用数组元素的语句，就输出GET_ARRAY_ADDR指令，该指令会得到数组元素的引用信息。
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GET_ARRAY_ADDR,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "GET_ARRAY_ADDR (%d)"
+					ZL_R_IT_GET_ARRAY_ADDR,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "GET_ARRAY_ADDR (%d)"
 				break;
 			case ZL_ASM_AI_OP_IN_ADDGET: //如果是类似 ++test[0] 这样的先加加后取值的语句，就输出ADDGET_ARRAY指令，将数组元素进行加一操作再返回值。
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_ADDGET_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "ADDGET_ARRAY (%d)"
+					ZL_R_IT_ADDGET_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); //对应汇编指令 类似 "ADDGET_ARRAY (%d)"
 				break;
 			case ZL_ASM_AI_OP_IN_MINISGET: //--test[0]之类的语句
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_MINISGET_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "MINISGET_ARRAY (%d)"
+					ZL_R_IT_MINISGET_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "MINISGET_ARRAY (%d)"
 				break;
 			case ZL_ASM_AI_OP_IN_GETADD: //test[0]++之类的语句
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GETADD_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GETADD_ARRAY (%d)"
+					ZL_R_IT_GETADD_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GETADD_ARRAY (%d)"
 				break;
 			case ZL_ASM_AI_OP_IN_GETMINIS: //test[0]--之类的语句
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GETMINIS_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GETMINIS_ARRAY (%d)"
+					ZL_R_IT_GETMINIS_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GETMINIS_ARRAY (%d)"
 				break;
 			default: //a = test[0]之类的获取数组元素的值的语句。
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-							ZL_R_IT_GET_ARRAY,ZL_R_DT_NONE,0,
-							compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GET_ARRAY (%d)"
+					ZL_R_IT_GET_ARRAY,ZL_R_DT_NONE,0,
+					compile->memDataForDot.type,compile->memDataForDot.val.mem); ///对应汇编指令 类似 "GET_ARRAY (%d)"
 				break;
 			}
 			compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_IS_IN_ARRAYITEM_OR_FUNCALL,ZL_TRUE); //输出完数组元素的汇编指令后，就可以弹出之前的压栈了。
@@ -3137,10 +2856,640 @@ finish_funcall:
 	}
 }
 
+typedef enum _ZENGL_ASMGC_SWITCH_STATUS{
+	ZENGL_ASMGC_SWITCH_STATUS_START,
+	ZENGL_ASMGC_SWITCH_STATUS_FINISH_EXPRESS,
+	ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_CASE_BLOCK,
+	ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_DEFAULT_BLOCK,
+} ZENGL_ASMGC_SWITCH_STATUS;
+
+typedef struct _ZENGL_ASMGC_SWITCH_STACK_VAL{
+	ZL_BOOL hasminmax;
+	ZL_BOOL hasdefault;
+	ZL_INT max;
+	ZL_INT min;
+	ZL_INT num;
+	ZL_INT i;
+	ZL_INT j;
+	ZL_INT tmpch;
+	ZL_INT * chnum;
+	ZL_INT * extnum;
+	ZENGL_ASM_CASE_JMP_TABLE casejmptable; //switch...case的跳转表
+	ZENGL_ASMGC_SWITCH_STATUS status;
+} ZENGL_ASMGC_SWITCH_STACK_VAL;
+
+/* 生成switch...case结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_SwitchCase(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZL_INT nodenum;
+	ZL_INT orig_nodenum;
+	ZENGL_RUN_INST_OP_DATA inst_op_data;
+	//ZL_INT * chnum;
+	ZENGL_ASMGC_SWITCH_STACK_VAL * stackVal;
+	if(loopStackTop == ZL_NULL) {
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+	}
+	nodenum = loopStackTop->nodenum;
+	orig_nodenum = loopStackTop->orig_nodenum;
+	(*loopStackTopArg) = ZL_NULL;
+	if(loopStackTop->stackValIndex < 0) {
+		stackVal = (ZENGL_ASMGC_SWITCH_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_SWITCH_STACK_VAL));
+		stackVal->status = ZENGL_ASMGC_SWITCH_STATUS_START;
+	}
+	else
+		stackVal = (ZENGL_ASMGC_SWITCH_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_SWITCH_STATUS_START:
+		loopStackTop->state = state;
+		break;
+	case ZENGL_ASMGC_SWITCH_STATUS_FINISH_EXPRESS:
+		goto finish_express;
+	case ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_CASE_BLOCK:
+		goto loop_in_case_block;
+	case ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_DEFAULT_BLOCK:
+		goto loop_in_default_block;
+	}
+
+	if(nodes[nodenum].childs.count >= 1)
+	{
+		//ZL_BOOL hasminmax,hasdefault;
+		//ZL_INT max,min,num,j;
+		//ZENGL_ASM_CASE_JMP_TABLE casejmptable = {0}; //switch...case的跳转表
+		ZENGL_SYS_MEM_SET(& stackVal->casejmptable,0,sizeof(ZENGL_ASM_CASE_JMP_TABLE)); //switch...case的跳转表
+		stackVal->chnum = nodes[nodenum].childs.childnum;
+		stackVal->extnum = nodes[nodenum].childs.extchilds;
+		switch(nodes[stackVal->chnum[0]].toktype) //先将要比较的值赋值给AX
+		{
+		case ZL_TK_ID:
+			inst_op_data = compile->SymLookupID(VM_ARG,stackVal->chnum[0]);
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->chnum[0],
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				inst_op_data.type,inst_op_data.val.mem); //对应汇编指令 类似 "MOV AX (%d)"
+			break;
+		case ZL_TK_NUM:
+			inst_op_data.val.num = ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[stackVal->chnum[0]].strindex));
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->chnum[0],
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_NUM,inst_op_data.val.num); //对应汇编指令 类似 "MOV AX 123"
+			break;
+		case ZL_TK_FLOAT:
+			inst_op_data.val.floatnum = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[stackVal->chnum[0]].strindex));
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->chnum[0],
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_FLOAT,inst_op_data.val.floatnum); //对应汇编指令 类似 "MOV AX 3.1415926"
+			break;
+		case ZL_TK_STR:
+			inst_op_data.val.num = (ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[stackVal->chnum[0]].strindex);
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,stackVal->chnum[0],
+				ZL_R_IT_MOV,ZL_R_DT_REG,ZL_R_RT_AX,
+				ZL_R_DT_STR,inst_op_data.val.num); //对应汇编指令 类似 [MOV AX "hello world"]
+			break;
+		default:
+			if(ZENGL_AST_ISTOKEXPRESS(stackVal->chnum[0])) //表达式的结果默认就是存放在AX中的，所以直接AsmGenCodes生成表达式的汇编代码即可
+			{
+				//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+				zengl_AsmGCLoopStackPush(VM_ARG, stackVal->chnum[0], ZL_ST_START); // 将stackVal->chnum[0]压入栈，返回后会对stackVal->chnum[0]对应的节点执行生成汇编指令的操作
+				stackVal->status = ZENGL_ASMGC_SWITCH_STATUS_FINISH_EXPRESS; return ZL_ST_START;
+finish_express:
+				;
+			}
+			else
+			{
+				compile->parser_curnode = nodenum;
+				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+					compile->TokenStringPoolGetPtr(VM_ARG,nodes[stackVal->chnum[0]].strindex),
+					nodes[stackVal->chnum[0]].line_no,
+					nodes[stackVal->chnum[0]].col_no,
+					nodes[stackVal->chnum[0]].filename);
+			}
+			break;
+		} //switch(nodes[stackVal->chnum[0]].toktype)
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_TABLE);
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT);
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_SWITCH_END);
+		compile->AsmScanCaseMinMax(VM_ARG,nodenum,&stackVal->hasminmax,&stackVal->min,&stackVal->max,&stackVal->hasdefault,&stackVal->casejmptable);
+		if(stackVal->hasdefault == ZL_TRUE) //如果有default则输出SWITCH adr%d(跳转表地址) adr%d(default汇编地址)的汇编格式
+		{
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_SWITCH,ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),
+				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_FALSE));
+		}
+		else //如果没有default则输出SWITCH adr%d(跳转表地址) adr%d(switch结构的结束位置)的汇编格式
+		{
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_SWITCH,ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),
+				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE));
+		}
+		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+			ZL_R_IT_LONG,ZL_R_DT_NUM,stackVal->casejmptable.count,
+			ZL_R_DT_NUM,stackVal->casejmptable.count); //对应汇编指令 类似 "LONG %d %d" LONG后面的两个操作数都是当前switch...case跳转表中的case总数
+		if(stackVal->hasminmax == ZL_TRUE)
+		{
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_LONG,ZL_R_DT_NUM,stackVal->min,
+				ZL_R_DT_NUM,stackVal->max); //对应汇编指令 类似 "LONG %d %d" LONG后面分别是case中的最小值和最大值
+		}
+		stackVal->i = 1;
+		stackVal->j = 0;
+		while(stackVal->i < nodes[nodenum].childs.count)
+		{
+			if(stackVal->i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
+				stackVal->tmpch = stackVal->extnum[stackVal->i - ZL_AST_CHILD_NODE_SIZE];
+			else
+				stackVal->tmpch = stackVal->chnum[stackVal->i];
+			if(nodes[stackVal->tmpch].reserve == ZL_RSV_CASE) //生成case块部分的执行代码
+			{
+				stackVal->casejmptable.member[stackVal->j++].caseAddr = compile->gencode_struct.pc; //将本case块的执行代码的汇编位置设置到跳转表的caseAddr字段
+				stackVal->i++;
+				if(stackVal->i < nodes[nodenum].childs.count)
+				{
+					if(stackVal->i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
+						stackVal->tmpch = stackVal->extnum[stackVal->i - ZL_AST_CHILD_NODE_SIZE];
+					else
+						stackVal->tmpch = stackVal->chnum[stackVal->i];
+					switch(nodes[stackVal->tmpch].reserve)
+					{
+					case ZL_RSV_CASE:
+					case ZL_RSV_DEFAULT:
+						break;
+					default:
+						while(stackVal->tmpch > 0) //循环生成本case块的汇编执行代码
+						{
+							//compile->AsmGenCodes(VM_ARG,tmpch); // TODO
+							zengl_AsmGCLoopStackPush(VM_ARG, stackVal->tmpch, ZL_ST_START); // 将stackVal->tmpch压入栈，返回后会对stackVal->tmpch对应的节点执行生成汇编指令的操作
+							stackVal->status = ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_CASE_BLOCK; return ZL_ST_START;
+loop_in_case_block:
+							stackVal->tmpch = nodes[stackVal->tmpch].nextnode;
+						}
+						stackVal->i++;
+						break;
+					}
+				}
+				if(stackVal->i >= nodes[nodenum].childs.count)
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+					ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+					ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 如果当前是最后一个case，且case后无default则JMP跳转到switch...case结束位置，在switch...case结束位置前存放的是跳转表，所以这里必须JMP进行跳转
+			} //if(nodes[tmpch].reserve == ZL_RSV_CASE) 
+			else if(nodes[stackVal->tmpch].reserve == ZL_RSV_DEFAULT) //生成default块部分的执行代码
+			{
+				compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_FALSE),compile->gencode_struct.pc);
+				stackVal->i++;
+				if(stackVal->i < nodes[nodenum].childs.count)
+				{
+					if(stackVal->i >= ZL_AST_CHILD_NODE_SIZE) //如果超过基本子节点数则使用扩展子节点
+						stackVal->tmpch = stackVal->extnum[stackVal->i - ZL_AST_CHILD_NODE_SIZE];
+					else
+						stackVal->tmpch = stackVal->chnum[stackVal->i];
+					while(stackVal->tmpch > 0) //生成default块部分的汇编代码
+					{
+						//compile->AsmGenCodes(VM_ARG,tmpch); // TODO
+						zengl_AsmGCLoopStackPush(VM_ARG, stackVal->tmpch, ZL_ST_START); // 将stackVal->tmpch压入栈，返回后会对stackVal->tmpch对应的节点执行生成汇编指令的操作
+						stackVal->status = ZENGL_ASMGC_SWITCH_STATUS_LOOP_IN_DEFAULT_BLOCK; return ZL_ST_START;
+loop_in_default_block:
+						stackVal->tmpch = nodes[stackVal->tmpch].nextnode;
+					}
+				}
+				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+					ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+					ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" JMP跳转到switch...case的结束位置
+				break;
+			} //else if(nodes[tmpch].reserve == ZL_RSV_DEFAULT)
+		} //while(i < nodes[nodenum].childs.count)
+		if(stackVal->casejmptable.count > 0)
+			compile->AsmSortCaseJmpTable(VM_ARG,&stackVal->casejmptable,nodenum); //将switch...case的跳转表按从小到大的顺序进行排序，为下面生成跳转表的汇编代码做准备
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_FALSE),compile->gencode_struct.pc); 
+		if(stackVal->hasminmax == ZL_TRUE) //如果有case最小值和最大值则说明switch...case中有case节点，就有必要生成跳转表的汇编代码
+		{
+			stackVal->num = stackVal->casejmptable.count;
+			for(stackVal->i=0;stackVal->i<stackVal->num;stackVal->i++)	//循环生成跳转表的汇编代码
+			{
+				if(stackVal->casejmptable.member[stackVal->i].caseAddr != 0)
+				{
+					run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+						ZL_R_IT_LONG,ZL_R_DT_NUM,stackVal->casejmptable.member[stackVal->i].caseAddr,
+						ZL_R_DT_NUM,stackVal->casejmptable.member[stackVal->i].caseNum); //对应汇编指令 类似 "LONG %d %d" LONG后面的分别是跳转表中存放的case的执行代码的位置和case的比较数
+				}
+				else
+					compile->exit(VM_ARG,ZL_ERR_CP_ASM_CASE_JMP_TABLE_CASEADDR_CAN_NOT_BE_ZERO);
+			}
+		}
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_FALSE),compile->gencode_struct.pc); //将switch...case的结束位置加入到链接器中
+		if(stackVal->hasminmax == ZL_TRUE && stackVal->casejmptable.member != ZL_NULL)
+			compile->memFreeOnce(VM_ARG,stackVal->casejmptable.member); //释放掉当前switch...case的跳转表
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_TABLE,ZL_TRUE);
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_DEFAULT,ZL_TRUE);
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_SWITCH_END,ZL_TRUE);
+		//state = ZL_ST_DOWN; // TODO
+		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
+	} //if(nodes[nodenum].childs.count >= 1)
+	else
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_AT_LEAST_ONE_CHILD);
+	}
+}
+
+typedef enum _ZENGL_ASMGC_WHILE_STATUS{
+	ZENGL_ASMGC_WHILE_STATUS_START,
+	ZENGL_ASMGC_WHILE_STATUS_FINISH_EXPRESS,
+	ZENGL_ASMGC_WHILE_STATUS_LOOP_IN_BLOCK
+} ZENGL_ASMGC_WHILE_STATUS;
+
+typedef struct _ZENGL_ASMGC_WHILE_STACK_VAL{
+	ZL_INT i;
+	ZENGL_ASMGC_WHILE_STATUS status;
+} ZENGL_ASMGC_WHILE_STACK_VAL;
+
+/* 生成while...endwhile循环结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_While(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZL_INT nodenum;
+	ZL_INT orig_nodenum;
+	ZL_INT * chnum;
+	ZENGL_ASMGC_WHILE_STACK_VAL * stackVal;
+	if(loopStackTop == ZL_NULL) {
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+	}
+	nodenum = loopStackTop->nodenum;
+	orig_nodenum = loopStackTop->orig_nodenum;
+	(*loopStackTopArg) = ZL_NULL;
+	if(loopStackTop->stackValIndex < 0) {
+		stackVal = (ZENGL_ASMGC_WHILE_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_WHILE_STACK_VAL));
+		stackVal->status = ZENGL_ASMGC_WHILE_STATUS_START;
+	}
+	else
+		stackVal = (ZENGL_ASMGC_WHILE_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+
+	chnum = nodes[orig_nodenum].childs.childnum;
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_WHILE_STATUS_START:
+		loopStackTop->state = state;
+		break;
+	case ZENGL_ASMGC_WHILE_STATUS_FINISH_EXPRESS:
+		goto finish_express;
+	case ZENGL_ASMGC_WHILE_STATUS_LOOP_IN_BLOCK:
+		goto loop_in_block;
+	}
+
+	if(nodes[nodenum].childs.count == 2)
+	{
+		//chnum = nodes[nodenum].childs.childnum;
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_WHILE_ADDR);
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_WHILE_END);
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_FALSE),compile->gencode_struct.pc); //将开头条件判断的汇编位置加入链接动态数组中
+		if(chnum[0] != -1 && ZENGL_AST_ISTOKEXPRESS(chnum[0])) //先生成while括号里的条件判断表达式的汇编码
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_WHILE_STATUS_FINISH_EXPRESS; return ZL_ST_START;
+finish_express:
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_JE,ZL_R_DT_NONE,0,
+				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_FALSE)); //对应汇编指令 类似 "JE adr%d" 根据条件判断是否需要跳出循环
+		}
+		stackVal->i = chnum[1];
+		while(stackVal->i > 0) //循环生成while...endwhile里的代码块的汇编码
+		{
+			//compile->AsmGenCodes(VM_ARG,i); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, stackVal->i, ZL_ST_START); // 将stackVal->i压入栈，返回后会对stackVal->i对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_WHILE_STATUS_LOOP_IN_BLOCK; return ZL_ST_START;
+loop_in_block:
+			stackVal->i = nodes[stackVal->i].nextnode;
+		}
+		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 循环体执行完后，跳到开头进行条件判断
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_FALSE),compile->gencode_struct.pc); //将while结束位置加入到链接动态数组中
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_ADDR,ZL_TRUE);
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_WHILE_END,ZL_TRUE);
+		//state = ZL_ST_DOWN; // TODO
+		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
+	}
+	else
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+	}
+}
+
+typedef enum _ZENGL_ASMGC_DOWHILE_STATUS{
+	ZENGL_ASMGC_DOWHILE_STATUS_START,
+	ZENGL_ASMGC_DOWHILE_STATUS_LOOP_IN_BLOCK,
+	ZENGL_ASMGC_DOWHILE_STATUS_FINISH_EXPRESS
+} ZENGL_ASMGC_DOWHILE_STATUS;
+
+typedef struct _ZENGL_ASMGC_DOWHILE_STACK_VAL{
+	ZL_INT i;
+	ZENGL_ASMGC_DOWHILE_STATUS status;
+} ZENGL_ASMGC_DOWHILE_STACK_VAL;
+
+/* 生成do...dowhile循环结构的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_DoWhile(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZL_INT nodenum;
+	ZL_INT orig_nodenum;
+	ZL_INT * chnum;
+	ZENGL_ASMGC_DOWHILE_STACK_VAL * stackVal;
+	if(loopStackTop == ZL_NULL) {
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+	}
+	nodenum = loopStackTop->nodenum;
+	orig_nodenum = loopStackTop->orig_nodenum;
+	(*loopStackTopArg) = ZL_NULL;
+	if(loopStackTop->stackValIndex < 0) {
+		stackVal = (ZENGL_ASMGC_DOWHILE_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_DOWHILE_STACK_VAL));
+		stackVal->status = ZENGL_ASMGC_DOWHILE_STATUS_START;
+	}
+	else
+		stackVal = (ZENGL_ASMGC_DOWHILE_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+
+	chnum = nodes[orig_nodenum].childs.childnum;
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_DOWHILE_STATUS_START:
+		loopStackTop->state = state;
+		break;
+	case ZENGL_ASMGC_DOWHILE_STATUS_LOOP_IN_BLOCK:
+		goto loop_in_block;
+	case ZENGL_ASMGC_DOWHILE_STATUS_FINISH_EXPRESS:
+		goto finish_express;
+	}
+
+	if(nodes[nodenum].childs.count == 2)
+	{
+		//chnum = nodes[nodenum].childs.childnum;
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_ADDR);
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_CONTINUE);
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_DO_END);
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE),compile->gencode_struct.pc); //将do...dowhile结构开头汇编位置加入到链接动态数组中
+		stackVal->i = chnum[0];
+		while(stackVal->i > 0) //循环生成do...dowhile里的代码块的汇编码
+		{
+			//compile->AsmGenCodes(VM_ARG,i); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, stackVal->i, ZL_ST_START); // 将stackVal->i压入栈，返回后会对stackVal->i对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_DOWHILE_STATUS_LOOP_IN_BLOCK; return ZL_ST_START;
+loop_in_block:
+			stackVal->i = nodes[stackVal->i].nextnode;
+		}
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_CONTINUE,ZL_FALSE),compile->gencode_struct.pc); //将continue需要跳转的位置加入到链接动态数组中
+		if(chnum[1] != -1 && ZENGL_AST_ISTOKEXPRESS(chnum[1])) //生成dowhile括号里条件判断表达式的汇编代码
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[1]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_DOWHILE_STATUS_FINISH_EXPRESS; return ZL_ST_START;
+finish_express:
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_JNE,ZL_R_DT_NONE,0,
+				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JNE adr%d"
+		}
+		else
+		{
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+				ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_FALSE)); //如果条件判断语句是空的，则JMP无限循环，此时只有break语句才可以跳出循环
+		}
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_END,ZL_FALSE),compile->gencode_struct.pc); //将do...dowhile的结束位置加入到链接器的动态数组中
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_ADDR,ZL_TRUE);
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_CONTINUE,ZL_TRUE);
+		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_DO_END,ZL_TRUE);
+		//state = ZL_ST_DOWN; // TODO
+		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
+	}
+	else
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+	}
+}
+
+typedef enum _ZENGL_ASMGC_COLON_STATUS{
+	ZENGL_ASMGC_COLON_STATUS_START,
+	ZENGL_ASMGC_COLON_STATUS_FINISH_FIRST_CHILD,
+	ZENGL_ASMGC_COLON_STATUS_FINISH_SECOND_CHILD
+} ZENGL_ASMGC_COLON_STATUS;
+
+typedef struct _ZENGL_ASMGC_COLON_STACK_VAL{
+	ZENGL_ASMGC_COLON_STATUS status;
+} ZENGL_ASMGC_COLON_STACK_VAL;
+
+/* 生成 ... ? ... : ... 中的冒号运算符的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_Colon(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZL_INT nodenum;
+	ZL_INT orig_nodenum;
+	ZL_INT * chnum;
+	ZENGL_ASMGC_COLON_STACK_VAL * stackVal;
+	if(loopStackTop == ZL_NULL) {
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+	}
+	nodenum = loopStackTop->nodenum;
+	orig_nodenum = loopStackTop->orig_nodenum;
+	(*loopStackTopArg) = ZL_NULL;
+	if(loopStackTop->stackValIndex < 0) {
+		stackVal = (ZENGL_ASMGC_COLON_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_COLON_STACK_VAL));
+		stackVal->status = ZENGL_ASMGC_COLON_STATUS_START;
+	}
+	else
+		stackVal = (ZENGL_ASMGC_COLON_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+
+	chnum = nodes[orig_nodenum].childs.childnum;
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_COLON_STATUS_START:
+		loopStackTop->state = state;
+		break;
+	case ZENGL_ASMGC_COLON_STATUS_FINISH_FIRST_CHILD:
+		goto finish_first_child;
+	case ZENGL_ASMGC_COLON_STATUS_FINISH_SECOND_CHILD:
+		goto finish_second_child;
+	}
+
+	if(nodes[nodenum].childs.count == 2)
+	{
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_QUESTION_END);
+		//chnum = nodes[nodenum].childs.childnum;
+		if(nodes[chnum[0]].toktype == ZL_TK_QUESTION_MARK) 
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_COLON_STATUS_FINISH_FIRST_CHILD; return ZL_ST_START;
+finish_first_child:
+			;
+		}
+		else
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+				compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
+				nodes[chnum[0]].line_no,
+				nodes[chnum[0]].col_no,
+				nodes[chnum[0]].filename);
+		}
+		if(nodes[chnum[1]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[1]))
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[1]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_COLON_STATUS_FINISH_SECOND_CHILD; return ZL_ST_START;
+finish_second_child:
+			;
+		}
+		else
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+				compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex),
+				nodes[chnum[1]].line_no,
+				nodes[chnum[1]].col_no,
+				nodes[chnum[1]].filename);
+		}
+		/*设置... ? ... : ...整个表达式结束的跳转汇编地址，并将ZL_ASM_STACK_ENUM_QUESTION_END从栈中弹出，
+		因为如果问号前的表达式为TRUE的时候在执行完问号后的表达式后，就应当结束执行，例如a > b ? test(a) : test(b);如果a>b则执行完test(a)就应当结束，
+		而不应该继续执行test(b)了*/
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_END,ZL_TRUE),compile->gencode_struct.pc);
+		//state = ZL_ST_DOWN; // TODO
+		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
+	}
+	else
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+	}
+}
+
+typedef enum _ZENGL_ASMGC_QUESTION_STATUS{
+	ZENGL_ASMGC_QUESTION_STATUS_START,
+	ZENGL_ASMGC_QUESTION_STATUS_FINISH_FIRST_CHILD,
+	ZENGL_ASMGC_QUESTION_STATUS_FINISH_SECOND_CHILD,
+} ZENGL_ASMGC_QUESTION_STATUS;
+
+typedef struct _ZENGL_ASMGC_QUESTION_STACK_VAL{
+	ZENGL_ASMGC_QUESTION_STATUS status;
+} ZENGL_ASMGC_QUESTION_STACK_VAL;
+
+/* 生成 ... ? ... : ... 中的问号运算符的汇编指令 */
+static ZENGL_STATES zengl_AsmGenCode_Question(ZL_VOID * VM_ARG, ZENGL_STATES state, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop = (*loopStackTopArg);
+	ZL_INT nodenum;
+	ZL_INT orig_nodenum;
+	ZL_INT * chnum;
+	ZENGL_ASMGC_QUESTION_STACK_VAL * stackVal;
+	if(loopStackTop == ZL_NULL) {
+		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
+	}
+	nodenum = loopStackTop->nodenum;
+	orig_nodenum = loopStackTop->orig_nodenum;
+	(*loopStackTopArg) = ZL_NULL;
+	if(loopStackTop->stackValIndex < 0) {
+		stackVal = (ZENGL_ASMGC_QUESTION_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_QUESTION_STACK_VAL));
+		stackVal->status = ZENGL_ASMGC_QUESTION_STATUS_START;
+	}
+	else
+		stackVal = (ZENGL_ASMGC_QUESTION_STACK_VAL *)(& compile->AsmGCLoopStackList.stackVals[loopStackTop->stackValIndex]);
+
+	chnum = nodes[orig_nodenum].childs.childnum; //获取子节点的索引数组
+	switch(stackVal->status)
+	{
+	case ZENGL_ASMGC_QUESTION_STATUS_START:
+		loopStackTop->state = state;
+		break;
+	case ZENGL_ASMGC_QUESTION_STATUS_FINISH_FIRST_CHILD:
+		goto finish_first_child;
+	case ZENGL_ASMGC_QUESTION_STATUS_FINISH_SECOND_CHILD:
+		goto finish_second_child;
+	}
+
+	if(nodes[nodes[nodenum].parentnode].toktype != ZL_TK_COLON)
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_QUESTION_NO_COLON_RIGHT);
+	}
+	if(nodes[nodenum].childs.count == 2) //判断节点是否有两个子节点
+	{
+		compile->AsmGCStackPush(VM_ARG,compile->AsmGCAddrNum++,ZL_ASM_STACK_ENUM_QUESTION_ADDR);
+		//chnum = nodes[nodenum].childs.childnum;  //获取子节点的索引数组
+		if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0]))
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_QUESTION_STATUS_FINISH_FIRST_CHILD; return ZL_ST_START;
+finish_first_child:
+			;
+		}
+		else
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+				compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[0]].strindex),
+				nodes[chnum[0]].line_no,
+				nodes[chnum[0]].col_no,
+				nodes[chnum[0]].filename);
+		}
+		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+			ZL_R_IT_JE,ZL_R_DT_NONE,0,
+			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_ADDR,ZL_FALSE)); //对应汇编指令 类似 "JE adr%d" 如果判断结果为FALSE(所有等于0或空字符串都代表FALSE)，则跳转执行第二个表达式
+		if(nodes[chnum[1]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[1])) 
+		{
+			//compile->AsmGenCodes(VM_ARG,chnum[1]); // TODO
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
+			stackVal->status = ZENGL_ASMGC_QUESTION_STATUS_FINISH_SECOND_CHILD; return ZL_ST_START;
+finish_second_child:
+			;
+		}
+		else
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_INVALID_CHILD_NODE_TYPE,
+				compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex),
+				nodes[chnum[1]].line_no,
+				nodes[chnum[1]].col_no,
+				nodes[chnum[1]].filename);
+		}
+		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
+			ZL_R_DT_LDADDR,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_END,ZL_FALSE)); //对应汇编指令 类似 "JMP adr%d" 
+		compile->LDAddrListSet(VM_ARG,compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_QUESTION_ADDR,ZL_TRUE),compile->gencode_struct.pc); //设置问号右边表达式结尾处的跳转汇编地址，并将ZL_ASM_STACK_ENUM_QUESTION_ADDR从栈中弹出
+		//state = ZL_ST_DOWN; // TODO
+		zengl_AsmGCLoopStackValsPop(VM_ARG,loopStackTop);
+		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
+	}
+	else
+	{
+		compile->parser_curnode = nodenum;
+		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_ASM_CURRENT_NODE_MUST_HAVE_TWO_CHILDS);
+	}
+}
+
 /*
- *	break语句的汇编代码生成，break如果在for里则跳出for，如果在switch里则跳出switch
- *	如果在while结构里则跳出while，如果在do...dowhile里则跳出do...dowhile
- */
+*	break语句的汇编代码生成，break如果在for里则跳出for，如果在switch里则跳出switch
+*	如果在while结构里则跳出while，如果在do...dowhile里则跳出do...dowhile
+*/
 static ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -3159,15 +3508,17 @@ static ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_UNEXPECT_LOC_OF_BREAK_CONTINUE);
 	}
 	else
+	{
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
 			ZL_R_DT_LDADDR,adrnum); //对应汇编指令 "JMP adr%d" 跳转到for，switch，while，do...dowhile结尾处
+	}
 }
 
 /*
- *	continue语句的汇编代码生成，判断是在for还是在while还是在do...dowhile里，然后
- *	根据判断跳到对应结构的开头
- */
+*	continue语句的汇编代码生成，判断是在for还是在while还是在do...dowhile里，然后
+*	根据判断跳到对应结构的开头
+*/
 static ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -3186,19 +3537,21 @@ static ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum)
 		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_UNEXPECT_LOC_OF_BREAK_CONTINUE);
 	}
 	else
+	{
 		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 			ZL_R_IT_JMP,ZL_R_DT_NONE,0,
 			ZL_R_DT_LDADDR,adrnum); //对应汇编指令 "JMP adr%d" 跳转到for，while，do...dowhile的continue对应位置
+	}
 }
 
 /*
-    扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点。
-	参数nodenum为switch节点的节点号。
-	参数hasminmax用于判断是否有最大和最小值。
-	参数minarg用于保存case中的最小值。
-	参数maxarg用于保存case中的最大值。
-	参数hasdefault用于判断是否有default节点。
-	参数table是switch...case的跳转表。
+扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点。
+参数nodenum为switch节点的节点号。
+参数hasminmax用于判断是否有最大和最小值。
+参数minarg用于保存case中的最小值。
+参数maxarg用于保存case中的最大值。
+参数hasdefault用于判断是否有default节点。
+参数table是switch...case的跳转表。
 */
 ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table)
