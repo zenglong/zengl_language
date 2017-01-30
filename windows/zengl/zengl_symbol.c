@@ -1236,10 +1236,12 @@ ZENGL_STATES zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM
 	ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL * stackVal;
 	if(loopStackTop != ZL_NULL) // 不为NULL，说明是从zengl_AsmGenCode_Dot进来的，就将自己压入汇编模拟栈，下次在汇编输出主循环时，就会直接进入当前函数
 	{
+		ZL_INT orig_count;
 		ZENGL_ASM_LOOP_STACK_TYPE * dot_loopStackTop;
 		ZENGL_ASMGC_DOT_STACK_VAL * dot_loopStackTop_stackVal;
+		orig_count = compile->AsmGCLoopStackList.count;
 		zengl_AsmGCLoopStackPush(VM_ARG, nodenum, ZL_ST_ASM_CODE_INDOT_SYM_SCAN);
-		dot_loopStackTop = loopStackTop;
+		dot_loopStackTop = & compile->AsmGCLoopStackList.stacks[orig_count - 1];
 		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
 		stackVal = (ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_SCAN_DOT_FOR_CLASS_STACK_VAL));
 		stackVal->nodenum = nodenum;

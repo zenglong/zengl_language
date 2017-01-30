@@ -770,11 +770,11 @@ static ZENGL_STATES zengl_AsmGenCode_Fun(ZL_VOID * VM_ARG, ZENGL_STATES state, Z
 		while(i > 0) //循环生成fun函数体里的每个表达式的汇编代码
 		{
 			//compile->AsmGenCodes(VM_ARG,i);
-			zengl_AsmGCLoopStackPush(VM_ARG, i, ZL_ST_START);
-			if(nodes[i].nextnode > 0)
+			if(nodes[i].nextnode > 0) // zengl_AsmGCLoopStackPush有可能会对循环模拟栈进行扩容操作，扩容后，loopStackTop就可能会变为无效的指针，因此，要在可能的扩容操作之前先对loopStackTop进行处理。
 				loopStackTop->nodenum = nodes[i].nextnode;
 			else
 				loopStackTop->nodenum = -1;
+			zengl_AsmGCLoopStackPush(VM_ARG, i, ZL_ST_START);
 			return ZL_ST_START;
 finish_child:
 			;
@@ -820,8 +820,8 @@ static ZENGL_STATES zengl_AsmGenCode_Comma(ZL_VOID * VM_ARG, ZENGL_STATES state,
 		}
 		loopStackTop->state = state;
 		if(nodes[chnum[0]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[0])) {
+			loopStackTop->nodenum = chnum[1]; // zengl_AsmGCLoopStackPush有可能会对循环模拟栈进行扩容操作，扩容后，loopStackTop就可能会变为无效的指针，因此，要在可能的扩容操作之前先对loopStackTop进行处理。
 			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START);
-			loopStackTop->nodenum = chnum[1];
 			return ZL_ST_START;
 		}
 		else {
@@ -834,8 +834,8 @@ static ZENGL_STATES zengl_AsmGenCode_Comma(ZL_VOID * VM_ARG, ZENGL_STATES state,
 	}
 	else if(nodenum == chnum[1]) {
 		if(nodes[chnum[1]].tokcategory == ZL_TKCG_OP_FACTOR || ZENGL_AST_ISTOKEXPRESS(chnum[1])) {
-			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START);
 			loopStackTop->nodenum = -1;
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START);
 			return ZL_ST_START;
 		}
 		else {
@@ -924,8 +924,8 @@ static ZENGL_STATES zengl_AsmGenCode_Assign_FirstChildNode(ZL_VOID * VM_ARG, ZEN
 		run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[0],
 			ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
 			ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 下面的AsmGenCodes生成的表达式的结果默认也是存放在AX中的，所以这里先将AX压栈保存
-		zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); //生成数组元素或类成员的汇编指令
 		loopStackTop->nodenum = -1;
+		zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); //生成数组元素或类成员的汇编指令
 		return ZL_ST_START;
 finish:
 		compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE); //将ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE弹出栈
@@ -1004,8 +1004,8 @@ static ZENGL_STATES zengl_AsmGenCode_Assign(ZL_VOID * VM_ARG, ZENGL_STATES state
 	default:
 		if(ZENGL_AST_ISTOKEXPRESS(chnum[1]))
 		{
-			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
 			loopStackTop->nodenum = chnum[0]; // 将当前循环模拟栈的nodenum设置为chnum[0]，下次进入本函数时，就会对该节点进行处理
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
 			return ZL_ST_START;
 second_finish:
 			;
@@ -1103,8 +1103,8 @@ static ZENGL_STATES zengl_AsmGenCode_ForTwo(ZL_VOID * VM_ARG, ZENGL_STATES state
 	default:
 		if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 		{
-			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 			loopStackTop->nodenum = chnum[1]; // 将当前循环模拟栈的nodenum设置为chnum[1]，下次进入本函数时，就会对该节点进行处理
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 			return ZL_ST_START;
 first_finish:
 			;
@@ -1166,8 +1166,9 @@ first_finish:
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[1],
 				ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
 				ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX" 先将前面的AX寄存器里的值压入栈，下面第二个节点的汇编指令会将新值覆盖到AX中
-			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
+
 			loopStackTop->nodenum = AGC_FOR_TWO_FINISH_SECOND_CHILD; // 将当前循环模拟栈的nodenum设置为-2，下次再进入本函数时，就表示第二个子节点处理完
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[1], ZL_ST_START); // 将chnum[1]压入栈，返回后会对chnum[1]对应的节点执行生成汇编指令的操作
 			return ZL_ST_START;
 second_finish:
 			run->AddInst(VM_ARG, compile->gencode_struct.pc++, chnum[1],
@@ -1428,8 +1429,8 @@ static ZENGL_STATES zengl_AsmGenCode_Negative(ZL_VOID * VM_ARG, ZENGL_STATES sta
 					ZL_R_IT_PUSH , ZL_R_DT_NONE , 0,
 					ZL_R_DT_REG , ZL_R_RT_AX); //对应汇编指令 "PUSH AX"
 				//compile->AsmGenCodes(VM_ARG,chnum[0]);
-				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 				loopStackTop->nodenum = -1;
+				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 				return ZL_ST_START;
 finish:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,chnum[0],
@@ -1519,8 +1520,8 @@ static ZENGL_STATES zengl_AsmGenCode_Reverse(ZL_VOID * VM_ARG, ZENGL_STATES stat
 			if(ZENGL_AST_ISTOKEXPRESS(chnum[0])) 
 			{
 				//compile->AsmGenCodes(VM_ARG,chnum[0]);
-				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 				loopStackTop->nodenum = -1;
+				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 				return ZL_ST_START;
 finish:
 				;
@@ -1598,8 +1599,8 @@ static ZENGL_STATES zengl_AsmGenCode_Address(ZL_VOID * VM_ARG, ZENGL_STATES stat
 		case ZL_TK_DOT:
 			compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_IN_ADDR,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE);
 			//compile->AsmGenCodes(VM_ARG,chnum[0]);
-			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 			loopStackTop->nodenum = -1;
+			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 			return ZL_ST_START;
 finish:
 			compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE);
@@ -1663,15 +1664,16 @@ static ZENGL_STATES zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE *
 	ZENGL_ASMGC_ELIF_STACK_VAL * stackVal;
 	if(loopStackTop != ZL_NULL) // 不为NULL，说明是从if进来的，就将自己压入模拟栈，下次循环时，就直接进入当前函数
 	{
-		ZL_INT nodenum;
+		ZL_INT nodenum,orig_count;
 		ZENGL_ASM_LOOP_STACK_TYPE * if_loopStackTop;
 		ZENGL_ASMGC_IF_STACK_VAL * if_loopStackTop_stackVal;
 		if(num < ZL_AST_CHILD_NODE_SIZE)
 			nodenum = ifchnum->childnum[num];
 		else
 			nodenum = ifchnum->extchilds[num - ZL_AST_CHILD_NODE_SIZE];
+		orig_count = compile->AsmGCLoopStackList.count;
 		zengl_AsmGCLoopStackPush(VM_ARG, nodenum, ZL_ST_ASM_CODE_INELIF);
-		if_loopStackTop = loopStackTop;
+		if_loopStackTop = & compile->AsmGCLoopStackList.stacks[orig_count - 1];
 		loopStackTop = & compile->AsmGCLoopStackList.stacks[compile->AsmGCLoopStackList.count - 1];
 		stackVal = (ZENGL_ASMGC_ELIF_STACK_VAL *)zengl_AsmGCLoopStackValsPush(VM_ARG, loopStackTop, sizeof(ZENGL_ASMGC_ELIF_STACK_VAL));
 		stackVal->ifchnum = ifchnum;
@@ -2189,8 +2191,9 @@ static ZENGL_STATES zengl_AsmGenCode_Print(ZL_VOID * VM_ARG, ZENGL_STATES state,
 			if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 			{
 				//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+				loopStackTop->nodenum = -1;
 				zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
-				loopStackTop->nodenum = -1; return ZL_ST_START;
+				return ZL_ST_START;
 finish_express:
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 					ZL_R_IT_PRINT , ZL_R_DT_NONE , 0,
@@ -2514,8 +2517,9 @@ static ZENGL_STATES zengl_AsmGenCode_Return(ZL_VOID * VM_ARG, ZENGL_STATES state
 				if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 				{
 					//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+					loopStackTop->nodenum = -2;
 					zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
-					loopStackTop->nodenum = -2; return ZL_ST_START;
+					return ZL_ST_START;
 finish_express:
 					;
 				}
@@ -2587,8 +2591,9 @@ static ZENGL_STATES zengl_AsmGenCode_ArrayItem(ZL_VOID * VM_ARG, ZENGL_STATES st
 		{
 			compile->AsmGCStackPush(VM_ARG,(ZL_INT)ZL_ASM_AI_OP_NONE,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE); //防止在生成嵌套数组元素的汇编指令时，受到外层数组元素的ARRAY_ITEM_OP_TYPE的影响
 			//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
+			loopStackTop->nodenum = -2;
 			zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
-			loopStackTop->nodenum = -2; return ZL_ST_START;
+			return ZL_ST_START;
 finish_express:
 			compile->AsmGCStackPop(VM_ARG,ZL_ASM_STACK_ENUM_ARRAY_ITEM_OP_TYPE,ZL_TRUE);
 		}
