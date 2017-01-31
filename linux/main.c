@@ -1173,7 +1173,7 @@ int main(int argc,char * argv[])
 		exit(-1);
 	}
 
-	printf("compiling(编译中)...\n");
+	printf("run(编译执行中)...\n");
 	debuglog = fopen("main_debuglogs.txt","w+");
 	VM = zenglApi_Open();
 	zenglApi_SetFlags(VM,(ZENGL_EXPORT_VM_MAIN_ARG_FLAGS)(ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO));
@@ -1204,7 +1204,7 @@ int main(int argc,char * argv[])
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
 		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
 
-	if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
+	/*if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
 		printf("after run , the i is %ld\n",testint);
 
 	zenglApi_Reset(VM);
@@ -1248,12 +1248,12 @@ int main(int argc,char * argv[])
 	zenglApi_SetModInitHandle(VM,"builtin",main_builtin_module_init);
 
 	if(zenglApi_Run(VM,"test2.zl") == -1) //编译执行zengl脚本
-		main_exit(VM,"错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));
+		main_exit(VM,"错误：编译<test2.zl>失败：%s\n",zenglApi_GetErrorString(VM));*/
 
 	zenglApi_Close(VM);
 
 	fclose(debuglog);
-	printf("compile finished(编译结束)\n");
+	printf("run finished(编译执行结束)\n");
 
 	/*下面是脚本普通异或加密和还原的测试*/
 	/*main_output_xor_source("test.zl","encrypt_script/test.zl",xor_key_str);

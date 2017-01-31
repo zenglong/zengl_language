@@ -279,6 +279,7 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INREVERSE,	//用于生成逻辑非运算符的汇编指令
 	ZL_ST_ASM_CODE_INBIT_REVERSE,//用于生成按位取反运算符的汇编指令
 	ZL_ST_ASM_CODE_INIF,		//用于生成if语句的汇编指令
+	ZL_ST_ASM_CODE_INELIF,		//用于生成elif语句的汇编指令
 	ZL_ST_ASM_CODE_IN_PP_MM,	//用于生成加加减减的汇编指令
 	ZL_ST_ASM_CODE_INFOR,		//用于生成for语句的汇编指令
 	ZL_ST_ASM_CODE_INFUN,		//用于生成fun语句的汇编指令
@@ -293,7 +294,8 @@ typedef enum _ZENGL_STATES{
 	ZL_ST_ASM_CODE_INARRAY_ITEM,//用于生成数组元素的汇编指令
 	ZL_ST_ASM_CODE_INCLASS,		//用于生成class结构的汇编指令
 	ZL_ST_ASM_CODE_INCLASS_STATEMENT,//用于生成类声明语句的汇编指令
-	ZL_ST_ASM_CODE_INDOT,		//用于生成类成员点运行符的汇编指令
+	ZL_ST_ASM_CODE_INDOT,		//用于生成类成员点运算符的汇编指令
+	ZL_ST_ASM_CODE_INDOT_SYM_SCAN, //用于生成对点运算符进行扫描时的汇编指令
 	ZL_ST_ASM_CODE_INSWITCH,	//用于生成switch结构的汇编指令
 	ZL_ST_ASM_CODE_INWHILE,		//用于生成while结构的汇编指令
 	ZL_ST_ASM_CODE_INDOWHILE,	//用于生成do...dowhile循环结构的汇编指令
@@ -548,6 +550,7 @@ typedef struct _ZENGL_SYM_FUN_TABLE{
 
 #define ZL_ASM_ADDR_TYPE_NUM 22 //为ZL_ASM_STACK_ENUM_IF_ADDR,ZL_ASM_STACK_ENUM_IF_END,ZL_ASM_STACK_ENUM_FOR_ADDR,ZL_ASM_STACK_ENUM_FOR_END...等元素，以后增加时数目要对应增加！
 #define ZL_ASM_STACK_LIST_SIZE 20 //生成汇编代码时因为处理嵌入式if等结构需要引入堆栈结构，这里是堆栈动态数组的初始化和动态扩容大小。
+#define ZL_ASM_LOOP_STACK_LIST_SIZE 20 //用于代替递归调用而设置的汇编模拟堆栈动态数组的初始化与动态扩容的大小
 #define ZL_ASM_CASE_JMP_TABLE_SIZE 15 //switch...case的跳转表的初始值和扩容大小
 
 typedef enum _ZENGL_ASM_STACK_ENUM{
@@ -610,6 +613,26 @@ typedef struct _ZENGL_ASM_STACKLIST_TYPE{
 	ZENGL_ASM_STACK_TYPE * stacks;
 }ZENGL_ASM_STACKLIST_TYPE; //为了解决if,for结构的嵌入式问题，需要在生成汇编代码时引入模拟堆栈。
 
+typedef struct _ZENGL_ASM_LOOP_STACK_TYPE{
+	ZL_INT nodenum; // 压入模拟栈的AST节点号
+	ZL_INT orig_nodenum; // 原始节点号
+	ZL_INT extData[1]; // 压入栈的额外数据
+	ZL_INT stackValIndex; // 较多的额外数据保存到stackVals中，stackValIndex为stackVals中的字节索引值，之所以存储索引值，是因为stackVals在扩容时，其指针有可能会发生改变，因此只能存储索引，再由索引确定具体的位置
+	ZL_INT stackValCnt; // 保存在stackVals中的额外数据的尺寸大小(以字节为单位)
+	ZENGL_STATES state; // 压入模拟栈的状态码
+}ZENGL_ASM_LOOP_STACK_TYPE; // 汇编模拟堆栈(配合循环来替代递归调用)中每个元素的结构定义
+
+typedef struct _ZENGL_ASM_LOOP_STACKLIST_TYPE{
+	ZL_BOOL isInit;
+	ZL_BOOL isInitStackVals;
+	ZL_INT size;
+	ZL_INT stackValSize;
+	ZL_INT count;
+	ZL_INT stackValCount;
+	ZENGL_ASM_LOOP_STACK_TYPE * stacks; // 模拟栈动态数组的指针值
+	ZL_BYTE * stackVals; // 使用模拟栈代替递归函数调用时，如果某个汇编输出函数中包含较多的局部变量时，就需要将这些局部变量的值保存到stackVals中，这样在下次通过模拟栈进入汇编输出函数时，才能恢复正确的局部变量值。较少的局部变量可以保存在stacks里的extData中
+}ZENGL_ASM_LOOP_STACKLIST_TYPE; // 通过设置模拟栈，来解决zengl_AsmGenCodes递归调用过多而可能导致的内存栈溢出问题
+
 typedef struct _ZENGL_ASM_CASE_JMP_TABLE_MEMBER{
 	ZL_LONG caseNum;
 	ZL_INT caseAddr;
@@ -621,6 +644,16 @@ typedef struct _ZENGL_ASM_CASE_JMP_TABLE{
 	ZL_INT count;
 	ZENGL_ASM_CASE_JMP_TABLE_MEMBER * member;
 }ZENGL_ASM_CASE_JMP_TABLE; //switch...case结构的跳转表
+
+typedef enum _ZENGL_ASMGC_DOT_STATUS{
+	ZENGL_ASMGC_DOT_STATUS_START,
+	ZENGL_ASMGC_DOT_STATUS_FINISH_SCAN_DOT,
+	ZENGL_ASMGC_DOT_STATUS_FINISH_FUNCALL
+} ZENGL_ASMGC_DOT_STATUS;
+
+typedef struct _ZENGL_ASMGC_DOT_STACK_VAL{
+	ZENGL_ASMGC_DOT_STATUS status;
+} ZENGL_ASMGC_DOT_STACK_VAL;
 
 /********************************************************************************
 		上面是和zengl_assemble.c汇编代码生成相关的结构体和枚举等定义
@@ -1232,6 +1265,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	/*和zengl_assemble.c汇编代码生成相关的成员*/
 	ZENGL_ASM_GENCODE_STRUCT gencode_struct; //在zengl_AsmGenCodes函数中会用到的一些变量，统一放在一个结构体中
 	ZENGL_ASM_STACKLIST_TYPE AsmGCStackList; //assemble生成汇编代码时需要用到的解决内部嵌套问题的堆栈
+	ZENGL_ASM_LOOP_STACKLIST_TYPE AsmGCLoopStackList; // 通过模拟堆栈配合循环操作，来替代函数的递归调用
 	ZL_INT AsmGCAddrNum; //ifadr,ifend,foradr,forend等的计数器。
 	ZL_BOOL AsmGCIsInClass; //判断是否在生成class类结构的汇编代码过程中。
 	ZENGL_RUN_INST_OP_DATA memDataForDot; //用于生成点运算符的汇编指令
@@ -1314,7 +1348,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* SymScanFunArg)(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫描堆栈来扫描语法树中函数的参数 对应 zengl_SymScanFunArg
 	ZL_VOID (* SymScanFunGlobal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT global_nodenum); //使用AST扫描堆栈来扫描语法树中函数的global关键字声明的全局变量 对应 zengl_SymScanFunGlobal
 	ZL_VOID (* SymScanClassStatement)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_statement_nodenum); //扫描类声明语句里声明的变量 对应 zengl_SymScanClassStatement
-	ZL_VOID (* SymScanDotForClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //扫描类引用时的节点，将类成员转为数组的索引压入栈中 对应 zengl_SymScanDotForClass
+	ZENGL_STATES (* SymScanDotForClass)(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg); //扫描类引用时的节点，将类成员转为数组的索引压入栈中 对应 zengl_SymScanDotForClass
 	ZL_VOID (* SymScanUseRsv)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT use_nodenum); //使用AST扫描堆栈来扫描语法树中use关键字声明的模块名 对应 zengl_SymScanUseRsv
 	ZL_VOID (* SymScanFunLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫描堆栈来扫描语法树中函数的局部变量 对应 zengl_SymScanFunLocal
 	ZL_BOOL (* SymInsertHashTableForLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中 对应 zengl_SymInsertHashTableForLocal
@@ -1327,9 +1361,9 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT (* AsmGCStackPush)(ZL_VOID * VM_ARG,ZL_INT num,ZENGL_ASM_STACK_ENUM type); //将数字压入汇编堆栈 对应 zengl_AsmGCStackPush
 	ZL_INT (* AsmGCStackPop)(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL isremove); //弹出汇编栈 对应 zengl_AsmGCStackPop
 	ZL_VOID (* AsmGCStackInit)(ZL_VOID * VM_ARG); //汇编堆栈初始化 对应 zengl_AsmGCStackInit
-	ZL_VOID (* AsmGCElif)(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElif函数用于生成elif代码块对应的汇编指令 对应 zengl_AsmGCElif
-	ZL_VOID (* AsmGCBreak_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //break语句的汇编代码生成 对应 zengl_AsmGCBreak_Codes
-	ZL_VOID (* AsmGCContinue_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成 对应 zengl_AsmGCContinue_Codes
+	//ZL_VOID (* AsmGCElif)(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElif函数用于生成elif代码块对应的汇编指令 对应 zengl_AsmGCElif
+	//ZL_VOID (* AsmGCBreak_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //break语句的汇编代码生成 对应 zengl_AsmGCBreak_Codes
+	//ZL_VOID (* AsmGCContinue_Codes)(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成 对应 zengl_AsmGCContinue_Codes
 	ZL_VOID (* AsmScanCaseMinMax)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点 对应 zengl_AsmScanCaseMinMax
 	ZL_LONG (* GetNodeInt)(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式 对应 zengl_GetNodeInt
@@ -1666,7 +1700,7 @@ ZL_INT zengl_SymLookupFunByName(ZL_VOID * VM_ARG,ZL_CHAR * name,ZL_INT classid);
 ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫描堆栈来扫描语法树中函数的参数
 ZL_VOID zengl_SymScanFunGlobal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT global_nodenum); //使用AST扫描堆栈来扫描语法树中函数的global关键字声明的全局变量
 ZL_VOID zengl_SymScanClassStatement(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT cls_statement_nodenum); //扫描类声明语句里声明的变量
-ZL_VOID zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //扫描类引用时的节点，将类成员转为数组的索引压入栈中
+ZENGL_STATES zengl_SymScanDotForClass(ZL_VOID * VM_ARG,ZL_INT nodenum, ZENGL_ASM_LOOP_STACK_TYPE ** loopStackTopArg); //扫描类引用时的节点，将类成员转为数组的索引压入栈中
 ZL_VOID zengl_SymScanUseRsv(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT use_nodenum); //使用AST扫描堆栈来扫描语法树中use关键字声明的模块名
 ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫描堆栈来扫描语法树中函数的局部变量
 ZL_BOOL zengl_SymInsertHashTableForLocal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中
@@ -1680,9 +1714,14 @@ ZL_VOID zengl_AsmGenCodes(ZL_VOID * VM_ARG,ZL_INT nodenum); //该函数根据AST
 ZL_INT zengl_AsmGCStackPush(ZL_VOID * VM_ARG,ZL_INT num,ZENGL_ASM_STACK_ENUM type); //将数字压入汇编堆栈
 ZL_INT zengl_AsmGCStackPop(ZL_VOID * VM_ARG,ZENGL_ASM_STACK_ENUM type,ZL_BOOL isremove); //弹出汇编栈
 ZL_VOID zengl_AsmGCStackInit(ZL_VOID * VM_ARG); //汇编堆栈初始化
-ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElif函数用于生成elif代码块对应的汇编指令
-ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //break语句的汇编代码生成
-ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成
+ZL_VOID zengl_AsmGCLoopStackPush(ZL_VOID * VM_ARG, ZL_INT nodenum, ZENGL_STATES state); // 将信息压入模拟堆栈
+ZENGL_STATES zengl_AsmGCLoopStackFinishTop(ZL_VOID * VM_ARG, ZL_INT nodenum); // 当模拟栈顶的元素生成完所需的汇编指令后，就将栈顶弹出，如果栈内还有元素的话，就返回栈顶元素的状态，继续模拟栈配合循环来生成新的栈顶元素的汇编指令，否则返回ZL_ST_DOWN表示栈内元素全处理完毕
+ZENGL_STATES zengl_AsmGCLoopStackFinishTopSimple(ZL_VOID * VM_ARG); // 当模拟栈顶的元素生成完所需的汇编指令后，就将栈顶弹出，这是简化的版本，没有针对数组或函数调用的PUSH AX操作，主要用于elif生成汇编指令以及扫描点运算符时使用的。
+ZL_BYTE * zengl_AsmGCLoopStackValsPush(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop, ZL_INT count); // 将汇编输出函数中所需使用的一些局部变量保存到模拟堆栈中
+ZL_VOID zengl_AsmGCLoopStackValsPop(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop); // 将保存局部变量和其他额外数据的模拟栈的栈顶弹出
+//ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElif函数用于生成elif代码块对应的汇编指令
+//ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //break语句的汇编代码生成
+//ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continue语句的汇编代码生成
 ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //扫描switch...case ，找出其中的case的最大值，最小值，以及判断是否有default默认节点
 ZL_LONG zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum); //返回节点的字符串信息的整数形式

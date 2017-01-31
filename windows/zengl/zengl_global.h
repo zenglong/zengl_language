@@ -1720,8 +1720,8 @@ ZENGL_STATES zengl_AsmGCLoopStackFinishTopSimple(ZL_VOID * VM_ARG); // µ±Ä£ÄâÕ»¶
 ZL_BYTE * zengl_AsmGCLoopStackValsPush(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop, ZL_INT count); // ½«»ã±àÊä³öº¯ÊıÖĞËùĞèÊ¹ÓÃµÄÒ»Ğ©¾Ö²¿±äÁ¿±£´æµ½Ä£Äâ¶ÑÕ»ÖĞ
 ZL_VOID zengl_AsmGCLoopStackValsPop(ZL_VOID * VM_ARG, ZENGL_ASM_LOOP_STACK_TYPE * loopStackTop); // ½«±£´æ¾Ö²¿±äÁ¿ºÍÆäËû¶îÍâÊı¾İµÄÄ£ÄâÕ»µÄÕ»¶¥µ¯³ö
 //ZL_VOID zengl_AsmGCElif(ZL_VOID * VM_ARG,ZENGL_AST_CHILD_NODE_TYPE * ifchnum,ZL_INT num); //zengl_AsmGCElifº¯ÊıÓÃÓÚÉú³Éelif´úÂë¿é¶ÔÓ¦µÄ»ã±àÖ¸Áî
-ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //breakÓï¾äµÄ»ã±à´úÂëÉú³É
-ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continueÓï¾äµÄ»ã±à´úÂëÉú³É
+//ZL_VOID zengl_AsmGCBreak_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //breakÓï¾äµÄ»ã±à´úÂëÉú³É
+//ZL_VOID zengl_AsmGCContinue_Codes(ZL_VOID * VM_ARG,ZL_INT nodenum); //continueÓï¾äµÄ»ã±à´úÂëÉú³É
 ZL_VOID zengl_AsmScanCaseMinMax(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_BOOL * hasminmax,ZL_INT * minarg,ZL_INT * maxarg,ZL_BOOL * hasdefault,
 								ZENGL_ASM_CASE_JMP_TABLE * table); //É¨Ãèswitch...case £¬ÕÒ³öÆäÖĞµÄcaseµÄ×î´óÖµ£¬×îĞ¡Öµ£¬ÒÔ¼°ÅĞ¶ÏÊÇ·ñÓĞdefaultÄ¬ÈÏ½Úµã
 ZL_LONG zengl_GetNodeInt(ZL_VOID * VM_ARG,ZL_INT nodenum); //·µ»Ø½ÚµãµÄ×Ö·û´®ĞÅÏ¢µÄÕûÊıĞÎÊ½

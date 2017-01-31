@@ -66,6 +66,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			/*和zengl_assemble.c汇编代码生成相关的成员*/
 			{0}, //gencode_struct
 			{0}, //AsmGCStackList
+			{0}, //AsmGCLoopStackList
 			0,	 //AsmGCAddrNum
 			ZL_FALSE, //AsmGCIsInClass
 			{0}, //memDataForDot
@@ -158,9 +159,9 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_AsmGCStackPush,
 			zengl_AsmGCStackPop,
 			zengl_AsmGCStackInit,
-			zengl_AsmGCElif,
-			zengl_AsmGCBreak_Codes,
-			zengl_AsmGCContinue_Codes,
+			//zengl_AsmGCElif,
+			//zengl_AsmGCBreak_Codes,
+			//zengl_AsmGCContinue_Codes,
 			zengl_AsmScanCaseMinMax,
 			zengl_GetNodeInt,
 			zengl_AsmAddCaseJmpTable,

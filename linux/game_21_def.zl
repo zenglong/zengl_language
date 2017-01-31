@@ -1,0 +1,16 @@
+use builtin;
+def TRUE 1;
+def FALSE 0;
+def UnitMoney 100000000;//大整数里单个元素的最大值。
+
+class clsPoker
+	count;
+	pokerlist;
+	totalpoint;
+endcls
+
+class clsPlayer
+	name;
+	clsPoker poker;
+	money;
+endcls
