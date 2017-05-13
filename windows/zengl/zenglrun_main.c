@@ -34,7 +34,7 @@ ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INS
 						 ZENGL_RUN_INST_OP_DATA_TYPE src_type , ZL_DOUBLE src_val)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
-	ZL_INT tmpint;
+	//ZL_INT tmpint; // 不再使用
 	if(!run->inst_list.isInit)
 		run->initInstList(VM_ARG);
 	if(run->inst_list.count == run->inst_list.size)
@@ -68,8 +68,8 @@ ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INS
 			run->inst_list.insts[run->inst_list.count].dest.val.floatnum = dest_val;
 			break;
 		case ZL_R_DT_STR:
-			tmpint = (ZL_INT)dest_val;
-			run->inst_list.insts[run->inst_list.count].dest.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)tmpint)); //64位下需先转为long，再转为指针
+			// tmpint = (ZL_INT)dest_val; // mac osx 64位系统中会发生32位截断，导致得不到正确的指针，因此下面直接将dest_val转为long再转为char *
+			run->inst_list.insts[run->inst_list.count].dest.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)dest_val)); //64位下需先转为long，再转为指针
 			break;
 		default:
 			run->inst_list.insts[run->inst_list.count].dest.val.num = (ZL_INT)dest_val;
@@ -93,8 +93,8 @@ ZL_VOID zenglrun_AddInst(ZL_VOID * VM_ARG,ZL_INT pc,ZL_INT nodenum,ZENGL_RUN_INS
 			run->inst_list.insts[run->inst_list.count].src.val.floatnum = src_val;
 			break;
 		case ZL_R_DT_STR:
-			tmpint = (ZL_INT)src_val;
-			run->inst_list.insts[run->inst_list.count].src.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)tmpint)); //64位下需先转为long，再转为指针
+			// tmpint = (ZL_INT)src_val; // mac osx 64位系统中会发生32位截断，导致得不到正确的指针，因此下面直接将src_val转为long再转为char *
+			run->inst_list.insts[run->inst_list.count].src.val.str_Index = run->InstDataStringPoolAdd(VM_ARG,(ZL_CHAR * )((ZL_LONG)src_val)); //64位下需先转为long，再转为指针
 			break;
 		default:
 			run->inst_list.insts[run->inst_list.count].src.val.num = (ZL_INT)src_val;

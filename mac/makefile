@@ -2,7 +2,7 @@
 
 CC = gcc
 
-CFLAGS = -g3 -ggdb -O0 -std=c99
+CFLAGS = -g3 -ggdb -O0 -std=c99 -Wno-everything
 CDEFINES = -D ZL_LANG_EN_WITH_CH
 SHARED_CFLAGS = $(CFLAGS) -dynamiclib -install_name '$(CURDIR)/libzengl.dylib' -current_version 1.0 -fvisibility=hidden  -fPIC
 
