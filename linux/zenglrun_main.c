@@ -273,6 +273,7 @@ ZL_VOID zenglrun_initVMemList(ZL_VOID * VM_ARG)
 	if(run->vmem_list.mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_VMEM_LIST_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(run->vmem_list.mem_array,0,run->vmem_list.size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT)); //将内存动态数组初始化为0
+	ZENGL_SYS_MEM_SET(&(run->vmem_list.hash_array),0,sizeof(ZENGL_RUN_HASH_ARRAY));
 	run->vmem_list.isInit = ZL_TRUE;
 }
 
@@ -462,6 +463,7 @@ ZL_VOID zenglrun_initVStackList(ZL_VOID * VM_ARG)
 	if(run->vstack_list.mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_VSTACK_LIST_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(run->vstack_list.mem_array,0,run->vstack_list.size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT)); //虚拟堆栈动态数组初始化为0
+	ZENGL_SYS_MEM_SET(&(run->vstack_list.hash_array),0,sizeof(ZENGL_RUN_HASH_ARRAY));
 	run->vstack_list.isInit = ZL_TRUE;
 }
 
@@ -1963,6 +1965,7 @@ ZENGL_RUN_VIRTUAL_MEM_LIST * zenglrun_alloc_memblock(ZL_VOID * VM_ARG,ZL_INT * i
 	if(ptr->mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(ptr->mem_array,0,ptr->size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT));
+	ZENGL_SYS_MEM_SET(&ptr->hash_array, 0, sizeof(ZENGL_RUN_HASH_ARRAY));
 	return ptr;
 }
 
@@ -1987,6 +1990,30 @@ ZL_INT zenglrun_memblock_getindex(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_ME
 		break;
 	case ZL_R_RDT_STR:
 		return ZENGL_SYS_STR_TO_NUM((ZL_CHAR *)tmpmem->val.str);
+		break;
+	}
+	return 0;
+}
+
+/**
+ * zenglrun_memblock_getindex的扩展版本，对字符串进行哈希数组处理
+ */
+ZL_INT zenglrun_memblock_getindex_ext(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT index = ZENGL_RUN_REGVAL(ZL_R_RT_ARRAY_ITEM).dword + i;
+	(*tmpmem) = run->VStackListOps(VM_ARG,ZL_R_VMOPT_GETMEM,index,(*tmpmem),ZL_TRUE);
+	switch(tmpmem->runType)
+	{
+	case ZL_R_RDT_INT:
+		return tmpmem->val.dword;
+		break;
+	case ZL_R_RDT_FLOAT:
+		return (ZL_INT)tmpmem->val.qword;
+		break;
+	case ZL_R_RDT_STR:
+		//return ZENGL_SYS_STR_TO_NUM((ZL_CHAR *)tmpmem->val.str);
+		//TODO
 		break;
 	}
 	return 0;

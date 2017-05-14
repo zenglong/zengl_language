@@ -176,6 +176,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: run func err , InstData_StringPool alloc failure in zenglrun_initInstDataStringPool(解释器异常：在zenglrun_initInstDataStringPool函数中为指令操作数字符串池分配内存初始化失败)\n", //ZL_ERR_RUN_INST_DATA_STRING_POOL_MALLOC_FAILED
 	"\n err: run func err , i out of bounds when InstData_StringPool add string (解释器异常：当指令操作数字符串池添加字符串时索引i超出范围)\n", //ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS
 	"\n err: run main err , vmem_list alloc failure in zenglrun_initVMemList (解释器异常：为全局虚拟内存动态数组分配内存初始化失败)\n", //ZL_ERR_RUN_VMEM_LIST_MALLOC_FAILED
+	"\n err: run err , hash array alloc memory failure (解释器异常：为虚拟内存块的哈希数组分配系统内存失败)\n", //ZL_ERR_RUN_HASH_ARRAY_MEM_ALLOC_FAILED
 	"\n err: run func err , zengl_memReUsePtr alloc failure (解释器异常：重利用内存池指针时，调整分配系统内存失败)\n", //ZL_ERR_RUN_MEM_RE_USE_PTR_MALLOC_FAILED
 	"\n err: run main err , invalid virtual mem type , pc=%d (解释器异常：无效的虚拟内存类型)\n", //ZL_ERR_RUN_INVALID_VMEM_TYPE
 	"\n err: run main err , invalid inst src data type , pc=%d (解释器异常：指令中源操作数类型无效)\n", //ZL_ERR_RUN_INVALID_INST_SRC_TYPE
