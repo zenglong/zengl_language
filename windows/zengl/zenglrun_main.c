@@ -273,6 +273,7 @@ ZL_VOID zenglrun_initVMemList(ZL_VOID * VM_ARG)
 	if(run->vmem_list.mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_VMEM_LIST_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(run->vmem_list.mem_array,0,run->vmem_list.size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT)); //将内存动态数组初始化为0
+	ZENGL_SYS_MEM_SET(&(run->vmem_list.hash_array),0,sizeof(ZENGL_RUN_HASH_ARRAY));
 	run->vmem_list.isInit = ZL_TRUE;
 }
 
@@ -462,6 +463,7 @@ ZL_VOID zenglrun_initVStackList(ZL_VOID * VM_ARG)
 	if(run->vstack_list.mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_VSTACK_LIST_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(run->vstack_list.mem_array,0,run->vstack_list.size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT)); //虚拟堆栈动态数组初始化为0
+	ZENGL_SYS_MEM_SET(&(run->vstack_list.hash_array),0,sizeof(ZENGL_RUN_HASH_ARRAY));
 	run->vstack_list.isInit = ZL_TRUE;
 }
 
@@ -1912,12 +1914,12 @@ ZL_VOID zenglrun_op_set_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 	if(argcount == 0)
 		index = ptr->count;
 	else if(argcount == 1)
-		index = run->memblock_getindex(VM_ARG,0,tmpmem);
+		index = run->memblock_getindex(VM_ARG,0,tmpmem, ptr);
 	else
 	{
 		for(i=0;i < argcount-1;i++)
 		{
-			index = run->memblock_getindex(VM_ARG,i,tmpmem);
+			index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 			if(index < 0)
 				run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
@@ -1929,7 +1931,7 @@ ZL_VOID zenglrun_op_set_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}
-		index = run->memblock_getindex(VM_ARG,i,tmpmem);
+		index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 	}
 	if(index < 0)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
@@ -1963,6 +1965,7 @@ ZENGL_RUN_VIRTUAL_MEM_LIST * zenglrun_alloc_memblock(ZL_VOID * VM_ARG,ZL_INT * i
 	if(ptr->mem_array == ZL_NULL)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(ptr->mem_array,0,ptr->size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT));
+	ZENGL_SYS_MEM_SET(&ptr->hash_array, 0, sizeof(ZENGL_RUN_HASH_ARRAY));
 	return ptr;
 }
 
@@ -1987,6 +1990,30 @@ ZL_INT zenglrun_memblock_getindex(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_ME
 		break;
 	case ZL_R_RDT_STR:
 		return ZENGL_SYS_STR_TO_NUM((ZL_CHAR *)tmpmem->val.str);
+		break;
+	}
+	return 0;
+}
+
+/**
+ * zenglrun_memblock_getindex的扩展版本，对字符串进行哈希数组处理
+ */
+ZL_INT zenglrun_memblock_getindex_ext(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT index = ZENGL_RUN_REGVAL(ZL_R_RT_ARRAY_ITEM).dword + i;
+	(*tmpmem) = run->VStackListOps(VM_ARG,ZL_R_VMOPT_GETMEM,index,(*tmpmem),ZL_TRUE);
+	switch(tmpmem->runType)
+	{
+	case ZL_R_RDT_INT:
+		return tmpmem->val.dword;
+		break;
+	case ZL_R_RDT_FLOAT:
+		return (ZL_INT)tmpmem->val.qword;
+		break;
+	case ZL_R_RDT_STR:
+		//return ZENGL_SYS_STR_TO_NUM((ZL_CHAR *)tmpmem->val.str);
+		return zenglrun_getIndexFromHashCodeTable(VM_ARG, memblock, (ZL_CHAR *)tmpmem->val.str);
 		break;
 	}
 	return 0;
@@ -2240,12 +2267,12 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 	if(argcount == 0)
 		index = ptr->count;
 	else if(argcount == 1)
-		index = run->memblock_getindex(VM_ARG,0,tmpmem);
+		index = run->memblock_getindex(VM_ARG,0,tmpmem, ptr);
 	else
 	{
 		for(i=0;i < argcount-1;i++)
 		{
-			index = run->memblock_getindex(VM_ARG,i,tmpmem);
+			index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 			if(index < 0)
 				run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
@@ -2257,7 +2284,7 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}
-		index = run->memblock_getindex(VM_ARG,i,tmpmem);
+		index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 	}
 	if(index < 0)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
@@ -2329,12 +2356,12 @@ ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT
 	if(argcount == 0)
 		index = ptr->count;
 	else if(argcount == 1)
-		index = run->memblock_getindex(VM_ARG,0,tmpmem);
+		index = run->memblock_getindex(VM_ARG,0,tmpmem, ptr);
 	else
 	{
 		for(i=0;i < argcount-1;i++)
 		{
-			index = run->memblock_getindex(VM_ARG,i,tmpmem);
+			index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 			if(index < 0)
 				run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
@@ -2347,7 +2374,7 @@ ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT
 			ptr = ptr->mem_array[index].val.memblock;
 			ptrIndex = ptr->mem_array[index].memblk_Index;
 		}
-		index = run->memblock_getindex(VM_ARG,i,tmpmem);
+		index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 	}
 	if(index < 0)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
@@ -2384,12 +2411,12 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 	if(argcount == 0) //如果没有索引信息如test[]，则直接在数组末尾添加一个元素
 		index = ptr->count;
 	else if(argcount == 1) //如果为一维数组，则直接memblock_getindex得到索引即可
-		index = run->memblock_getindex(VM_ARG,0,tmpmem);
+		index = run->memblock_getindex(VM_ARG,0,tmpmem, ptr);
 	else
 	{
 		for(i=0;i < argcount-1;i++) //如果维度大于等于2，则先循环根据需要得到数组的各维度的内存块，例如test[1,2,3]则i为0时为索引1分配内存块这样test[1]也成为了一个数组，然后i为1时为索引2分配内存块这样test[1,2]也成为了一个数组，test[1,2,3]就是test[1,2]数组中的第4个元素(索引从0开始)
 		{
-			index = run->memblock_getindex(VM_ARG,i,tmpmem);
+			index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr);
 			if(index < 0)
 				run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);
 			ptr = run->realloc_memblock(VM_ARG,ptr,index); //默认分配的内存块并不大，当index索引超过内存块大小时，就需要动态分配内存块以满足index索引的需求
@@ -2401,7 +2428,7 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}
-		index = run->memblock_getindex(VM_ARG,i,tmpmem); //得到最后一维度的索引
+		index = run->memblock_getindex(VM_ARG,i,tmpmem, ptr); //得到最后一维度的索引
 	}
 	if(index < 0)
 		run->exit(VM_ARG,ZL_ERR_RUN_MEM_BLOCK_INVALID_INDEX);

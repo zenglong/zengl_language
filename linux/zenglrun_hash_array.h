@@ -26,11 +26,13 @@
 #include "zengl_global_header.h"
 
 #define ZL_R_HASH_CODE_TABLE_SIZE 10 // 哈希数组的初始化及动态扩容的大小
+#define ZL_R_HASH_STR_POOL_SIZE 120  // 哈希字符串池的初始化及动态扩容的大小
+#define ZL_R_HASH_CODE_SHIFT 4  // 哈希值的计算因子
 
 typedef struct _ZENGL_RUN_HASH_CODE_TABLE_MEMBER{
 	ZL_INT hash_code; // 字符串的hash code
 	ZL_INT str_len;   // 字符串的长度
-	ZL_INT str_offset; // 字符串在字符串池中的索引值
+	ZL_INT str_offset; // 字符串在字符串池中的字节偏移值
 	ZL_INT memblock_index; // 内存块中，字符串对应的真实的索引值
 }ZENGL_RUN_HASH_CODE_TABLE_MEMBER; // 哈希数组中单个成员的定义
 

@@ -206,6 +206,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zenglrun_hash_array.c"
+				>
+			</File>
+			<File
 				RelativePath=".\zenglrun_main.c"
 				>
 			</File>
@@ -224,7 +228,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zengl_global_header.h"
+				>
+			</File>
+			<File
 				RelativePath=".\zengl_locals.h"
+				>
+			</File>
+			<File
+				RelativePath=".\zenglrun_hash_array.h"
 				>
 			</File>
 		</Filter>

@@ -175,6 +175,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_RUN_INST_DATA_STRING_POOL_MALLOC_FAILED,	//解释器异常：在zenglrun_initInstDataStringPool函数中为指令操作数字符串池分配内存初始化失败
 	ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS, //解释器异常：当指令操作数字符串池添加字符串时索引i超出范围
 	ZL_ERR_RUN_VMEM_LIST_MALLOC_FAILED,		//解释器异常：为全局虚拟内存动态数组分配内存初始化失败
+	ZL_ERR_RUN_HASH_ARRAY_MEM_ALLOC_FAILED,		//解释器异常：为虚拟内存块的哈希数组分配系统内存失败
 	ZL_ERR_RUN_MEM_RE_USE_PTR_MALLOC_FAILED,	//解释器异常：重利用内存池指针时，调整分配系统内存失败
 	ZL_ERR_RUN_INVALID_VMEM_TYPE,			//解释器异常：无效的虚拟内存类型
 	ZL_ERR_RUN_INVALID_INST_SRC_TYPE,		//解释器异常：指令中源操作数类型无效

@@ -1,0 +1,9 @@
+use builtin;
+
+a = array();
+a['name'] = 'zenglong';
+a['job'] = 'Programmer';
+print 'my name: ' + a['name'];
+print 'my job: ' + a['job'] + '\n';
+print 'my name: ' + a[0];
+print 'my job: ' + a[1];

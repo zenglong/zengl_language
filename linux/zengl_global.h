@@ -1431,7 +1431,7 @@ typedef struct _ZENGL_RUN_TYPE
 	ZL_VOID (* op_addr)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //ADDR引用汇编指令的操作 对应 zenglrun_op_addr
 	ZL_VOID (* op_set_array)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //设置数组元素 对应 zenglrun_op_set_array
 	ZENGL_RUN_VIRTUAL_MEM_LIST * (* alloc_memblock)(ZL_VOID * VM_ARG,ZL_INT * index); //为内存块分配动态内存，通过ZENGL_RUN_VIRTUAL_MEM_LIST结构来管理内存块，ZENGL_RUN_VIRTUAL_MEM_LIST结构中的mem_array字段是新分配的内存块指针 对应 zenglrun_alloc_memblock
-	ZL_INT (* memblock_getindex)(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //获取数组内存块的索引 对应 zenglrun_memblock_getindex
+	ZL_INT (* memblock_getindex)(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock); //获取数组内存块的索引 对应 zenglrun_memblock_getindex_ext
 	ZENGL_RUN_VIRTUAL_MEM_LIST * (* realloc_memblock)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * ptr,ZL_INT index); //为内存块动态调整大小 对应 zenglrun_realloc_memblock
 	ZL_VOID (* assign_memblock)(ZL_VOID * VM_ARG,ZL_VOID ** dest_arg,ZL_VOID * src_arg); //将dest_arg设为src_arg所指向的内存块，同时增加refcount内存块的引用计数 对应 zenglrun_assign_memblock
 	ZL_VOID (* memblock_setval)(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * ptr,ZL_INT index,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //设置数组对应内存块ptr的index索引位置的值 对应 zenglrun_memblock_setval
@@ -1754,7 +1754,8 @@ ZL_VOID zenglrun_op_addminisone(ZL_VOID * VM_ARG,ZENGL_RUN_INST_TYPE type); //�
 ZL_VOID zenglrun_op_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //ADDR引用汇编指令的操作
 ZL_VOID zenglrun_op_set_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //设置数组元素
 ZENGL_RUN_VIRTUAL_MEM_LIST * zenglrun_alloc_memblock(ZL_VOID * VM_ARG,ZL_INT * index); //为内存块分配动态内存，通过ZENGL_RUN_VIRTUAL_MEM_LIST结构来管理内存块，ZENGL_RUN_VIRTUAL_MEM_LIST结构中的mem_array字段是新分配的内存块指针
-ZL_INT zenglrun_memblock_getindex(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //获取数组内存块的索引
+//ZL_INT zenglrun_memblock_getindex(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //获取数组内存块的索引
+ZL_INT zenglrun_memblock_getindex_ext(ZL_VOID * VM_ARG,ZL_INT i,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock); // zenglrun_memblock_getindex的扩展版本，对字符串进行哈希数组处理
 ZENGL_RUN_VIRTUAL_MEM_LIST * zenglrun_realloc_memblock(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * ptr,ZL_INT index); //为内存块动态调整大小
 ZL_VOID zenglrun_assign_memblock(ZL_VOID * VM_ARG,ZL_VOID ** dest_arg,ZL_VOID * src_arg); //将dest_arg设为src_arg所指向的内存块，同时增加refcount内存块的引用计数
 ZL_VOID zenglrun_memblock_setval(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * ptr,ZL_INT index,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem); //设置数组对应内存块ptr的index索引位置的值
@@ -1769,6 +1770,9 @@ ZL_VOID zenglrun_FreeAllForReUse(ZL_VOID * VM_ARG); //重利用虚拟机时，�
 ZL_VOID zenglrun_op_switch(ZL_VOID * VM_ARG); //SWITCH指令的处理
 ZL_LONG zenglrun_getRegInt(ZL_VOID * VM_ARG,ZENGL_RUN_REG_TYPE reg); //返回寄存器值的整数形式
 ZL_INT zenglrun_main(ZL_VOID * VM_ARG);	//解释器的入口函数
+
+//下面是定义在zenglrun_hash_array.c中的函数
+ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock, ZL_CHAR * key); // 从哈希数组的哈希表中，根据字符串key获取对应的索引值
 
 //下面是定义在zenglDebug.c中的函数
 ZL_INT zenglDebug_Compile(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //调试器的编译部分

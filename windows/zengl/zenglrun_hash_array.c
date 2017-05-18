@@ -21,13 +21,13 @@
 */
 
 /**
- * è¯¥æ–‡ä»¶ä¸­ä¸»è¦å­˜æ”¾ä¸Žå†…å­˜å—çš„å“ˆå¸Œæ•°ç»„ç›¸å…³çš„å‡½æ•°
+ * ¸ÃÎÄ¼þÖÐÖ÷Òª´æ·ÅÓëÄÚ´æ¿éµÄ¹þÏ£Êý×éÏà¹ØµÄº¯Êý
  */
 
 #include "zengl_global.h"
 
 /**
- * æ ¹æ®å­—ç¬¦ä¸²keyè®¡ç®—å“ˆå¸Œå€¼
+ * ¸ù¾Ý×Ö·û´®key¼ÆËã¹þÏ£Öµ
  */
 static ZL_INT zenglrun_getHashCode(ZL_CHAR * key)
 {
@@ -42,7 +42,7 @@ static ZL_INT zenglrun_getHashCode(ZL_CHAR * key)
 }
 
 /**
- * æ£€æµ‹å­—ç¬¦ä¸²æ˜¯å¦æ˜¯æ•°å­—
+ * ¼ì²â×Ö·û´®ÊÇ·ñÊÇÊý×Ö
  */
 static ZL_BOOL zenglrun_detectIsDigit(ZL_CHAR * key)
 {
@@ -58,7 +58,7 @@ static ZL_BOOL zenglrun_detectIsDigit(ZL_CHAR * key)
 }
 
 /**
- * åˆå§‹åŒ–å“ˆå¸Œå­—ç¬¦ä¸²æ± 
+ * ³õÊ¼»¯¹þÏ£×Ö·û´®³Ø
  */
 static ZL_VOID zenglrun_initHashStrPool(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_STR_POOL * str_pool)
 {
@@ -74,7 +74,7 @@ static ZL_VOID zenglrun_initHashStrPool(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_STR_POO
 }
 
 /**
- * æ·»åŠ å­—ç¬¦ä¸²åˆ°å“ˆå¸Œå­—ç¬¦ä¸²æ± ä¸­
+ * Ìí¼Ó×Ö·û´®µ½¹þÏ£×Ö·û´®³ØÖÐ
  */
 static ZL_INT zenglrun_HashStrPoolAddString(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_STR_POOL * str_pool, ZL_CHAR * str)
 {
@@ -104,7 +104,7 @@ static ZL_INT zenglrun_HashStrPoolAddString(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_STR
 }
 
 /**
- * åˆå§‹åŒ–å“ˆå¸Œæ•°ç»„çš„å“ˆå¸Œè¡¨
+ * ³õÊ¼»¯¹þÏ£Êý×éµÄ¹þÏ£±í
  */
 static ZL_VOID zenglrun_initHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_TABLE * hash_code_table)
 {
@@ -121,7 +121,7 @@ static ZL_VOID zenglrun_initHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_
 }
 
 /**
- * å°†å­—ç¬¦ä¸²keyæ·»åŠ åˆ°
+ * ½«×Ö·û´®keyÌí¼Óµ½
  */
 static ZL_VOID zenglrun_addKeyToHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_TABLE * hash_code_table, ZENGL_RUN_HASH_STR_POOL * str_pool,
 												ZL_CHAR * key, ZL_INT str_len,
@@ -148,7 +148,7 @@ static ZL_VOID zenglrun_addKeyToHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_C
 }
 
 /**
- * ä»Žå“ˆå¸Œæ•°ç»„çš„å“ˆå¸Œè¡¨ä¸­ï¼Œæ ¹æ®å­—ç¬¦ä¸²keyèŽ·å–å¯¹åº”çš„ç´¢å¼•å€¼
+ * ´Ó¹þÏ£Êý×éµÄ¹þÏ£±íÖÐ£¬¸ù¾Ý×Ö·û´®key»ñÈ¡¶ÔÓ¦µÄË÷ÒýÖµ
  */
 ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock, ZL_CHAR * key)
 {
@@ -157,7 +157,7 @@ ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_ME
 	ZENGL_RUN_HASH_STR_POOL * str_pool = &(memblock->hash_array.str_pool);
 	ZL_INT hash_code,i,str_len;
 	ZL_CHAR * str_pool_ptr;
-	if(zenglrun_detectIsDigit(key)) // å¦‚æžœkeyåªåŒ…å«äº†æ•°å­—ï¼Œåˆ™ç›´æŽ¥å°†å…¶è½¬ä¸ºå¯¹åº”çš„æ•´æ•°è¿”å›ž
+	if(zenglrun_detectIsDigit(key)) // Èç¹ûkeyÖ»°üº¬ÁËÊý×Ö£¬ÔòÖ±½Ó½«Æä×ªÎª¶ÔÓ¦µÄÕûÊý·µ»Ø
 		return ZENGL_SYS_STR_TO_NUM(key);
 	if(str_pool->ptr == ZL_NULL)
 		zenglrun_initHashStrPool(VM_ARG, str_pool);

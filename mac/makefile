@@ -8,14 +8,14 @@ SHARED_CFLAGS = $(CFLAGS) -dynamiclib -install_name '$(CURDIR)/libzengl.dylib' -
 
 ZENGL_LIB_CFLAGS_LIB = -L '$(CURDIR)' -lzengl
 
-OBJS = ../linux/zengl_main.c ../linux/zengl_parser.c ../linux/zengl_symbol.c ../linux/zengl_locals.c ../linux/zengl_assemble.c ../linux/zengl_ld.c ../linux/zenglrun_main.c ../linux/zenglrun_func.c ../linux/zenglApi.c ../linux/zenglApi_BltModFuns.c ../linux/zenglDebug.c
+OBJS = ../linux/zengl_main.c ../linux/zengl_parser.c ../linux/zengl_symbol.c ../linux/zengl_locals.c ../linux/zengl_assemble.c ../linux/zengl_ld.c ../linux/zenglrun_main.c ../linux/zenglrun_func.c ../linux/zenglApi.c ../linux/zenglApi_BltModFuns.c ../linux/zenglDebug.c ../linux/zenglrun_hash_array.c
 RUNOBJS = main.o
 
 zengl: $(RUNOBJS) encrypt.o libzengl.dylib
 		$(CC) $(CFLAGS) -o zengl $(RUNOBJS) $(ZENGL_LIB_CFLAGS_LIB)
 		$(CC) $(CFLAGS) -o encrypt encrypt.o $(ZENGL_LIB_CFLAGS_LIB)
 
-libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h
+libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h ../linux/zenglrun_hash_array.h
 		$(CC) $(CDEFINES) $(SHARED_CFLAGS) -o libzengl.dylib $(OBJS)
 		
 main.o: ../linux/main.c ../linux/zengl_exportfuns.h
