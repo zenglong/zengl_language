@@ -1,0 +1,29 @@
+inc 'game_21_fun_use_hash_array.zl';
+
+android["name"] = 'Android';
+user["name"] = 'User';
+android['money'] = array(0,180,00000000); //机器人一开始有180亿虚拟币
+user['money'] = array(0,200,00000000); //用户一开始有200亿虚拟币
+user['poker','pokerlist'] = array();
+android['poker','pokerlist'] = array();
+oneturnMoney = array(0,20,55000000); //每轮结束时，输赢需添加或扣除的虚拟币
+print 'user:'+user['name'];
+turn_num = 0;
+blfirst = TRUE;
+
+do
+	if(blfirst)
+		printf('if you want start ,type "s" \r\n\t');
+	else
+		printf('if you want play again ,type "r" \r\n\t');
+	endif
+	input = read();
+	if((!blfirst && input=='r') || (blfirst && input=='s'))
+		myGameStart();
+		if(blfirst)
+			blfirst = FALSE;
+		endif
+	else
+		break;
+	endif
+dowhile() //end program!

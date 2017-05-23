@@ -24,8 +24,8 @@
 #define _ZENGL_EXPORT_FUNCTIONS_H_
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
-#define ZL_EXP_MINOR_VERSION 6 //zengl子版本号
-#define ZL_EXP_REVISION 1      //zengl修正版本号
+#define ZL_EXP_MINOR_VERSION 7 //zengl子版本号
+#define ZL_EXP_REVISION 0      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
@@ -215,6 +215,9 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetFunArgEx(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum
 
 /*获取内存块的size容量等信息*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT * mblk_size,ZL_EXP_INT * mblk_count);
+
+/*根据索引值，从哈希表中获取对应的字符串key*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock, ZL_EXP_INT memblock_index, ZL_EXP_CHAR ** key);
 
 /*API接口，用户可以通过此接口在中途停止脚本*/
 ZL_EXPORT ZL_EXP_INT zenglApi_Stop(ZL_EXP_VOID * VM_ARG);

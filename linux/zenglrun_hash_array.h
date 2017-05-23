@@ -40,6 +40,7 @@ typedef struct _ZENGL_RUN_HASH_CODE_TABLE_MEMBER{
 typedef struct _ZENGL_RUN_HASH_CODE_TABLE{
 	ZL_INT size; // 哈希表对应的动态数组的尺寸
 	ZL_INT count; // 哈希表中存储的元素个数
+	ZL_INT last_index; // 记录最后一个哈希表成员所对应的索引值
 	ZL_INT mempool_index; //下面的members指针在内存池中的索引
 	ZENGL_RUN_HASH_CODE_TABLE_MEMBER * members; // 存放具体的哈希数组成员
 }ZENGL_RUN_HASH_CODE_TABLE; // 哈希数组的结构定义

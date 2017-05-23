@@ -745,11 +745,13 @@ ZL_EXP_VOID main_builtin_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 ZL_EXP_VOID main_print_array(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK memblock,ZL_EXP_INT recur_count)
 {
 	ZL_EXP_INT size,i,j;
+	ZL_EXP_CHAR * key;
 	ZENGL_EXPORT_MOD_FUN_ARG mblk_val = {ZL_EXP_FAT_NONE,{0}};
 	zenglApi_GetMemBlockInfo(VM_ARG,&memblock,&size,ZL_EXP_NULL);
 	for(i=1;i<=size;i++)
 	{
 		mblk_val = zenglApi_GetMemBlock(VM_ARG,&memblock,i);
+		zenglApi_GetMemBlockHashKey(VM_ARG,&memblock,i-1,&key);
 		switch(mblk_val.type)
 		{
 		case ZL_EXP_FAT_INT:
@@ -763,18 +765,34 @@ ZL_EXP_VOID main_print_array(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK memblock
 		switch(mblk_val.type)
 		{
 		case ZL_EXP_FAT_INT:
-			printf("[%d] %ld\n",i-1,mblk_val.val.integer);
+			if(key != ZL_EXP_NULL)
+				printf("[%d]{%s} %ld\n",i-1,key,mblk_val.val.integer);
+			else
+				printf("[%d] %ld\n",i-1,mblk_val.val.integer);
 			break;
 		case ZL_EXP_FAT_FLOAT:
-			printf("[%d] %.16g\n",i-1,mblk_val.val.floatnum);
+			if(key != ZL_EXP_NULL)
+				printf("[%d]{%s} %.16g\n",i-1,key,mblk_val.val.floatnum);
+			else
+				printf("[%d] %.16g\n",i-1,mblk_val.val.floatnum);
 			break;
 		case ZL_EXP_FAT_STR:
-			printf("[%d] %s\n",i-1,mblk_val.val.str);
+			if(key != ZL_EXP_NULL)
+				printf("[%d]{%s} %s\n",i-1,key,mblk_val.val.str);
+			else
+				printf("[%d] %s\n",i-1,mblk_val.val.str);
 			break;
 		case ZL_EXP_FAT_MEMBLOCK:
-			printf("[%d] <array or class obj type> begin:\n",i-1);
+			if(key != ZL_EXP_NULL)
+				printf("[%d]{%s} <array or class obj type> begin:\n",i-1,key);
+			else
+				printf("[%d] <array or class obj type> begin:\n",i-1);
 			main_print_array(VM_ARG,mblk_val.val.memblock,recur_count+1);
-			printf("[%d] <array or class obj type> end\n",i-1);
+			for(j=0;j<recur_count;j++) printf("  "); // 递归调用返回后，输出前缀空格，以便于排版
+			if(key != ZL_EXP_NULL)
+				printf("[%d]{%s} <array or class obj type> end\n",i-1,key);
+			else
+				printf("[%d] <array or class obj type> end\n",i-1);
 			break;
 		}
 	}

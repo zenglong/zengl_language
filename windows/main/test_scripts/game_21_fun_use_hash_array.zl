@@ -1,0 +1,192 @@
+inc 'game_21_def.zl';
+
+/**
+ * 发牌函数
+ */
+fun myAddPoker(obj,poker)
+	return obj['totalpoint'] += obj['pokerlist', obj['count']++] = poker;
+endfun
+
+/**
+ * myIsNeedPoker函数用于机器人通过概率来判断
+ * 是否需要继续要牌
+ */
+fun myIsNeedPoker(obj)
+	num = 21 - obj['totalpoint'];
+	if(bltRandom()%13 +1 <= num)
+		return 1;
+	else
+		return 0;
+	endif
+endfun
+
+/**
+ * 游戏循环的主逻辑函数
+ */
+fun myGameStart()
+	global user,android,turn_num,oneturnMoney;
+	
+	printf('please input \'y\' to get poker,except to end! \r\n\t');
+	
+	do
+		input = read();
+		if(input == 'y')
+			myAddPoker(user['poker'], bltRandom()%13+1);
+			print '	you get ' + user['poker', 'pokerlist', user['poker', 'count']-1];
+			if(user['poker','totalpoint'] > 21)
+				break;
+			endif
+		endif
+		
+		if(android['poker', 'totalpoint'] < user['poker', 'totalpoint'] || 
+			myIsNeedPoker(android['poker']))
+			myAddPoker(android['poker'], bltRandom()%13+1);
+			print '	android get '+ android['poker', 'pokerlist', android['poker','count']-1];
+			if(android['poker', 'totalpoint'] > 21)
+				break;
+			endif
+		endif
+		
+		printf(user['name'] + ' total:'+ user['poker', 'totalpoint'] + ' '+ 
+			  android['name'] + ' total:'+ android['poker', 'totalpoint'] + '\r\n\t');
+	dowhile(input=='y')
+	
+	printf(user['name'] +" have gets :");
+	for(i=0;i<user['poker','count'];i++)
+		printf('Poker:'+ user['poker','pokerlist',i] + ' ');
+	endfor
+	print ' total: ' + user['poker','totalpoint'];
+	
+	printf(android['name'] +" have gets :");
+	for(i=0;i<android['poker','count'];i++)
+		printf('Poker:'+ android['poker','pokerlist',i] + ' ');
+	endfor
+	print ' total: ' + android['poker','totalpoint'];
+	
+	bool_userwin = TRUE;
+	if( android['poker','totalpoint'] > 21)
+		print '	******* '+user['name'] +' win ********';
+	elif(user['poker','totalpoint'] > 21)
+		print '	******* '+android['name'] +' win ********';
+		bool_userwin = FALSE;
+	else
+		if(android['poker','totalpoint'] >= user['poker','totalpoint'])
+			print '	******* '+android["name"] +' win ********';
+			bool_userwin = FALSE;
+		else
+			print '	******* '+user['name'] +' win ********';
+		endif
+	endif
+	
+	if(bool_userwin)
+		myBigIntAdd(user['money'],oneturnMoney,user['money']); //oneturnMoney为每轮的输赢需添加或扣除的虚拟币。
+		myBigIntMinis(android['money'],oneturnMoney,android['money']);
+	else
+		myBigIntMinis(user['money'],oneturnMoney,user['money']);
+		myBigIntAdd(android['money'],oneturnMoney,android['money']);
+	endif
+	print 'the '+ ++turn_num +' turn: \r\n\t'+user['name'] + ' money:'+ 
+		myGetBitIntStr(user["money"]) +' '+ android["name"]+' money:'+
+		myGetBitIntStr(android["money"]);
+	user['poker','count'] = user['poker','totalpoint'] = android['poker','count'] = android['poker','totalpoint'] = 0;
+endfun
+
+/**
+ * 两个大整数相减，如180,00000000和160,00000000相减，结果存放在c数组里，在本例中a和c对应同一个数
+ */
+fun myBigIntMinis(a,b,c)
+	if(a[0] == 1) //a[0]第一个元素表示a是正还是负数
+		if(b[0]==0) //b[0]代表b是正数还是负数
+			a[0] = 0;
+			myBigIntAdd(a,b,c); //一个负数减去一个正数，则先将两个数相加，结果再设为负数
+			a[0] = 1; //结果符号位设为负
+			return;
+		elif(b[0]==1) //负数和负数相减，相当于两数相加，再根据结果设置符号位
+			a[0] = b[0] = 0;
+			myBigIntMinis(a,b,c);
+			if(a[0]==0)
+				a[0] = 1;
+			else
+				a[0] = 0;
+			endif
+			return;
+		endif
+	elif(a[0] == 0 && b[0] == 1) //正数减负数相当于两数相加
+		b[0] = 0;
+		myBigIntAdd(a,b,c);
+		return;
+	endif
+	for(i=1;i<3;i++) //确定最终的符号位，e代表a,b中较大的一个，f代表a,b中较小的一个。
+		if(a[i]>b[i])
+			e = &a;
+			f = &b;
+			c[0] = 0;
+			break;
+		elif(a[i]<b[i])
+			e = &b;
+			f = &a;
+			c[0] = 1;
+			break;
+		elif(i==2)
+			return c[0] = c[1] = c[2] = 0;
+		endif
+	endfor
+	borrow = 0;
+	for(i=2;i>=1;i--) //两数相减，并进行借位运算。
+		c[i] = e[i] - f[i] - borrow;
+		if(c[i] >= 0)
+			borrow = 0;
+		else
+			c[i] += UnitMoney;
+			borrow = 1;
+		endif
+	endfor
+endfun
+
+/**
+ * 两个大整数相加
+ */
+fun myBigIntAdd(a,b,c)
+	if(a[0] == 1)
+		if(b[0]==0)
+			a[0] = 0;
+			myBigIntMinis(a,b,c);
+			if(a[0]==0)
+				a[0] = 1;
+			else
+				a[0] = 0;
+			endif
+			return;
+		elif(b[0] == 1)
+			a[0] = b[0] = 0;
+			myBigIntAdd(a,b,c);
+			a[0] = 1;
+		endif
+	elif(a[0] == 0)
+		if(b[0]==1)
+			b[0] = 0;
+		endif
+	endif
+	carry = 0;
+	for(i=2;i>=1;i--)
+		c[i] = a[i] + b[i] + carry;
+		if(c[i] < UnitMoney)
+			carry = 0;
+		else
+			c[i] -= UnitMoney;
+			carry = 1;
+		endif
+	endfor
+endfun
+
+/**
+ * 将上亿的大整数转为字符串的形式返回
+ */
+fun myGetBitIntStr(a)
+	if(a[0] == 0)
+		ret = a[1] + ',' + bltIntToStr(a[2],8,'0'); //如果是正数，则将第三个元素转为8位宽的数(左边不足的用0填充)，再和第一个元素用逗号连接在一起。
+	elif(a[0] == 1)
+		ret = '-' + a[1] + ',' + bltIntToStr(a[2],8,'0'); //在正数的基础上，在最左边加上负号。
+	endif
+	return ret;
+endfun

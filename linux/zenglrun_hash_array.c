@@ -42,22 +42,6 @@ static ZL_INT zenglrun_getHashCode(ZL_CHAR * key)
 }
 
 /**
- * 检测字符串是否是数字
- */
-static ZL_BOOL zenglrun_detectIsDigit(ZL_CHAR * key)
-{
-	ZL_INT i = 0;
-	while (key[i] != ZL_STRNULL)
-	{
-		if(!ZENGL_SYS_CTYPE_IS_DIGIT(key[i]))
-		{
-			return ZL_FALSE;
-		}
-	}
-	return ZL_TRUE;
-}
-
-/**
  * 初始化哈希字符串池
  */
 static ZL_VOID zenglrun_initHashStrPool(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_STR_POOL * str_pool)
@@ -113,6 +97,7 @@ static ZL_VOID zenglrun_initHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_
 		return;
 	hash_code_table->count = 0;
 	hash_code_table->size = ZL_R_HASH_CODE_TABLE_SIZE;
+	hash_code_table->last_index = 0;
 	hash_code_table->members = (ZENGL_RUN_HASH_CODE_TABLE_MEMBER *)run->memAlloc(VM_ARG, hash_code_table->size * sizeof(ZENGL_RUN_HASH_CODE_TABLE_MEMBER),
 										&hash_code_table->mempool_index);
 	if(hash_code_table->members == ZL_NULL)
@@ -159,8 +144,6 @@ ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_ME
 	ZENGL_RUN_HASH_CODE_TABLE_MEMBER tmp_member; // 根据hits交换成员时，需要用到的临时变量
 	ZL_INT hash_code,i,str_len,min_hits,min_hits_index,ret_memblock_index;
 	ZL_CHAR * str_pool_ptr;
-	if(zenglrun_detectIsDigit(key)) // 如果key只包含了数字，则直接将其转为对应的整数返回
-		return ZENGL_SYS_STR_TO_NUM(key);
 	if(str_pool->ptr == ZL_NULL)
 		zenglrun_initHashStrPool(VM_ARG, str_pool);
 	hash_code = zenglrun_getHashCode(key);
@@ -195,6 +178,25 @@ ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_ME
 		}
 		return ret_memblock_index;
 	}
-	zenglrun_addKeyToHashCodeTable(VM_ARG, hash_code_table, str_pool, key, str_len, hash_code, memblock->count);
-	return memblock->count;
+	zenglrun_addKeyToHashCodeTable(VM_ARG, hash_code_table, str_pool, key, str_len, hash_code, hash_code_table->last_index);
+	return hash_code_table->last_index++;
+}
+
+/**
+ * 从哈希数组的哈希表中，根据索引值来获取对应的字符串key
+ */
+ZL_CHAR * zenglrun_getKeyFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock, ZL_INT memblock_index)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_RUN_HASH_CODE_TABLE * hash_code_table = &(memblock->hash_array.hash_code_table);
+	ZENGL_RUN_HASH_STR_POOL * str_pool = &(memblock->hash_array.str_pool);
+	ZL_INT i;
+	for(i=0;i < hash_code_table->count;i++)
+	{
+		if(hash_code_table->members[i].memblock_index == memblock_index)
+		{
+			return str_pool->ptr + hash_code_table->members[i].str_offset;
+		}
+	}
+	return ZL_NULL;
 }

@@ -34,11 +34,13 @@ typedef struct _ZENGL_RUN_HASH_CODE_TABLE_MEMBER{
 	ZL_INT str_len;   // 字符串的长度
 	ZL_INT str_offset; // 字符串在字符串池中的字节偏移值
 	ZL_INT memblock_index; // 内存块中，字符串对应的真实的索引值
+	ZL_INT hits; //命中次数，命中次数越多，在哈希表中越靠前
 }ZENGL_RUN_HASH_CODE_TABLE_MEMBER; // 哈希数组中单个成员的定义
 
 typedef struct _ZENGL_RUN_HASH_CODE_TABLE{
 	ZL_INT size; // 哈希表对应的动态数组的尺寸
 	ZL_INT count; // 哈希表中存储的元素个数
+	ZL_INT last_index; // 记录最后一个哈希表成员所对应的索引值
 	ZL_INT mempool_index; //下面的members指针在内存池中的索引
 	ZENGL_RUN_HASH_CODE_TABLE_MEMBER * members; // 存放具体的哈希数组成员
 }ZENGL_RUN_HASH_CODE_TABLE; // 哈希数组的结构定义

@@ -2243,7 +2243,11 @@ ZL_VOID zenglrun_memblock_free(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * mem
 			}
 		}
 		run->memFreeIndex(VM_ARG,memblock->mem_array,&memblock->mempool_index); //没有这条就会内存一直增大，导致内存泄漏。。
-		run->memFreeIndex(VM_ARG,memblock,index);
+		if(memblock->hash_array.hash_code_table.members != ZL_NULL)
+			run->memFreeIndex(VM_ARG,memblock->hash_array.hash_code_table.members,&(memblock->hash_array.hash_code_table.mempool_index)); // 释放哈希数组中的哈希表
+		if(memblock->hash_array.str_pool.ptr != ZL_NULL)
+			run->memFreeIndex(VM_ARG,memblock->hash_array.str_pool.ptr,&(memblock->hash_array.str_pool.mempool_index)); // 释放哈希数组中的字符串池
+		run->memFreeIndex(VM_ARG,memblock,index); // 将内存块自己给释放掉
 	}
 }
 

@@ -1773,6 +1773,7 @@ ZL_INT zenglrun_main(ZL_VOID * VM_ARG);	//解释器的入口函数
 
 //下面是定义在zenglrun_hash_array.c中的函数
 ZL_INT zenglrun_getIndexFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock, ZL_CHAR * key); // 从哈希数组的哈希表中，根据字符串key获取对应的索引值
+ZL_CHAR * zenglrun_getKeyFromHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_VIRTUAL_MEM_LIST * memblock, ZL_INT memblock_index); // 从哈希数组的哈希表中，根据索引值来获取对应的字符串key
 
 //下面是定义在zenglDebug.c中的函数
 ZL_INT zenglDebug_Compile(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_ARGS * vm_main_args); //调试器的编译部分

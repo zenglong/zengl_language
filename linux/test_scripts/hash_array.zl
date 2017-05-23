@@ -1,10 +1,16 @@
 use builtin;
 
-a = array();
+//a = array();
 a['name'] = 'zenglong';
 a['job'] = 'Programmer';
 a['hobby'] = 'play game';
+a[4] = 'end';
+a['4'] = 'i am string key "4", not integer index 4';
+bltPrintArray(a);
+print '';
 print 'my hobby: ' + a['hobby'];
 print 'my job: ' + a['job'] + '\n';
 print 'my hobby: ' + a['hobby'];
 print 'my name: ' + a['name'];
+print a[2] + ' ' + a['4'];
+print a[4];
