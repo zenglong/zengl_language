@@ -1486,6 +1486,30 @@ ZL_EXPORT ZL_EXP_INT zenglApi_CreateMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_M
 	return 0;
 }
 
+/*API接口，增加数组等内存块的引用计数值(如果add_refcount是负数，就是减少引用计数值)，返回0表示成功，返回-1表示失败*/
+ZL_EXPORT ZL_EXP_INT zenglApi_AddMemBlockRefCount(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT add_refcount)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_VIRTUAL_MEM_LIST * mem_list;
+	ZL_CHAR * ApiName = "zenglApi_AddMemBlockRefCount";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	if(memblock == ZL_NULL)
+		return -1;
+	mem_list = (ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->ptr;
+	mem_list->refcount += add_refcount;
+	return 0;
+}
+
 /*设置内存块中index - 1索引对应的值，index参数为1表示数组等内存块的第一个元素，以此类推，返回0表示成功，返回-1表示retval类型错误*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT index,ZENGL_EXPORT_MOD_FUN_ARG * retval)
 {
@@ -1554,6 +1578,29 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMB
 		break;
 	}
 	return 0;
+}
+
+/*通过字符串key来设置数组等内存块的成员，该接口会先将字符串转为对应的索引值，再调用SetMemBlock接口去执行具体的设置工作*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlockByHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_CHAR * key,ZENGL_EXPORT_MOD_FUN_ARG * retval)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZL_INT index;
+	ZL_CHAR * ApiName = "zenglApi_SetMemBlockByHashKey";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	if(retval == ZL_NULL)
+		return 0;
+	index = zenglrun_getIndexFromHashCodeTable(VM_ARG, (ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->ptr, key);
+	return zenglApi_SetMemBlock(VM_ARG, memblock, (index + 1), retval);
 }
 
 /*获取数组等内存块中的index - 1索引处的元素，index参数为1表示数组等内存块的第一个元素，以此类推*/

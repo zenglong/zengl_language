@@ -106,7 +106,7 @@ static ZL_VOID zenglrun_initHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_
 }
 
 /**
- * 将字符串key添加到
+ * 将字符串key添加到哈希数组的哈希表中
  */
 static ZL_VOID zenglrun_addKeyToHashCodeTable(ZL_VOID * VM_ARG, ZENGL_RUN_HASH_CODE_TABLE * hash_code_table, ZENGL_RUN_HASH_STR_POOL * str_pool,
 												ZL_CHAR * key, ZL_INT str_len,

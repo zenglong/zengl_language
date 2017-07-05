@@ -1148,8 +1148,13 @@ start:
 		case ZL_R_IT_PUSH_LOC: //PUSH_LOC指令，为脚本函数局部变量分配栈空间
 			run->VStackListOps(VM_ARG,ZL_R_VMOPT_ADDMEM_NONE,-1,tmpmem,ZL_TRUE);
 			break;
-		case ZL_R_IT_RET: //RET指令，从脚本函数返回
-run_ret:
+		case ZL_R_IT_RET: //RET指令，从脚本函数返回，重置AX的值为整数0
+			ZENGL_RUN_REG(ZL_R_RT_AX).runType = ZL_R_RDT_INT;
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock = ZL_NULL;
+			ZENGL_RUN_REG(ZL_R_RT_AX).memblk_Index = 0;
+			ZENGL_RUN_REGVAL(ZL_R_RT_AX).dword = 0;
+		case ZL_R_IT_RETURN: //RETURN指令，从脚本函数返回，保留AX的值
+run_return:
 			run->memblock_freeall_local(VM_ARG);
 			run->vstack_list.count = ZENGL_RUN_REGVAL(ZL_R_RT_LOC).dword; //将栈顶设为LOC寄存器的值，这样栈顶就指向脚本函数的返回地址
 			tmpmem = run->VStackListOps(VM_ARG,ZL_R_VMOPT_GETMEM,-1,tmpmem,ZL_TRUE);
@@ -1219,7 +1224,7 @@ run_ret:
 					else
 						run->exit(VM_ARG,ZL_ERR_RUN_FUNCTION_IS_INVALID,functionName,ZL_R_REG_PC,functionName);
 				}
-				goto run_ret;
+				goto run_return;
 				break;
 			case ZL_R_DT_NUM:
 				{
@@ -1234,7 +1239,7 @@ run_ret:
 						VM->ApiState = origState;
 					}
 				}
-				goto run_ret;
+				goto run_return;
 				break;
 			}
 			break; //case ZL_R_IT_CALL: //CALL指令 调用用户自定义的模块函数
@@ -2594,8 +2599,17 @@ ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG)
 		case ZL_R_RDT_MEM_BLOCK:
 			if(run->vstack_list.mem_array[locIndex].val.memblock != ZL_NULL)
 			{
-				run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
-					&run->vstack_list.mem_array[locIndex].memblk_Index);
+				// 如果当前局部变量的内存块等于AX返回寄存器的内存块，说明该内存块很有可能会被外部调用者使用，就只将refcount引用计数减一，而不执行具体的释放内存块的操作。
+				if(ZENGL_RUN_REG(ZL_R_RT_AX).runType == ZL_R_RDT_MEM_BLOCK &&
+				   ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock == run->vstack_list.mem_array[locIndex].val.memblock) {
+					ZL_INT refcount = ((ZENGL_RUN_VIRTUAL_MEM_LIST *)(run->vstack_list.mem_array[locIndex].val.memblock))->refcount;
+					refcount = ((refcount - 1) >= 0) ? (refcount - 1) : 0; // refcount的最小值为0
+					((ZENGL_RUN_VIRTUAL_MEM_LIST *)(run->vstack_list.mem_array[locIndex].val.memblock))->refcount = refcount;
+				}
+				else {
+					run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
+						&run->vstack_list.mem_array[locIndex].memblk_Index);
+				}
 				run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
 				run->vstack_list.mem_array[locIndex].val.dword = 0;
 				run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;

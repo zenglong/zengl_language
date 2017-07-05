@@ -1,3 +1,86 @@
+  v1.7.1 添加RETURN汇编指令，修复从脚本函数返回数组时可能会报的内存错误，增加两个与哈希数组相关的API接口函数
+
+  从该版本开始，RET指令会将AX寄存器的值(即函数的返回值)重置为0，因此，如果没有使用return明确返回某个值时，脚本函数的返回值默认是0，
+  对于return语句，当其后没有跟随任何表达式时，如：return;语句，那么依然是生成RET汇编指令，即返回值默认是0，
+  如果return后面跟随了表达式的话，例如：return b;语句，那么生成的会是RETURN汇编指令，对于RETURN指令，它不会将AX寄存器的值重置为0，
+  因此，RETURN指令可以将return语句后面的表达式的值作为结果返回。
+
+  之前的版本，由于RET指令没有重置AX寄存器的值，因此，脚本函数的最后一条语句的结果会被隐式的作为整个函数的结果返回，隐式返回的结果可能不是想要的结果，还会导致某些被释放掉的
+  数组等内存块被隐式的返回，从而导致未知的内存错误。
+
+  此外，之前的版本，如果在某个脚本函数里设置了某个局部变量为数组等内存块时，如果将该局部变量进行return返回的话，会直接报内存错误，这是因为所有的局部变量在脚本函数返回时，
+  如果这些局部变量是数组之类的内存块的话，系统内部会将这些内存块的引用计数值减一，如果减到0就释放掉这些数组，从而导致返回的数组其实已经被释放掉了。
+
+  从当前版本开始，如果某个局部变量是数组等内存块时，可以直接用return语句返回，系统内部在释放局部变量对应的内存块时，会检查这些局部变量对应的内存块是否是AX寄存器返回的内存块，
+  如果是AX寄存器返回的内存块的话，就只将内存块的引用计数值减一，但是并不会执行具体的释放内存块的操作，这样，外部调用者就可以使用脚本函数返回的数组，而不会报内存错误了。
+  可以在test_scripts/v1.7.1/test.zl测试脚本中看到从脚本函数返回数组的例子。
+
+  当前版本还增加了两个与哈希数组相关的API接口函数：zenglApi_AddMemBlockRefCount 和 zenglApi_SetMemBlockByHashKey
+
+  其中，zenglApi_AddMemBlockRefCount接口函数可以在自定义的模块函数中，用于手动增加或减少某个内存块的引用计数值，通过手动增加数组等内存块的引用计数值，可以让这些数组
+  在zengl脚本的整个生命周期中都一直存在，而不会被自动释放掉。
+
+  而zenglApi_SetMemBlockByHashKey接口函数，则可以在自定义的模块函数中，使用字符串作为key来设置哈希数组的成员。
+
+  在main.c中的main_builtin_get_extraArray函数(对应脚本模块函数为：bltGetExtraArray)，可以看到这两个接口函数的具体用法，该模块函数内部会先创建一个内存块，
+  然后使用zenglApi_AddMemBlockRefCount来增加该内存块的引用计数，接着使用zenglApi_SetMemBlockByHashKey设置了两个数组成员，一个key为"name"，对应的值为"zengl"，
+  另一个key为"job"，对应的值为"programmer"。在test_scripts/v1.7.1/test2.zl测试脚本中，就通过bltGetExtraArray模块函数得到了这个哈希数组，并将数组里的"name"成员和"job"成员显示了出来，
+  另外，在test2.zl中的SetExtraArray脚本函数里，当使用b = bltGetExtraArray();语句将该模块函数返回的数组赋值给了局部变量后，脚本函数返回时，并不会将该局部变量对应的数组给释放掉，
+  这是因为，bltGetExtraArray模块函数在创建数组时，手动增加了该数组对应的内存块的引用计数值，使该引用计数值不会被减为0，而被释放掉。
+  此外，bltGetExtraArray模块函数只会在第一次调用时创建数组，之后再调用该模块函数时，它会将之前创建过的数组直接返回。
+
+  作者：zenglong
+
+  v1.7.0 实现哈希数组(可以使用字符串作为key来访问数组成员)
+
+  通过多个日常提交加上当前的commit，完成了哈希数组，可以在数组中使用字符串来作为key访问数组成员。例如：test_scripts/hash_array.zl中的a['name']，a['job']等。也可以用于多维度的数组成员，
+  例如：test_scripts/game_21_fun_use_hash_array.zl测试脚本中的user['poker', 'totalpoint']类似于PHP中的user['poker']['totalpoint']，以及user['poker', 'pokerlist', user['poker', 'count']-1]类似于PHP中的user['poker']['pokerlist'][user['poker']['count']-1]，
+  在test_scripts中的game_21_use_hash_array.zl和game_21_fun_use_hash_array.zl通过哈希数组来代替class(类)，来完成21点小游戏。
+
+  需要注意的是：只要是字符串key，就会在数组中创建一个哈希表，并将该字符串与某个具体的索引值关联起来，例如：a['name']可以和索引值0关联，那么既可以通过a['name']来访问第一个成员，也可以通过a[0]来访问第一个成员。
+  同时a['4']与a[4]也可以是两个完全不同的成员，'4'作为字符串可以对应索引3等，而整数索引4只能对应第5个成员。
+
+  可以在脚本调试时，使用p命令来查看key与索引值的对应关系:
+
+>>> debug input:p user
+user :array or class obj:
+[0]{name} User
+[1]{money} <array or class obj type> begin:
+  [0] 0
+  [1] 200
+  [2] 0
+[1]{money} <array or class obj type> end
+[2]{poker} <array or class obj type> begin:
+  [0]{pokerlist} <array or class obj type> begin:
+    [0] 7
+  [0]{pokerlist} <array or class obj type> end
+  [1]{totalpoint} 7
+  [2]{count} 1
+[2]{poker} <array or class obj type> end
+
+>>> debug input:
+
+  上面的例子中，name对应索引值0，money对应索引值1，poker对应索引值2等。
+
+  当前版本只在windows的vs2008中，ubuntu 16.0.4中(使用gcc 5.4)以及在Mac OS X 10.10 Yosemite中(Clang)中进行了编译测试。其他的系统如：android，zenglOX等，因为时间关系没去处理。
+
+  作者：zenglong
+  
+  v1.6.1版本，修复mac osx 64位系统下的segment fault错误
+
+  作者：zenglong
+
+  zengl v1.6.0 经过多个[日常提交 for v1.6.0]的commits，完成了采用循环加模拟栈的方式，来代替旧的递归调用zengl_AsmGenCodes函数来生成汇编指令的方式，递归函数调用的方式虽然操作简单，但是弊端就是当递归层次很多时，就可能会发生内存栈溢出的情况。因此，
+  为了解决这个问题，引入了ZENGL_ASM_LOOP_STACKLIST_TYPE的模拟栈结构，再配合汇编输出主循环，就可以代替旧的递归调用方式，采用模拟栈的方式时，需要用到两个动态数组：一个用于存储节点信息(组成一个节点路径，通过节点路径来确定下一次要执行的汇编输出函数)，
+  一个用于存储C函数中可能会用到的一些局部变量等(由于我们没有采用递归方式，因此，C函数中的一些局部变量就需要保存在自己的模拟栈中)，此外，还需要充分发挥goto跳转语句的作用，在一个节点的汇编输出函数里执行完一段代码后，会将下一次要执行的节点压入模拟栈，并返回到汇编输出主循环，
+  由主循环进入到下一个节点的汇编输出函数，当该节点的汇编指令生成完毕后，通过模拟栈中的节点路径，就会返回到上一次的节点的汇编输出函数中，此时，就需要goto语句来跳过已经执行过了的部分，并继续执行剩下的代码。
+
+  v1.6.0的代码是在win7下通过vs2008来进行开发调试的，并在ubuntu 16.04版本中，通过gcc 5.4.0的版本进行了编译测试。因此，目前只测试了windows环境以及linux环境(vc6没去测试，高版本的visual  studio理论上应该可以直接导入vs2008进行测试，我只在vs2012中简单的测试了下，
+  可以通过设置test.zl或者test4.zl或者game_21_point.zl的命令行参数来测试)。至于其他系统环境，如mac，android之类的系统因为时间关系，就没去测试了。
+
+  作者：zenglong
+
+
   zengl v1.5.0 , 添加了一个zenglOX目录，该目录内的makefile和相关的源文件都是针对zenglOX操作系统的(可以参考zenglOX v2.3.0的官方文章)，需要在zenglOX的源代码中进行编译，
   其他的windows目录、android目录内的zengl_exportfuns.h及zengl_global.h头文件也进行了同步，这样就可以和linux目录内的源代码保持一致。
   

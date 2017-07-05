@@ -25,7 +25,7 @@
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
 #define ZL_EXP_MINOR_VERSION 7 //zengl子版本号
-#define ZL_EXP_REVISION 0      //zengl修正版本号
+#define ZL_EXP_REVISION 1      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
@@ -196,8 +196,14 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetRetValAsMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXP
 /*根据size参数创建足够容纳size个元素的内存块(内存块大小不一定等于size，只是大于等于size)，数组，类变量都属于内存块*/
 ZL_EXPORT ZL_EXP_INT zenglApi_CreateMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT size);
 
+/*API接口，增加数组等内存块的引用计数值(如果add_refcount是负数，就是减少引用计数值)，返回0表示成功，返回-1表示失败*/
+ZL_EXPORT ZL_EXP_INT zenglApi_AddMemBlockRefCount(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT add_refcount);
+
 /*设置内存块中index - 1索引对应的值，index参数为1表示数组等内存块的第一个元素，以此类推，返回0表示成功，返回-1表示retval类型错误*/
 ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT index,ZENGL_EXPORT_MOD_FUN_ARG * retval);
+
+/*通过字符串key来设置数组等内存块的成员，该接口会先将字符串转为对应的索引值，再调用SetMemBlock接口去执行具体的设置工作*/
+ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlockByHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_CHAR * key,ZENGL_EXPORT_MOD_FUN_ARG * retval);
 
 /*获取数组等内存块中的index - 1索引处的元素，index参数为1表示数组等内存块的第一个元素，以此类推*/
 ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT index);

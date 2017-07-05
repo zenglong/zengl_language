@@ -1,0 +1,11 @@
+use builtin;
+
+fun test()
+	a = array();
+	a['name'] = 'zengl';
+	return a;
+endfun
+
+b = test();
+//print b;
+print b['name'];

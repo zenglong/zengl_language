@@ -2479,12 +2479,15 @@ static ZENGL_STATES zengl_AsmGenCode_Return(ZL_VOID * VM_ARG, ZENGL_STATES state
 		compile->parser_curnode = nodenum;
 		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_UNEXPECT_LOC_OF_RETURN);
 	}
-	if(nodes[nodenum].childs.count == 1) //return关键字后面跟的是要返回的值，如果是变量标识符或数字或字符串，就直接将变量,数字,字符串的值赋值给AX寄存器作为返回值，如果是表达式就计算出表达式的值，因为表达式的结果默认就在AX中，所以可以直接作为返回值。最后以RET指令跳出脚本函数。
+	if(nodes[nodenum].childs.count == 1) //return关键字后面跟的是要返回的值，如果是变量标识符或数字或字符串，就直接将变量,数字,字符串的值赋值给AX寄存器作为返回值，如果是表达式就计算出表达式的值，因为表达式的结果默认就在AX中，所以可以直接作为返回值。最后以RET指令或RETURN指令结束脚本函数。
 	{
 		loopStackTop->state = state;
-		//chnum = nodes[nodenum].childs.childnum;
-		if(chnum[0] == -1) //当子节点为-1，如return;语句，return后没有表达式，所以子节点为-1，就需要在此处跳过，否则下面数组访问-1的索引就会出现内存错误。
-			;
+		if(chnum[0] == -1) // 当子节点为-1，如return;语句，return后没有表达式，此时，就输出RET指令，对于RET指令，AX寄存器的值即返回的结果会是整数0
+		{
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_RET,ZL_R_DT_NONE,0,
+				ZL_R_DT_NONE,0); //对应汇编指令 "RET"
+		}
 		else
 		{
 			switch(nodes[chnum[0]].toktype) //以下为对第一个子节点的判断并输出相应的汇编代码，结果储存在AX寄存器中。
@@ -2516,7 +2519,6 @@ static ZENGL_STATES zengl_AsmGenCode_Return(ZL_VOID * VM_ARG, ZENGL_STATES state
 			default:
 				if(ZENGL_AST_ISTOKEXPRESS(chnum[0]))
 				{
-					//compile->AsmGenCodes(VM_ARG,chnum[0]); // TODO
 					loopStackTop->nodenum = -2;
 					zengl_AsmGCLoopStackPush(VM_ARG, chnum[0], ZL_ST_START); // 将chnum[0]压入栈，返回后会对chnum[0]对应的节点执行生成汇编指令的操作
 					return ZL_ST_START;
@@ -2534,11 +2536,10 @@ finish_express:
 				}
 				break;
 			} //switch(nodes[chnum[0]].toktype)
-		} //else
-		run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
-			ZL_R_IT_RET,ZL_R_DT_NONE,0,
-			ZL_R_DT_NONE,0); //对应汇编指令 "RET"
-		//state = ZL_ST_DOWN; // TODO
+			run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
+				ZL_R_IT_RETURN,ZL_R_DT_NONE,0,
+				ZL_R_DT_NONE,0); //对应汇编指令 "RETURN"，对于RETURN指令，解释器会保留AX寄存器的值，该寄存器的值也就是函数的返回值，不会像RET指令那样，将其重置为0
+		} // if(chnum[0] == -1) ...else ...
 		return zengl_AsmGCLoopStackFinishTop(VM_ARG, orig_nodenum);
 	}
 	else

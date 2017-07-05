@@ -20,6 +20,10 @@ typedef struct{
 	int cur;
 }ReadStr_Type; //字符串动态数组，用于存放用户从终端输入的信息
 
+typedef struct _MAIN_DATA{
+	ZENGL_EXPORT_MEMBLOCK extra_memblock; // 测试用的数组之类的内存块
+} MAIN_DATA; // 传递给zengl脚本的测试用的额外数据
+
 FILE * debuglog;
 ReadStr_Type ReadStr;
 int random_seed=0;
@@ -895,6 +899,41 @@ ZL_EXP_VOID main_builtin_get_extraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,(ZL_EXP_CHAR *)zenglApi_GetExtraData(VM_ARG,extraName),0,0);
 }
 
+/*bltGetExtraArray模块函数，获取测试用的哈希数组(如果不存在则创建该数组)，如果已经存在则直接返回该数组*/
+ZL_EXP_VOID main_builtin_get_extraArray(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	MAIN_DATA * my_data = zenglApi_GetExtraData(VM_ARG, "my_data");
+
+	// 如果没有创建过哈希数组，则创建哈希数组，并用字符串作为key设置数组成员，由于下面是根据ptr是否等于NULL来判断是否创建过的，
+	// 因此，需要在脚本执行前，事先将ptr的值显示的设置为NULL，否则，如果my_data的来源是局部变量的话，ptr的默认初始值就不会是NULL
+	if(my_data->extra_memblock.ptr == ZL_EXP_NULL) {
+		if(zenglApi_CreateMemBlock(VM_ARG,&my_data->extra_memblock,0) == -1) {
+			zenglApi_Exit(VM_ARG,zenglApi_GetErrorString(VM_ARG));
+		}
+		// 手动增加该内存块的引用计数值，使其能够在脚本执行的整个生命周期中都一直存在，而不会被释放掉
+		// 当数组之类的内存块在脚本函数中被赋值给局部变量后，在脚本函数返回时，会释放掉所有局部变量对应的内存块(除非某个局部变量被return返回)，
+		// 通过手动增加内存块的引用计数值，这样，脚本函数返回时，内存块的引用计数值就不会被减为0，也就不会被释放掉
+		zenglApi_AddMemBlockRefCount(VM_ARG,&my_data->extra_memblock,1); 
+
+		arg.type = ZL_EXP_FAT_STR;
+		arg.val.str = "zengl";
+		// 使用zenglApi_SetMemBlockByHashKey接口将字符串作为key设置哈希数组的成员
+		zenglApi_SetMemBlockByHashKey(VM_ARG, &my_data->extra_memblock, "name", &arg);
+
+		arg.type = ZL_EXP_FAT_STR;
+		arg.val.str = "programmer";
+		zenglApi_SetMemBlockByHashKey(VM_ARG, &my_data->extra_memblock, "job", &arg);
+		
+		// 将创建的哈希数组作为结果返回
+		zenglApi_SetRetValAsMemBlock(VM_ARG,&my_data->extra_memblock);
+	}
+	else {
+		// 如果之前已经创建过哈希数组，就直接将该数组返回
+		zenglApi_SetRetValAsMemBlock(VM_ARG,&my_data->extra_memblock);
+	}
+}
+
 /*debug调试模块函数*/
 ZL_EXP_VOID main_builtin_debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
@@ -942,6 +981,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraArray",main_builtin_get_extraArray);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"debug",main_builtin_debug);
 }
 
@@ -1179,6 +1219,7 @@ int main(int argc,char * argv[])
 		"print 'a-b is '+(a-b); \n"
 		"bltLoadScript('test3.zl'); \n"; //行尾设置\n换行符这样查找语法错误时，方便定位行号信息
 	int run_str_len = strlen(run_str);
+	MAIN_DATA my_data; // 测试用的额外数据
 	ZL_EXP_INT builtinID,sdlID;
 	ZL_EXP_VOID * VM;
 
@@ -1213,6 +1254,12 @@ int main(int argc,char * argv[])
 
 	if(zenglApi_SetExtraData(VM,"val","my val is zengl too") == -1)
 		main_exit(VM,"设置额外数据失败:%s",zenglApi_GetErrorString(VM));
+
+	my_data.extra_memblock.ptr = ZL_EXP_NULL; // 将ptr的初始值设置为NULL(空指针)
+	my_data.extra_memblock.index = 0;
+
+	if(zenglApi_SetExtraData(VM,"my_data",&my_data) == -1)
+		main_exit(VM,"设置额外数据my_data失败:%s",zenglApi_GetErrorString(VM));
 
 	//zenglApi_SetSourceRC4Key(VM,rc4_key_str,rc4_key_len);
 

@@ -1,0 +1,13 @@
+use builtin;
+
+e = bltGetExtraArray();
+print e['name'] + ': ' + e['job'];
+
+SetExtraArray();
+
+print e['name'] + ': ' + e['job'];
+
+fun SetExtraArray()
+	b = bltGetExtraArray();
+	b['job'] = 'play game';
+endfun

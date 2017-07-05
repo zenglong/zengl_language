@@ -850,6 +850,7 @@ typedef enum _ZENGL_RUN_INST_TYPE{
 	ZL_R_IT_ARG_SET,		//ARG_SET指令
 	ZL_R_IT_PUSH_LOC,		//PUSH_LOC指令
 	ZL_R_IT_RET,			//RET指令
+	ZL_R_IT_RETURN,			//RETURN指令
 	ZL_R_IT_RESET,			//RESET指令
 	ZL_R_IT_CALL,			//CALL指令
 	ZL_R_IT_USE,			//USE指令

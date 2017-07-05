@@ -410,6 +410,7 @@ ZL_CONST ZL_CHAR * ZL_Run_Inst_Type_String[] = {
 	"ARG_SET",			//ZL_R_IT_ARG_SET
 	"PUSH_LOC",			//ZL_R_IT_PUSH_LOC
 	"RET",				//ZL_R_IT_RET
+	"RETURN",			//ZL_R_IT_RETURN
 	"RESET",			//ZL_R_IT_RESET
 	"CALL",				//ZL_R_IT_CALL
 	"USE",				//ZL_R_IT_USE
