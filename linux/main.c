@@ -836,6 +836,42 @@ ZL_EXP_VOID main_builtin_test_addr(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	zenglApi_SetFunArg(VM_ARG,1,&arg);
 }
 
+/*bltTestPrintByArrayKey模块函数(仅供测试)，用于测试zenglApi_GetMemBlockByHashKey接口函数*/
+ZL_EXP_VOID main_builtin_test_print_by_array_key(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZENGL_EXPORT_MEMBLOCK memblock = {0};
+	if(argcount != 2)
+		zenglApi_Exit(VM_ARG,"usage:bltTestPrintByArrayKey(array, key)");
+	zenglApi_GetFunArg(VM_ARG,1,&arg);
+	if(arg.type != ZL_EXP_FAT_MEMBLOCK)
+		zenglApi_Exit(VM_ARG,"bltTestPrintByArrayKey函数的第一个参数必须是哈希数组");
+	memblock = arg.val.memblock;
+	zenglApi_GetFunArg(VM_ARG,2,&arg);
+	if(arg.type != ZL_EXP_FAT_STR)
+		zenglApi_Exit(VM_ARG,"bltTestPrintByArrayKey函数的第二个参数必须是字符串，表示数组中的key");
+	// 通过zenglApi_GetMemBlockByHashKey接口，实现在模块函数中，根据字符串key来获取数组的成员
+	ZENGL_EXPORT_MOD_FUN_ARG mblk_val = zenglApi_GetMemBlockByHashKey(VM_ARG, &memblock, arg.val.str);
+	switch(mblk_val.type)
+	{
+	case ZL_EXP_FAT_INT:
+		printf("%ld\n", mblk_val.val.integer);
+		break;
+	case ZL_EXP_FAT_FLOAT:
+		printf("%.16g\n", mblk_val.val.floatnum);
+		break;
+	case ZL_EXP_FAT_STR:
+		printf("%s\n", mblk_val.val.str);
+		break;
+	case ZL_EXP_FAT_MEMBLOCK:
+		main_print_array(VM_ARG, mblk_val.val.memblock, 0);
+		break;
+	default:
+		zenglApi_Exit(VM_ARG,"bltTestPrintByArrayKey函数检测到无效的类型");
+		break;
+	}
+}
+
 /*bltSetArray模块函数，使用第2个，第3个等参数来设置第一个参数对应的数组中的元素*/
 ZL_EXP_VOID main_builtin_set_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
@@ -977,6 +1013,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltIntToStr",zenglApiBMF_bltIntToStr);  //使用虚拟机zenglApi_BltModFuns.c中定义的bltIntToStr
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltPrintArray",main_builtin_print_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestAddr",main_builtin_test_addr);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestPrintByArrayKey",main_builtin_test_print_by_array_key);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
