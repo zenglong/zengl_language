@@ -25,7 +25,7 @@
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
 #define ZL_EXP_MINOR_VERSION 7 //zengl子版本号
-#define ZL_EXP_REVISION 1      //zengl修正版本号
+#define ZL_EXP_REVISION 2      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
@@ -207,6 +207,9 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetMemBlockByHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EX
 
 /*获取数组等内存块中的index - 1索引处的元素，index参数为1表示数组等内存块的第一个元素，以此类推*/
 ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_INT index);
+
+/*根据key来获取数组等内存块中的成员，此接口会先将key转为索引值，再根据索引值和上面的zenglApi_GetMemBlock接口来返回对应的成员*/
+ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlockByHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_CHAR * key);
 
 /*获取第argnum个参数的类型等信息，argnum从1开始表示第一个参数，之前的GetFunArg函数只能获取参数的值，如果参数是引用，则直接获取引用的变量的值，
 所以无法知道参数的类型信息，比如无法知道某个参数是否是引用等类型，该函数则可以获取到这些信息，如果参数不是引用类型，则这两个函数等价*/

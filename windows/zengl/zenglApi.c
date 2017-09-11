@@ -1671,6 +1671,32 @@ ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlock(ZL_EXP_VOID * VM_ARG,ZEN
 	return retval;
 }
 
+/*根据key来获取数组等内存块中的成员，此接口会先将key转为索引值，再根据索引值和上面的zenglApi_GetMemBlock接口来返回对应的成员*/
+ZL_EXPORT ZENGL_EXPORT_MOD_FUN_ARG zenglApi_GetMemBlockByHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock,ZL_EXP_CHAR * key)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_EXPORT_MOD_FUN_ARG retval = {0};
+	ZL_INT index;
+	ZL_CHAR * ApiName = "zenglApi_GetMemBlockByHashKey";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+	{
+		retval.type = ZL_EXP_FAT_INVALID;
+		return retval;
+	}
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		retval.type = ZL_EXP_FAT_INVALID;
+		return retval;
+		break;
+	}
+	index = zenglrun_getIndexFromHashCodeTable(VM_ARG, (ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->ptr, key);
+	return zenglApi_GetMemBlock(VM_ARG, memblock, index + 1);
+}
+
 /*获取第argnum个参数的类型等信息，argnum从1开始表示第一个参数，之前的GetFunArg函数只能获取参数的值，如果参数是引用，则直接递归获取引用的变量的值，
 所以无法知道参数的类型信息，比如无法知道某个参数是否是引用等类型，该函数则可以获取到这些信息，如果参数不是引用类型，则这两个函数等价*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetFunArgInfo(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argnum,ZENGL_EXPORT_MOD_FUN_ARG * retval)

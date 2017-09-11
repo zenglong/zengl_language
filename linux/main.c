@@ -841,6 +841,7 @@ ZL_EXP_VOID main_builtin_test_print_by_array_key(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT
 {
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
 	ZENGL_EXPORT_MEMBLOCK memblock = {0};
+	ZENGL_EXPORT_MOD_FUN_ARG mblk_val = {ZL_EXP_FAT_NONE,{0}};
 	if(argcount != 2)
 		zenglApi_Exit(VM_ARG,"usage:bltTestPrintByArrayKey(array, key)");
 	zenglApi_GetFunArg(VM_ARG,1,&arg);
@@ -851,7 +852,7 @@ ZL_EXP_VOID main_builtin_test_print_by_array_key(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT
 	if(arg.type != ZL_EXP_FAT_STR)
 		zenglApi_Exit(VM_ARG,"bltTestPrintByArrayKey函数的第二个参数必须是字符串，表示数组中的key");
 	// 通过zenglApi_GetMemBlockByHashKey接口，实现在模块函数中，根据字符串key来获取数组的成员
-	ZENGL_EXPORT_MOD_FUN_ARG mblk_val = zenglApi_GetMemBlockByHashKey(VM_ARG, &memblock, arg.val.str);
+	mblk_val = zenglApi_GetMemBlockByHashKey(VM_ARG, &memblock, arg.val.str);
 	switch(mblk_val.type)
 	{
 	case ZL_EXP_FAT_INT:
