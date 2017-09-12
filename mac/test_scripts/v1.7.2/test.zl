@@ -1,0 +1,16 @@
+use builtin;
+
+a['name'] = 'zengl';
+a['job'] = 'programmer';
+a['hobby'] = array('play game', 'watch movie', 'write code');
+
+print '\nmy name:';
+bltTestPrintByArrayKey(a, 'name');
+
+print '\nmy job:';
+bltTestPrintByArrayKey(a, 'job');
+
+print '\nmy hobby:';
+bltTestPrintByArrayKey(a, 'hobby');
+print '';
+
