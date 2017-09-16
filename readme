@@ -1,3 +1,9 @@
+  v1.7.2 增加zenglApi_GetMemBlockByHashKey接口函数，通过此接口，可以在模块函数内根据字符串key来获取数组中的成员，测试脚本：test_scripts/v1.7.2/test.zl
+
+  作者：zenglong
+  时间：2017年9月16日
+  官网：www.zengl.com
+
   v1.7.1 添加RETURN汇编指令，修复从脚本函数返回数组时可能会报的内存错误，增加两个与哈希数组相关的API接口函数
 
   从该版本开始，RET指令会将AX寄存器的值(即函数的返回值)重置为0，因此，如果没有使用return明确返回某个值时，脚本函数的返回值默认是0，
