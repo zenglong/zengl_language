@@ -256,6 +256,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_VM_API_INVALID_MEMBLOCK_ARG_IN_SET_RETVAL,	//解释器运行时错误：SetRetValAsMemBlock接口中memblock参数无效，不可为空指针
 	ZL_ERR_VM_API_INVALID_ARGNUM_ARG_IN_SET_FUN_ARG,	//解释器运行时错误：SetFunArg接口中argnum参数无效
 	ZL_ERR_VM_API_INVALID_MEMBLOCK_ARG_IN_GET_MEM_BLOCK_SIZE,		//解释器运行时错误：GetMemBlockSize接口中memblock参数无效，不可为空指针
+	ZL_ERR_VM_API_INVALID_MEMBLOCK_ARG_IN_GET_MEM_BLOCK_NNCOUNT,	//解释器运行时错误：GetMemBlockNNCount接口中memblock参数无效，不可为空指针
 	ZL_ERR_VM_API_INIT_EXTRA_DATA_TABLE_FAILED,	//解释器运行时错误：用户额外数据动态数组分配内存初始化失败
 	ZL_ERR_VM_API_CAN_NOT_FIND_NOT_VALID_INDEX_IN_EXTRA_DATA_TABLE,	//解释器运行时错误：额外数据表中无法找到没被占用的索引，无法完成添加工作
 	ZL_ERR_VM_API_INVALID_EXTRA_DATA_NAME_OR_POINT,		//解释器运行时错误：额外数据名称或对应的指针为空

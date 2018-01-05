@@ -133,6 +133,7 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemListOps(ZL_VOID * VM_ARG,ZENGL_RUN_VME
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT retmem = argval;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runType;
 	ZL_VOID ** tmptr;
 	ZL_INT len;
 	if(!run->vmem_list.isInit)
@@ -178,6 +179,7 @@ realloc:
 			run->vmem_list.mem_array[memloc].val.memblock = ZL_NULL;
 	}
 
+	orig_runType = run->vmem_list.mem_array[memloc].runType;
 	switch(opType) //执行不同的内存操作
 	{
 	case ZL_R_VMOPT_SETMEM_INT: //SETMEM的操作侧重于设置，而非添加
@@ -189,6 +191,9 @@ realloc:
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
 		}
+		// 如果之前是NONE类型，即内存块成员由NONE类型变为非NONE类型时，需要将nncount(非NONE成员数)加一
+		if(orig_runType == ZL_R_RDT_NONE)
+			run->vmem_list.nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_DOUBLE:
 	case ZL_R_VMOPT_ADDMEM_DOUBLE: //设置memloc位置的内存值为浮点数
@@ -199,6 +204,8 @@ realloc:
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			run->vmem_list.nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_STR:
 	case ZL_R_VMOPT_ADDMEM_STR: //设置memloc位置的内存值为字符串
@@ -214,6 +221,8 @@ realloc:
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			run->vmem_list.nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_MEMBLOCK:
 	case ZL_R_VMOPT_ADDMEM_MEMBLOCK: //设置memloc位置的内存为内存块
@@ -225,6 +234,8 @@ realloc:
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			run->vmem_list.nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_ADDR:
 	case ZL_R_VMOPT_ADDMEM_ADDR: //将memloc内存设置为另一个内存的引用
@@ -240,6 +251,8 @@ realloc:
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			run->vmem_list.nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_NONE:
 	case ZL_R_VMOPT_ADDMEM_NONE: //将memloc内存设置为未初始化状态
@@ -248,6 +261,12 @@ realloc:
 		{
 			run->vmem_list.count++;
 			run->vmem_list.mem_array[memloc].isvalid = ZL_TRUE;
+		}
+		// 当内存块成员从非NONE类型变为NONE类型时，将nncount(非NONE成员数)减一
+		if(orig_runType != ZL_R_RDT_NONE) {
+			run->vmem_list.nncount--;
+			if(run->vmem_list.nncount < 0)
+				run->vmem_list.nncount = 0;
 		}
 		break;
 	case ZL_R_VMOPT_GETMEM: //获取memloc位置的内存值。
@@ -1904,6 +1923,7 @@ ZL_VOID zenglrun_op_set_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_LIST * ptr;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runtype;
 	ZL_INT argcount,index,ptrIndex,i;
 	ZENGL_RUN_VMEM_OP_GET(ZL_R_CUR_INST.src.type,(*tmpmem),src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
 	if(tmpmem->val.memblock == ZL_NULL)
@@ -1930,9 +1950,17 @@ ZL_VOID zenglrun_op_set_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
 			if(ptr->mem_array[index].val.memblock == ZL_NULL)
 			{
+				orig_runtype = ptr->mem_array[index].runType;
 				ptr->mem_array[index].runType = ZL_R_RDT_MEM_BLOCK;
 				run->assign_memblock(VM_ARG,&(ptr->mem_array[index].val.memblock) ,
 					run->alloc_memblock(VM_ARG,&ptr->mem_array[index].memblk_Index));
+				// 在对内存块的成员进行了相关设置后，需要相应的调整内存块的count和nncount的值
+				if(ptr->mem_array[index].isvalid == ZL_FALSE) {
+					ptr->count++;
+					ptr->mem_array[index].isvalid = ZL_TRUE;
+				}
+				if(orig_runtype == ZL_R_RDT_NONE)
+					ptr->nncount++;
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}
@@ -1963,8 +1991,10 @@ ZENGL_RUN_VIRTUAL_MEM_LIST * zenglrun_alloc_memblock(ZL_VOID * VM_ARG,ZL_INT * i
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_LIST * ptr;
 	ptr = (ZENGL_RUN_VIRTUAL_MEM_LIST *)run->memAlloc(VM_ARG,sizeof(ZENGL_RUN_VIRTUAL_MEM_LIST),index);
+	ptr->isInit = ZL_TRUE;
 	ptr->size = ZL_R_MEM_BLOCK_SIZE;
 	ptr->count = 0;
+	ptr->nncount = 0;
 	ptr->refcount = 0;
 	ptr->mem_array = (ZENGL_RUN_VIRTUAL_MEM_STRUCT *)run->memAlloc(VM_ARG,ptr->size * sizeof(ZENGL_RUN_VIRTUAL_MEM_STRUCT),&ptr->mempool_index);
 	if(ptr->mem_array == ZL_NULL)
@@ -2108,6 +2138,7 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 												   ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runType;
 	ZL_INT len;
 	ZL_VOID ** tmptr;
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT retmem = (*tmpmem);
@@ -2143,6 +2174,7 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->mem_array[index].val.memblock = ZL_NULL;
 		}
 	}
+	orig_runType = ptr->mem_array[index].runType;
 	switch(op)
 	{
 	case ZL_R_VMOPT_SETMEM_INT: //将数组元素设为整数
@@ -2154,6 +2186,9 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
 		}
+		// 如果之前是NONE类型，即内存块成员由NONE类型变为非NONE类型时，需要将nncount(非NONE成员数)加一
+		if(orig_runType == ZL_R_RDT_NONE)
+			ptr->nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_DOUBLE: //将数组元素设为浮点数
 	case ZL_R_VMOPT_ADDMEM_DOUBLE:
@@ -2164,6 +2199,8 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			ptr->nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_STR: //将数组元素设为字符串
 	case ZL_R_VMOPT_ADDMEM_STR:
@@ -2178,6 +2215,8 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			ptr->nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_MEMBLOCK: //将数组元素设为一个新的数组
 	case ZL_R_VMOPT_ADDMEM_MEMBLOCK:
@@ -2189,6 +2228,8 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			ptr->nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_ADDR: //将数组元素设为另一个内存元素的引用。
 	case ZL_R_VMOPT_ADDMEM_ADDR:
@@ -2204,6 +2245,8 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
 		}
+		if(orig_runType == ZL_R_RDT_NONE)
+			ptr->nncount++;
 		break;
 	case ZL_R_VMOPT_SETMEM_NONE: //将数组元素设为未初始化状态
 	case ZL_R_VMOPT_ADDMEM_NONE:
@@ -2212,6 +2255,12 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 		{
 			ptr->count++;
 			ptr->mem_array[index].isvalid = ZL_TRUE;
+		}
+		// 当内存块成员从非NONE类型变为NONE类型时，将nncount(非NONE成员数)减一
+		if(orig_runType != ZL_R_RDT_NONE) {
+			ptr->nncount--;
+			if(ptr->nncount < 0)
+				ptr->nncount = 0;
 		}
 		break;
 	case ZL_R_VMOPT_GETMEM: //获取数组元素的值。
@@ -2261,6 +2310,7 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_LIST * ptr;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runtype;
 	ZL_INT argcount,index,ptrIndex,i;
 	ZENGL_RUN_VMEM_OP_GET(ZL_R_CUR_INST.src.type,(*tmpmem),src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
 	if(tmpmem->val.memblock == ZL_NULL)
@@ -2287,9 +2337,17 @@ ZL_VOID zenglrun_op_get_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT * tm
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
 			if(ptr->mem_array[index].val.memblock == ZL_NULL)
 			{
+				orig_runtype = ptr->mem_array[index].runType;
 				ptr->mem_array[index].runType = ZL_R_RDT_MEM_BLOCK;
 				run->assign_memblock(VM_ARG,&(ptr->mem_array[index].val.memblock) ,
 					run->alloc_memblock(VM_ARG,&ptr->mem_array[index].memblk_Index));
+				// 在对内存块的成员进行了相关设置后，需要相应的调整内存块的count和nncount的值
+				if(ptr->mem_array[index].isvalid == ZL_FALSE) {
+					ptr->count++;
+					ptr->mem_array[index].isvalid = ZL_TRUE;
+				}
+				if(orig_runtype == ZL_R_RDT_NONE)
+					ptr->nncount++;
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}
@@ -2347,6 +2405,7 @@ ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_LIST * ptr;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runtype;
 	ZL_INT argcount,index,ptrIndex,i;
 	ZENGL_RUN_VMEM_OP_GET(ZL_R_CUR_INST.src.type,(*tmpmem),src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
 	if(tmpmem->val.memblock == ZL_NULL)
@@ -2376,9 +2435,17 @@ ZL_VOID zenglrun_op_get_array_addr(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_STRUCT
 			ptr = run->realloc_memblock(VM_ARG,ptr,index);
 			if(ptr->mem_array[index].val.memblock == ZL_NULL)
 			{
+				orig_runtype = ptr->mem_array[index].runType;
 				ptr->mem_array[index].runType = ZL_R_RDT_MEM_BLOCK;
 				run->assign_memblock(VM_ARG,&(ptr->mem_array[index].val.memblock) ,
 					run->alloc_memblock(VM_ARG,&ptr->mem_array[index].memblk_Index));
+				// 在对内存块的成员进行了相关设置后，需要相应的调整内存块的count和nncount的值
+				if(ptr->mem_array[index].isvalid == ZL_FALSE) {
+					ptr->count++;
+					ptr->mem_array[index].isvalid = ZL_TRUE;
+				}
+				if(orig_runtype == ZL_R_RDT_NONE)
+					ptr->nncount++;
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 			ptrIndex = ptr->mem_array[index].memblk_Index;
@@ -2405,6 +2472,7 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
 	ZENGL_RUN_VIRTUAL_MEM_LIST * ptr;
+	ZENGL_RUN_RUNTIME_OP_DATA_TYPE orig_runtype;
 	ZL_INT argcount,index,ptrIndex,i;
 	ZENGL_RUN_VMEM_OP_GET(ZL_R_CUR_INST.src.type,(*tmpmem),src,ZL_ERR_RUN_INVALID_VMEM_TYPE)
 	if(tmpmem->val.memblock == ZL_NULL) //如果没分配过内存块则通过alloc_memblock为其分配内存块
@@ -2431,9 +2499,17 @@ ZL_VOID zenglrun_op_addminis_one_array(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_ST
 			ptr = run->realloc_memblock(VM_ARG,ptr,index); //默认分配的内存块并不大，当index索引超过内存块大小时，就需要动态分配内存块以满足index索引的需求
 			if(ptr->mem_array[index].val.memblock == ZL_NULL) //如果此维度没有分配过内存块则alloc_memblock为其分配内存块，同时通过assign_memblock来增加内存块的引用计数
 			{
+				orig_runtype = ptr->mem_array[index].runType;
 				ptr->mem_array[index].runType = ZL_R_RDT_MEM_BLOCK;
 				run->assign_memblock(VM_ARG,&(ptr->mem_array[index].val.memblock) ,
 					run->alloc_memblock(VM_ARG,&ptr->mem_array[index].memblk_Index));
+				// 在对内存块的成员进行了相关设置后，需要相应的调整内存块的count和nncount的值
+				if(ptr->mem_array[index].isvalid == ZL_FALSE) {
+					ptr->count++;
+					ptr->mem_array[index].isvalid = ZL_TRUE;
+				}
+				if(orig_runtype == ZL_R_RDT_NONE)
+					ptr->nncount++;
 			}
 			ptr = ptr->mem_array[index].val.memblock;
 		}

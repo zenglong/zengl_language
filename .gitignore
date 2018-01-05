@@ -1,3 +1,16 @@
+################
+## custom
+###############
+
+zengl
+encrypt
+encrypt.o
+main.o
+libzengl.so
+
+libzengl.dylib
+libzengl.dylib.dSYM
+
 #################
 ## Eclipse
 #################

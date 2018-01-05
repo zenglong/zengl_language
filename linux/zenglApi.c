@@ -1999,6 +1999,32 @@ ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockInfo(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_
 	return 0;
 }
 
+/*获取内存块中非NONE成员的数量*/
+ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockNNCount(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_RUN_VIRTUAL_MEM_LIST * tmpMemBlock;
+	ZL_CHAR * ApiName = "zenglApi_GetMemBlockNNCount";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_MOD_FUN_HANDLE:
+	case ZL_API_ST_DEBUG_HANDLE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	run = &VM->run;
+	if(memblock == ZL_NULL)
+		run->exit(VM_ARG,ZL_ERR_VM_API_INVALID_MEMBLOCK_ARG_IN_GET_MEM_BLOCK_NNCOUNT);
+	tmpMemBlock = (ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->ptr;
+	return tmpMemBlock->nncount;
+}
+
 /*根据索引值，从哈希表中获取对应的字符串key*/
 ZL_EXPORT ZL_EXP_INT zenglApi_GetMemBlockHashKey(ZL_EXP_VOID * VM_ARG,ZENGL_EXPORT_MEMBLOCK * memblock, ZL_EXP_INT memblock_index, ZL_EXP_CHAR ** key)
 {

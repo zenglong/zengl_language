@@ -873,6 +873,22 @@ ZL_EXP_VOID main_builtin_test_print_by_array_key(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT
 	}
 }
 
+/*bltGetArrayNNCount模块函数，获取数组之类的内存块中有多少个非NONE类型的成员*/
+ZL_EXP_VOID main_builtin_get_array_nncount(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	ZENGL_EXPORT_MEMBLOCK memblock = {0};
+	ZL_EXP_INT nncount;
+	if(argcount != 1)
+		zenglApi_Exit(VM_ARG,"usage:bltGetArrayNNCount(array)");
+	zenglApi_GetFunArg(VM_ARG,1,&arg);
+	if(arg.type != ZL_EXP_FAT_MEMBLOCK)
+		zenglApi_Exit(VM_ARG,"bltGetArrayNNCount函数的第一个参数必须是数组");
+	memblock = arg.val.memblock;
+	nncount = zenglApi_GetMemBlockNNCount(VM_ARG, &memblock);
+	zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, nncount, 0);
+}
+
 /*bltSetArray模块函数，使用第2个，第3个等参数来设置第一个参数对应的数组中的元素*/
 ZL_EXP_VOID main_builtin_set_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
@@ -1015,6 +1031,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltPrintArray",main_builtin_print_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestAddr",main_builtin_test_addr);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestPrintByArrayKey",main_builtin_test_print_by_array_key);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetArrayNNCount",main_builtin_get_array_nncount);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);

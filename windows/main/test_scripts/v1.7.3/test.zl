@@ -1,0 +1,13 @@
+use builtin;
+
+a[3] = 'hello world!';
+a[5] = 'good morning!!';
+a[7] = 'welcome to here!!!';
+a[9] = 'good luck to you!!!!';
+a[12] = 'god bless you!!!!!';
+
+print 'a\'s Non-NONE value count: ' + bltGetArrayNNCount(a);
+print '';
+
+bltPrintArray(a);
+

@@ -1030,6 +1030,7 @@ typedef struct _ZENGL_RUN_VIRTUAL_MEM_LIST{
 	ZL_BOOL isInit;
 	ZL_INT size;
 	ZL_INT count;
+	ZL_INT nncount; //(Non-NONE value count): 统计数组之类的内存块中有多少个非NONE类型的成员
 	ZL_INT refcount; //内存块的引用计数，主要用于数组之类的动态分配的内存块。
 	ZL_INT mempool_index; //下面的mem_array指针在内存池中的索引
 	ZENGL_RUN_VIRTUAL_MEM_STRUCT * mem_array;
