@@ -117,6 +117,10 @@ typedef clock_t ZL_CLOCK_T;
 #define ZENGL_SYS_ARG_START va_start //可变参数起始地址
 #define ZENGL_SYS_ARG_GET  va_arg  //获取可变参数值
 #define ZENGL_SYS_ARG_END va_end //结束可变参数列表定义
+#ifndef va_copy
+	#define va_copy(dst, src)   memcpy(&(dst), &(src), sizeof(va_list))
+#endif
+#define ZENGL_SYS_ARG_COPY va_copy
 /*宏定义结束*/
 
 #endif/* _ZENGL_GLOBAL_HEADER_H_ */
