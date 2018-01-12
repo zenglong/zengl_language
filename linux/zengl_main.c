@@ -1662,6 +1662,11 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 		compile->buildAsmCode(VM_ARG);	//组建汇编代码
 		compile->LDAddrListReplaceAll(VM_ARG); //将所有的伪地址替换为真实的汇编代码位置，从而完成链接工作	
 
+		if(compile->errorFullString.str != ZL_NULL && compile->errorFullString.count > 0)
+		{
+			compile->exit(VM_ARG, ZL_ERR_RUN_ERROR_EXIT_WHEN_IN_COMPILE);
+		}
+
 end:
 
 		if((VM->vm_main_args->flags & isNeedDebugInfo) == isNeedDebugInfo) //用户自定义的调试模式下

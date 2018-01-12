@@ -563,7 +563,7 @@ ZL_INT zenglrun_InstDataStringPoolAdd(ZL_VOID * VM_ARG , ZL_CHAR * src)
 	if(src == ZL_NULL)
 		return -1;
 	len = ZENGL_SYS_STRLEN(src);
-	if(run->InstData_StringPool.count == run->InstData_StringPool.size ||
+	while(run->InstData_StringPool.count >= run->InstData_StringPool.size ||
 		run->InstData_StringPool.count + len + 1 > run->InstData_StringPool.size)
 	{
 		run->InstData_StringPool.size += ZL_R_INST_DATA_STRING_POOL_SIZE;

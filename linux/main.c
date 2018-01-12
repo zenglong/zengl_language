@@ -908,6 +908,20 @@ ZL_EXP_VOID main_builtin_set_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	}
 }
 
+/*bltGetStrLen获取字符串长度*/
+ZL_EXP_VOID main_builtin_get_str_len(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	int str_len;
+	if(argcount < 1)
+		zenglApi_Exit(VM_ARG,"usage: bltGetStrLen(str)");
+	zenglApi_GetFunArg(VM_ARG,1,&arg); //得到第一个参数
+	if(arg.type != ZL_EXP_FAT_STR)
+		zenglApi_Exit(VM_ARG,"bltGetStrLen函数的第一个参数必须是字符串");
+	str_len = strlen(arg.val.str);
+	zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, str_len, 0);
+}
+
 ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG);
 
 /*bltLoadScript模块函数，新建一个虚拟机，加载并执行某个脚本*/
@@ -1033,6 +1047,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltTestPrintByArrayKey",main_builtin_test_print_by_array_key);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetArrayNNCount",main_builtin_get_array_nncount);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetStrLen",main_builtin_get_str_len);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);
