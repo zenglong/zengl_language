@@ -120,7 +120,7 @@ typedef clock_t ZL_CLOCK_T;
 #ifndef va_copy
 	#define va_copy(dst, src)   memcpy(&(dst), &(src), sizeof(va_list))
 #endif
-#define ZENGL_SYS_ARG_COPY va_copy
+#define ZENGL_SYS_ARG_COPY va_copy // 拷贝可变参数列表，主要用于64位系统中的GCC和clang
 /*宏定义结束*/
 
 #endif/* _ZENGL_GLOBAL_HEADER_H_ */

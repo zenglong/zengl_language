@@ -1518,6 +1518,14 @@ ZL_CHAR * zengl_makeInfoString(ZL_VOID * VM_ARG,ZENGL_INFO_STRING_TYPE * infoStr
 	}
 	do
 	{
+		// 在64位系统中, GCC和clang会将va_list指向某种特殊的结构，该结构中存储了可变参数位置信息，
+		// 直接将va_list传递给vsnprintf的话，相当于将特殊结构的指针传递过去，vsnprintf根据指针，会修改该结构指向的参数位置，那么下一次再次执行
+		// vsnprintf时，虽然va_list指针没变化，但是va_list对应的结构，实际指向的可能是一个无效的参数。因此，需要先使用va_copy生成一个拷贝，
+		// 再将va_list的拷贝(包含了特殊结构的拷贝)传递给vsnprintf，
+		// 32位系统，不需要va_copy也可以正常工作，因为32位系统中的va_list是一个简单的栈指针，直接指向了可变参数位置，
+		// 32位中，va_list传递给vsnprintf时，本身就是以栈指针拷贝的方式传递的，所以32位系统中没有va_copy也可以正常工作，
+		// 不过，为了让代码能够在32位和64位中都正常运作，就统一使用va_copy的方式来处理，在VS2008之类的没有
+		// va_copy的环境中，会将va_copy定义为memcpy
 		ZENGL_SYS_ARG_COPY(tmp_arglist, arglist);
 		retcount = ZENGL_SYS_SPRINTF_ARG_NUM((infoStringPtr->str + infoStringPtr->cur),
 			(infoStringPtr->size - infoStringPtr->count),format,tmp_arglist);
@@ -1662,6 +1670,11 @@ ZL_INT zengl_main(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_AR
 		compile->buildAsmCode(VM_ARG);	//组建汇编代码
 		compile->LDAddrListReplaceAll(VM_ARG); //将所有的伪地址替换为真实的汇编代码位置，从而完成链接工作	
 
+		/**
+		 * 在编译过程中，如果调用了解释器的函数时，例如buildAsmCode组建汇编代码，向解释器写入虚拟汇编指令时
+		 * 如果发生错误，是不会立即退出的，只会将错误信息写入到errorFullString中，因此，这里，如果检测到
+		 * 错误，就退出编译器，并将错误信息传递给用户自定义函数(如果定义了的话)
+		 */
 		if(compile->errorFullString.str != ZL_NULL && compile->errorFullString.count > 0)
 		{
 			compile->exit(VM_ARG, ZL_ERR_RUN_ERROR_EXIT_WHEN_IN_COMPILE);

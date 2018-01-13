@@ -908,7 +908,7 @@ ZL_EXP_VOID main_builtin_set_array(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	}
 }
 
-/*bltGetStrLen获取字符串长度*/
+/*bltGetStrLen模块函数，获取字符串长度*/
 ZL_EXP_VOID main_builtin_get_str_len(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
 	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
