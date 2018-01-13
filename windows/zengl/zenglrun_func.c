@@ -473,17 +473,28 @@ ZL_CHAR * zenglrun_SetApiError(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno ,ZENGL_SYS
 ZL_CHAR * zenglrun_makeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * infoStringPtr , ZL_CONST ZL_CHAR * format , ZENGL_SYS_ARG_LIST arglist)
 {
 	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZENGL_SYS_ARG_LIST tmp_arglist;
 	ZL_INT retcount = -1;
+	ZENGL_SYS_ARG_END(tmp_arglist);
 	if(infoStringPtr->str == ZL_NULL)
 	{
 		infoStringPtr->size = ZL_INFO_STRING_SIZE;
 		infoStringPtr->str = run->memAlloc(VM_ARG,infoStringPtr->size * sizeof(ZL_CHAR),&infoStringPtr->mempool_index);
 	}
-	while(ZL_TRUE)
+	do
 	{
+		// 在64位系统中, GCC和clang会将va_list指向某种特殊的结构，该结构中存储了可变参数位置信息，
+		// 直接将va_list传递给vsnprintf的话，相当于将特殊结构的指针传递过去，vsnprintf根据指针，会修改该结构指向的参数位置，那么下一次再次执行
+		// vsnprintf时，虽然va_list指针没变化，但是va_list对应的结构，实际指向的可能是一个无效的参数。因此，需要先使用va_copy生成一个拷贝，
+		// 再将va_list的拷贝(包含了特殊结构的拷贝)传递给vsnprintf，
+		// 32位系统，不需要va_copy也可以正常工作，因为32位系统中的va_list是一个简单的栈指针，直接指向了可变参数位置，
+		// 32位中，va_list传递给vsnprintf时，本身就是以栈指针拷贝的方式传递的，所以32位系统中没有va_copy也可以正常工作，
+		// 不过，为了让代码能够在32位和64位中都正常运作，就统一使用va_copy的方式来处理，在VS2008之类的没有
+		// va_copy的环境中，会将va_copy定义为memcpy
+		ZENGL_SYS_ARG_COPY(tmp_arglist, arglist);
 		retcount = ZENGL_SYS_SPRINTF_ARG_NUM((infoStringPtr->str + infoStringPtr->cur),
-											 (infoStringPtr->size - infoStringPtr->count),format,arglist);
-
+											 (infoStringPtr->size - infoStringPtr->count),format,tmp_arglist);
+		ZENGL_SYS_ARG_END(tmp_arglist);
 		if(retcount >= 0 && retcount < (infoStringPtr->size - infoStringPtr->count))
 		{
 			infoStringPtr->count += retcount;
@@ -494,7 +505,7 @@ ZL_CHAR * zenglrun_makeInfoString(ZL_VOID * VM_ARG,ZENGL_RUN_INFO_STRING_TYPE * 
 
 		infoStringPtr->size += ZL_INFO_STRING_SIZE;
 		infoStringPtr->str = run->memReAlloc(VM_ARG,infoStringPtr->str,infoStringPtr->size * sizeof(ZL_CHAR),&infoStringPtr->mempool_index);
-	}
+	} while(ZL_TRUE);
 	return ZL_NULL;
 }
 
@@ -560,7 +571,10 @@ ZL_INT zenglrun_InstDataStringPoolAdd(ZL_VOID * VM_ARG , ZL_CHAR * src)
 	if(src == ZL_NULL)
 		return -1;
 	len = ZENGL_SYS_STRLEN(src);
-	if(run->InstData_StringPool.count == run->InstData_StringPool.size ||
+	// 这里使用while循环语句，循环增加size，直到size能够满足字符串的大小时才跳出循环
+	// 之前用的if语句，size只会增加一次，从而导致指令操作数中，较长的字符串会被截断，
+	// 并发生 ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS 错误
+	while(run->InstData_StringPool.count >= run->InstData_StringPool.size ||
 		run->InstData_StringPool.count + len + 1 > run->InstData_StringPool.size)
 	{
 		run->InstData_StringPool.size += ZL_R_INST_DATA_STRING_POOL_SIZE;
