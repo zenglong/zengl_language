@@ -26,10 +26,10 @@ st_zengl: $(RUNOBJS) encrypt.o libzengl.a
 libzengl.a: $(OBJS)
 		$(AR) $(ARFLAGS) libzengl.a $(OBJS)
 
-$(OBJS): $(SRCS)  zengl_global.h zengl_locals.h zengl_exportfuns.h zenglrun_hash_array.h
+$(OBJS): $(SRCS)  zengl_global.h zengl_global_header.h zengl_locals.h zengl_exportfuns.h zenglrun_hash_array.h
 		$(CC) $(CDEFINES) $(STATIC_CFLAGS) -c $(SRCS)
 
-libzengl.so : $(SRCS) zengl_global.h zengl_locals.h zengl_exportfuns.h zenglrun_hash_array.h
+libzengl.so : $(SRCS) zengl_global.h zengl_global_header.h zengl_locals.h zengl_exportfuns.h zenglrun_hash_array.h
 		$(CC) $(CDEFINES) $(SHARED_CFLAGS) -o libzengl.so $(SRCS)
 		cp libzengl.so /usr/lib
 		

@@ -1,3 +1,9 @@
+  v1.7.4 修复zenglrun_makeInfoString函数(定义在zenglrun_func.c文件中)和zengl_makeInfoString函数(定义在zengl_main.c文件中)在生成格式化字符串时，如果格式化的字符串较长时，在64位gcc和clang中会出现乱码或者段错误的Bug。以及修复zenglrun_InstDataStringPoolAdd函数(定义在zenglrun_func.c文件中)，在添加的指令操作数是字符串，且字符串的长度较长时，会出现的字符串截断和发生ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS错误的Bug。在zengl_main函数里(定义在zengl_main.c中)，添加检测errorFullString错误信息的代码，当编译器调用解释器的方法发生错误时，虚拟机如果是以zenglApi_Run的方式运行时，并不会立即退出，而只是将错误信息写入到errorFullString中，因此，需要在zengl_main函数中添加相关的检测代码，这样当发生ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS之类的错误时，就能够及时退出编译器，并将错误信息显示出来。测试脚本：test_scripts/v1.7.4/test.zl
+
+  作者：zenglong
+  时间：2018年1月13日
+  官网：www.zengl.com
+
   v1.7.3 增加zenglApi_GetMemBlockNNCount接口函数，通过此接口，可以获取数组之类的内存块中非NONE成员的数量。测试脚本：test_scripts/v1.7.3/test.zl
 
   作者：zenglong
