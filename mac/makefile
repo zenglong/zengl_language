@@ -15,7 +15,7 @@ zengl: $(RUNOBJS) encrypt.o libzengl.dylib
 		$(CC) $(CFLAGS) -o zengl $(RUNOBJS) $(ZENGL_LIB_CFLAGS_LIB)
 		$(CC) $(CFLAGS) -o encrypt encrypt.o $(ZENGL_LIB_CFLAGS_LIB)
 
-libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h ../linux/zenglrun_hash_array.h
+libzengl.dylib : $(OBJS) ../linux/zengl_global.h ../linux/zengl_global_header.h ../linux/zengl_locals.h ../linux/zengl_exportfuns.h ../linux/zenglrun_hash_array.h
 		$(CC) $(CDEFINES) $(SHARED_CFLAGS) -o libzengl.dylib $(OBJS)
 		
 main.o: ../linux/main.c ../linux/zengl_exportfuns.h
