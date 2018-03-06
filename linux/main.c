@@ -1,5 +1,6 @@
 #define ZL_EXP_OS_IN_LINUX //在加载下面的zengl头文件之前，windows系统请定义ZL_EXP_OS_IN_WINDOWS，linux , mac系统请定义ZL_EXP_OS_IN_LINUX
 #include "zengl_exportfuns.h"
+#include "md5.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -8,6 +9,12 @@
 #include <time.h>
 #include <stdarg.h>
 #include <ctype.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifndef ZL_EXP_OS_IN_WINDOWS
+	#include <unistd.h>
+#endif
 
 #define STRNULL '\0'
 #define DEBUG_INPUT_MAX 50
@@ -27,6 +34,180 @@ typedef struct _MAIN_DATA{
 FILE * debuglog;
 ReadStr_Type ReadStr;
 int random_seed=0;
+
+/**
+ * 将append_path路径追加到full_path中，如果追加路径后，full_path长度会超出full_path_size时，路径将会被截断
+ */
+static int main_full_path_append(char * full_path, int full_path_length, int full_path_size, char * append_path)
+{
+	int append_path_length = strlen(append_path);
+	int max_length = full_path_size - full_path_length - 1;
+	if(append_path_length > max_length)
+		append_path_length = max_length;
+	if(append_path_length > 0)
+		strncpy((full_path + full_path_length), append_path, append_path_length);
+	return append_path_length;
+}
+
+static void main_compute_md5(char * buf, char * str, ZL_EXP_BOOL isLowerCase, ZL_EXP_BOOL is32)
+{
+	MD5_CTX md5;
+	unsigned char * encrypt = (unsigned char *)str;
+	unsigned char decrypt[16];
+	char * p;
+	const char * format;
+	int start_idx, end_idx, i;
+	MD5Init(&md5);
+	MD5Update(&md5,encrypt,strlen((char *)encrypt));
+	MD5Final(&md5,decrypt);
+	p = buf;
+	start_idx = is32 ? 0 : 4;
+	end_idx = is32 ? 16 : 12;
+	format = isLowerCase ? "%02x" : "%02X";
+	for(i = start_idx; i < end_idx; i++) {
+		sprintf(p, format, decrypt[i]);
+		p += 2;
+	}
+	(*p) = '\0';
+}
+
+/**
+ * 根据full_path脚本路径，得到最终要生成的缓存文件的路径信息
+ */
+static void main_get_zengl_cache_path(char * cache_path, int cache_path_size, char * full_path)
+{
+	char fullpath_md5[33];
+	char cache_prefix[20] = {0};
+	const char * cache_path_prefix = "caches/"; // 缓存文件都放在caches目录中
+	int append_length;
+	main_compute_md5(fullpath_md5, full_path, ZL_EXP_TRUE, ZL_EXP_TRUE); // 将full_path进行md5编码
+	// 在缓存路径前面加上zengl版本号和指针长度，不同的zengl版本生成的缓存有可能会不一样，另外，32位和64位环境下生成的内存缓存数据也是不一样的
+	// 32位系统中生成的缓存数据放到64位中运行，或者反过来，都会报内存相关的错误
+	sprintf(cache_prefix, "%d_%d_%d_%ld_", ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION, sizeof(char *));
+	append_length = main_full_path_append(cache_path, 0, cache_path_size, (char *)cache_path_prefix);
+	append_length += main_full_path_append(cache_path, append_length, cache_path_size, cache_prefix);
+	append_length += main_full_path_append(cache_path, append_length, cache_path_size, fullpath_md5);
+	cache_path[append_length] = '\0';
+}
+
+/**
+ * 尝试重利用full_path脚本文件对应的缓存数据，cache_path表示缓存数据所在的文件路径
+ * 如果缓存文件不存在，则会重新生成缓存文件，如果full_path脚本文件内容发生了改变或者其加载的脚本文件内容发生了改变，也会重新生成缓存
+ * 外部调用者通过is_reuse_cache变量的值来判断是否需要生成缓存文件，如果is_reuse_cache为ZL_EXP_FALSE，就表示没有重利用缓存，则需要生成缓存文件
+ * 如果is_reuse_cache为ZL_EXP_TRUE，则说明重利用了缓存，不需要再生成缓存文件了
+ */
+static void main_try_to_reuse_zengl_cache(ZL_EXP_VOID * VM, char * cache_path, char * full_path, ZL_EXP_BOOL * is_reuse_cache)
+{
+	FILE * ptr_fp;
+	ZL_EXP_VOID * cachePoint;
+	ZENGL_EXPORT_API_CACHE_TYPE * api_cache;
+	ZL_EXP_LONG offset, cache_mtime, file_mtime;
+	ZL_EXP_BYTE * mempoolPtr;
+	ZL_EXP_CHAR ** filenames, * filename;
+	ZL_EXP_INT cacheSize, i;
+	struct stat stat_result;
+	(* is_reuse_cache) = ZL_EXP_FALSE;
+	if(stat(cache_path, &stat_result)==0) { // 获取缓存文件的修改时间
+		cache_mtime = (ZL_EXP_LONG)stat_result.st_mtime;
+	}
+	else { // 获取文件的状态信息失败，可能缓存文件不存在，需要重新编译生成缓存，直接返回
+		printf("stat cache file: \"%s\" failed, maybe no cache file [recompile]\n", cache_path);
+		return ;
+	}
+	if(stat(full_path, &stat_result)==0) { // 获取主执行脚本的修改时间
+		file_mtime = (ZL_EXP_LONG)stat_result.st_mtime;
+		printf("%s mtime:%ld", full_path, file_mtime);
+		if(file_mtime >= cache_mtime) { // 如果主执行脚本的修改时间大于等于缓存数据的修改时间，则说明主执行脚本的内容发生了改变，需要重新编译生成新的缓存
+			printf(" [changed] [recompile]\n");
+			return;
+		}
+		printf("\n");
+	}
+	else { // 主执行脚本不存在，直接返回
+		printf("warning stat script file: \"%s\" failed, maybe no such file! [recompile]\n", full_path);
+		return ;
+	}
+	// 打开缓存文件
+	if((ptr_fp = fopen(cache_path, "rb")) == NULL) {
+		printf("no cache file: \"%s\" [recompile]\n", cache_path);
+		return ;
+	}
+	fseek(ptr_fp,0L,SEEK_END);
+	cacheSize = ftell(ptr_fp); // 得到缓存数据的大小
+	fseek(ptr_fp,0L,SEEK_SET);
+	cachePoint = malloc(cacheSize); // 根据缓存大小分配堆空间，先将缓存数据读取到该堆内存中
+	if(fread(cachePoint, cacheSize, 1, ptr_fp) != 1) { // 读取缓存数据
+		printf("read cache file \"%s\" failed [recompile]\n", cache_path);
+		goto end;
+	}
+	api_cache = (ZENGL_EXPORT_API_CACHE_TYPE *)cachePoint;
+	if(api_cache->signer != ZL_EXP_API_CACHE_SIGNER) { // 根据缓存签名判断是否是有效的缓存数据
+		printf("invalid cache file \"%s\" [recompile]\n", cache_path);
+		goto end;
+	}
+	mempoolPtr = ((ZL_EXP_BYTE *)cachePoint + api_cache->mempoolOffset);
+	offset = (ZL_EXP_LONG)api_cache->filenames;
+	filenames = (ZL_EXP_CHAR **)(mempoolPtr + offset - 1);
+	if(api_cache->filenames_count > 0) {
+		// 循环判断加载的脚本文件的内容是否发生了改变，如果改变了，则需要重新编译生成新的缓存
+		for(i=0; i < api_cache->filenames_count; i++) {
+			offset = (ZL_EXP_LONG)(filenames[i]);
+			filename = (ZL_EXP_CHAR *)(mempoolPtr + offset - 1);
+			printf("%s", filename);
+			if(stat(filename, &stat_result)==0) {
+				file_mtime = (ZL_EXP_LONG)stat_result.st_mtime;
+				printf(" mtime:%ld", file_mtime);
+				if(file_mtime >= cache_mtime){
+					printf(" [changed] [recompile]\n");
+					goto end;
+				}
+			}
+			else {
+				printf(" stat failed [recompile]\n");
+				goto end;
+			}
+			printf("\n");
+		}
+	}
+	// 通过zenglApi_ReUseCacheMemData接口函数，将编译好的缓存数据加载到编译器和解释器中，这样就可以跳过编译过程，直接运行
+	if(zenglApi_ReUseCacheMemData(VM, cachePoint, cacheSize) == -1) {
+		printf("reuse cache file \"%s\" failed: %s [recompile]\n", cache_path, zenglApi_GetErrorString(VM));
+		goto end;
+	}
+	(* is_reuse_cache) = ZL_EXP_TRUE;
+	printf("reuse cache file: \"%s\" mtime:%ld\n", cache_path, cache_mtime);
+end:
+	fclose(ptr_fp);
+	free(cachePoint);
+}
+
+/**
+ * 在编译执行结束后，生成缓存数据并写入缓存文件
+ */
+static void main_write_zengl_cache_to_file(ZL_EXP_VOID * VM, char * cache_path)
+{
+	FILE * ptr_fp;
+	ZL_EXP_VOID * cachePoint;
+	ZL_EXP_INT cacheSize;
+	// 通过zenglApi_CacheMemData接口函数，将编译器和解释器中的主要的内存数据缓存到cachePoint对应的内存中
+	if(zenglApi_CacheMemData(VM, &cachePoint, &cacheSize) == -1) {
+		printf("write zengl cache to file \"%s\" failed: %s\n", cache_path,zenglApi_GetErrorString(VM));
+		return;
+	}
+
+	// 打开cache_path对应的缓存文件
+	if((ptr_fp = fopen(cache_path, "wb")) == NULL) {
+		printf("write zengl cache to file \"%s\" failed: open failed\n", cache_path);
+		return;
+	}
+
+	// 将缓存数据写入缓存文件
+	if( fwrite(cachePoint, cacheSize, 1, ptr_fp) != 1)
+		printf("write zengl cache to file \"%s\" failed: write failed\n", cache_path);
+	else
+		printf("write zengl cache to file \"%s\" success \n", cache_path);
+	fclose(ptr_fp);
+}
 
 ZL_EXP_CHAR * getDebugArg(ZL_EXP_CHAR * str,ZL_EXP_INT * start,ZL_EXP_BOOL needNull)
 {
@@ -1268,6 +1449,10 @@ int main_output_rc4_source(char * src_filename,char * dest_filename,char * rc4_k
 	#endif
 }*/
 
+#ifdef ZL_EXP_OS_IN_WINDOWS
+	#define stat _stat
+#endif
+
 /**
 	用户程序执行入口。
 */
@@ -1292,6 +1477,8 @@ int main(int argc,char * argv[])
 	MAIN_DATA my_data; // 测试用的额外数据
 	ZL_EXP_INT builtinID,sdlID;
 	ZL_EXP_VOID * VM;
+	ZL_EXP_BOOL is_reuse_cache;
+	char cache_path[200];
 
 	if(argc < 2)
 	{
@@ -1336,8 +1523,14 @@ int main(int argc,char * argv[])
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
 
+	// 根据脚本文件名得到缓存文件的路径信息
+	main_get_zengl_cache_path(cache_path, sizeof(cache_path), argv[1]);
+	// 尝试重利用缓存数据
+	main_try_to_reuse_zengl_cache(VM, cache_path, argv[1], &is_reuse_cache);
 	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
 		main_exit(VM,"错误：编译<%s>失败：%s\n",argv[1],zenglApi_GetErrorString(VM));
+	else if(!is_reuse_cache) // 如果没有重利用缓存数据，则生成新的缓存数据，并将其写入缓存文件中
+		main_write_zengl_cache_to_file(VM, cache_path);
 
 	/*if(zenglApi_GetValueAsInt(VM,"i",&testint) != -1)
 		printf("after run , the i is %ld\n",testint);

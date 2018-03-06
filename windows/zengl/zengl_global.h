@@ -338,7 +338,10 @@ typedef struct _ZENGL_FILE_STACKLIST_TYPE{
 	ZL_BOOL isInit;
 	ZL_INT size;
 	ZL_INT count;
+	ZL_INT filenames_size;  // filenames动态数组的大小，当存储的成员数等于该大小时，就会将filenames数组进行动态扩容
+	ZL_INT filenames_count; // filenames动态数组中实际存储的成员数
 	ZENGL_FILE_STACK_TYPE * stacks;
+	ZL_CHAR ** filenames; // 该动态数组中将存储所有inc加载过的文件的文件名指针
 }ZENGL_FILE_STACKLIST_TYPE; //用于inc加载的文件堆栈		
 
 /********************************************************************************
@@ -1217,7 +1220,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_VOID (* initDefTable)(ZL_VOID * VM_ARG); //初始化def_table（def宏定义的动态数组） 对应 zengl_initDefTable
 	ZL_VOID (* include_file)(ZL_VOID * VM_ARG); //当词法扫描器扫描到inc关键字时，就会调用该函数来加载文件。对应 zengl_include_file
 	ZL_CHAR * (* makePathFileName)(ZL_VOID * VM_ARG,ZL_CHAR * filename); //inc加载文件时，得到文件的完整路径信息 对应 zengl_makePathFileName
-	ZL_VOID (* push_FileStack)(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col); //将原来的文件信息压入栈。对应 zengl_push_FileStack
+	ZL_VOID (* push_FileStack)(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col, ZL_CHAR * inc_filename); //将原来的文件信息压入栈。对应 zengl_push_FileStack
 	ZL_VOID (* pop_FileStack)(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * dest); //将上次压入栈的文件信息弹出，从弹出的文件信息里恢复原文件的扫描 对应 zengl_pop_FileStack
 	ZL_VOID (* initFileStack)(ZL_VOID * VM_ARG); //初始化inc加载文件的堆栈 对应 zengl_initFileStack
 	ZENGL_TOKENTYPE (* ReplaceDefConst)(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE token); //常量宏替换函数 对应 zengl_ReplaceDefConst
@@ -1565,7 +1568,7 @@ ZL_INT zengl_insert_DefTable(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_TOKENTYPE t
 ZL_VOID zengl_initDefTable(ZL_VOID * VM_ARG); //初始化def_table（def宏定义的动态数组）
 ZL_VOID zengl_include_file(ZL_VOID * VM_ARG); //当词法扫描器扫描到inc关键字时，就会调用该函数来加载文件。
 ZL_CHAR * zengl_makePathFileName(ZL_VOID * VM_ARG,ZL_CHAR * filename); //inc加载文件时，先得到当前扫描的文件的路径信息
-ZL_VOID zengl_push_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col); //将原来的文件信息压入栈。
+ZL_VOID zengl_push_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col, ZL_CHAR * inc_filename); //将原来的文件信息压入栈。
 ZL_VOID zengl_pop_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * dest); //将上次压入栈的文件信息弹出，从弹出的文件信息里恢复原文件的扫描。
 ZL_VOID zengl_initFileStack(ZL_VOID * VM_ARG); //初始化inc加载文件的堆栈
 ZENGL_TOKENTYPE zengl_ReplaceDefConst(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE token); //替换宏为具体的值

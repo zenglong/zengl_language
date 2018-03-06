@@ -24,20 +24,23 @@
 #define _ZENGL_EXPORT_FUNCTIONS_H_
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
-#define ZL_EXP_MINOR_VERSION 7 //zengl子版本号
-#define ZL_EXP_REVISION 4      //zengl修正版本号
+#define ZL_EXP_MINOR_VERSION 8 //zengl子版本号
+#define ZL_EXP_REVISION 0      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
 #else
 	#define ZL_EXP_CHAR char
 #endif
+#define ZL_EXP_UCHAR unsigned char
+#define ZL_EXP_BYTE unsigned char
 #define ZL_EXP_INT int
 #define ZL_EXP_LONG long
 #define ZL_EXP_DOUBLE double
 #define ZL_EXP_NULL 0 //指针为0的宏定义
 #define ZL_EXP_FALSE 0 //逻辑假
 #define ZL_EXP_TRUE 1 //逻辑真
+#define ZL_EXP_API_CACHE_SIGNER 0x43434C5A // 缓存签名，用于判断是否是有效的缓存数据
 typedef unsigned char ZL_EXP_BOOL; //定义bool类型
 
 typedef ZL_EXP_VOID (* ZL_VM_API_MODS_INIT)(ZL_EXP_VOID * VM_ARG); //全局模块初始化函数，会在run解释器入口处执行
@@ -118,6 +121,15 @@ typedef struct _ZENGL_EXPORT_VM_MAIN_ARGS{
 	ZL_EXP_VOID * userdef_module_init; //用户自定义的全局模块初始化函数，在run解释器入口处会被调用
 	ZL_EXP_INT flags; //用户自定义的一些编译器或解释器的选项
 }ZENGL_EXPORT_VM_MAIN_ARGS;
+
+typedef struct _ZENGL_EXPORT_API_CACHE_TYPE {
+	ZL_EXP_INT signer; // 设置缓存签名，方便判断是否是有效的缓存数据
+	ZL_EXP_INT mempoolRealSize; // 需要放进缓存的内存池的实际大小
+	ZL_EXP_INT mempoolOffset; // 内存池在缓存中的的偏移值
+	ZL_EXP_INT totalSize; // 缓存数据的总大小
+	ZL_EXP_INT filenames_count; // inc加载的文件数量
+	ZL_EXP_CHAR ** filenames; // inc加载的文件名动态数组
+}ZENGL_EXPORT_API_CACHE_TYPE; // 缓存数据的头部结构
 
 /*以下为zenglApi接口的声明，目前一共有50个API接口函数(不包括底部声明的那些内建模块函数)*/
 
@@ -298,6 +310,15 @@ ZL_EXPORT ZL_EXP_INT zenglApi_DebugSetSingleBreak(ZL_EXP_VOID * VM_ARG,ZL_EXP_BO
 /*API接口，获取脚本函数的堆栈调用信息*/
 ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetTrace(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT * argArg,ZL_EXP_INT * argLOC,ZL_EXP_INT * argPC,
 											ZL_EXP_CHAR ** fileName,ZL_EXP_INT * line,ZL_EXP_CHAR ** className,ZL_EXP_CHAR ** funcName);
+
+/**
+ * API接口，将编译器和解释器中主要的内存数据缓存起来，缓存的内存数据可以存储到文件或者别的地方，
+ * 之后可以利用缓存起来的内存数据跳过编译过程，直接执行虚拟汇编指令，缓存起来的内存数据只可以用于当前机器
+ */
+ZL_EXPORT ZL_EXP_INT zenglApi_CacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID ** cachePoint, ZL_EXP_INT * cacheSize);
+
+/* 重利用缓存数据，就可以跳过编译过程 */
+ZL_EXPORT ZL_EXP_INT zenglApi_ReUseCacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * cachePoint, ZL_EXP_INT cacheSize);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

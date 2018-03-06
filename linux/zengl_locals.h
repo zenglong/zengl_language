@@ -283,6 +283,8 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_VM_API_FILENAME_TOO_LONG, //解释器运行时错误：文件路径信息太长
 	ZL_ERR_VM_API_FILENAME_TOO_LONG_WHEN_MERGE, //解释器运行时错误：合并后的文件路径信息太长
 	ZL_ERR_VM_API_INVALID_ARG,	//解释器运行时错误：提供给API接口'%s'的参数无效
+	ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, //解释器运行时错误：API缓存接口'%s'搜索内存池指针失败
+	ZL_ERR_VM_API_CACHE_INVALID_CACHE_DATA, //解释器运行时错误：API缓存接口'%s'获取到的缓存数据无效
 }ZENGL_ERRORNO;
 /*各种错误的枚举定义结束*/
 

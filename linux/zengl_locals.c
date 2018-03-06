@@ -284,6 +284,8 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: VM Api err , filename <'%s'> is too long (解释器运行时错误：文件路径信息太长)\n", //ZL_ERR_VM_API_FILENAME_TOO_LONG
 	"\n err: VM Api err , filename <'%s'> + <'%s'> is too long (解释器运行时错误：合并后的文件路径信息太长)\n", //ZL_ERR_VM_API_FILENAME_TOO_LONG_WHEN_MERGE
 	"\n err: VM Api err , invalid args in %s (解释器运行时错误：提供给API接口'%s'的参数无效)\n", //ZL_ERR_VM_API_INVALID_ARG
+	"\n err: VM Api err , zengl cache api '%s' search mempool point failed (解释器运行时错误：API缓存接口'%s'搜索内存池指针失败)\n", //ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED
+	"\n err: VM Api err , zengl cache api '%s' get invalid cache data (解释器运行时错误：API缓存接口'%s'获取到的缓存数据无效)\n", //ZL_ERR_VM_API_CACHE_INVALID_CACHE_DATA
 };
 #endif
 

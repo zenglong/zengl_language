@@ -1,3 +1,11 @@
+  v1.8.0 增加zenglApi_CacheMemData和zenglApi_ReUseCacheMemData接口函数。其中，zenglApi_CacheMemData接口将编译器和解释器中主要的内存编译数据缓存起来，缓存的数据可以存储到文件或者别的地方，之后就可以利用缓存起来的内存编译数据来跳过编译过程，直接执行虚拟汇编指令，缓存起来的内存数据只可以用于当前机器。zenglApi_ReUseCacheMemData接口则用于重利用缓存数据，从而跳过编译过程。
+
+  该版本的main.c中默认启用了缓存功能，当缓存文件不存在时，执行完脚本后，会自动生成缓存文件，因此在执行任何一个脚本时，第一次在底部都会看到write zengl cache to file...的信息。第二次执行相同脚本时，就会自动重利用缓存的编译数据，跳过编译过程，会在脚本执行的开头看到reuse cache file: ...的信息。可以使用test.zl或者别的已有的脚本进行测试。重利用缓存的编译数据时，依然可以使用调试功能，可以在脚本文件名后面加入-d参数进行调试测试。
+
+  作者：zenglong
+  时间：2018年3月25日
+  官网：www.zengl.com
+
   v1.7.4 修复zenglrun_makeInfoString函数(定义在zenglrun_func.c文件中)和zengl_makeInfoString函数(定义在zengl_main.c文件中)在生成格式化字符串时，如果格式化的字符串较长时，在64位gcc和clang中会出现乱码或者段错误的Bug。以及修复zenglrun_InstDataStringPoolAdd函数(定义在zenglrun_func.c文件中)，在添加的指令操作数是字符串，且字符串的长度较长时，会出现的字符串截断和发生ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS错误的Bug。在zengl_main函数里(定义在zengl_main.c中)，添加检测errorFullString错误信息的代码，当编译器调用解释器的方法发生错误时，虚拟机如果是以zenglApi_Run的方式运行时，并不会立即退出，而只是将错误信息写入到errorFullString中，因此，需要在zengl_main函数中添加相关的检测代码，这样当发生ZL_ERR_RUN_INST_DATA_STR_POOL_ADD_I_OUT_OF_BOUNDS之类的错误时，就能够及时退出编译器，并将错误信息显示出来。测试脚本：test_scripts/v1.7.4/test.zl
 
   作者：zenglong

@@ -2790,3 +2790,599 @@ ZL_EXPORT ZL_EXP_INT zenglApi_DebugGetTrace(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT * ar
 	debug = &VM->debug;
 	return debug->GetTraceInfo(VM_ARG,ApiName,argArg,argLOC,argPC,fileName,line,className,funcName);
 }
+
+typedef struct _API_MEM_POOL_POINT_TYPE{
+	ZL_VOID * point; // 内存池中的指针值
+	ZL_INT size;     // 内存池指针所占用的内存大小
+	ZL_INT offset;   // 指针对应的在缓存中的偏移值
+}API_MEM_POOL_POINT_TYPE; // 该结构中存储了指针和缓存偏移值的对应关系，通过该对应关系，可以找到某个指针对应的偏移值
+
+/**
+ * 将内存池指针和相应的偏移值存储到对应关系结构体中
+ */
+static ZL_VOID zengl_api_make_mempool(API_MEM_POOL_POINT_TYPE * api_mempool,
+		ZENGL_MEM_POOL_TYPE * mempool, ZL_BYTE * cachePtr)
+{
+	ZL_INT i, j, k, offset = 0;
+	API_MEM_POOL_POINT_TYPE temp;
+	for(i=0;i < mempool->count;i++) {
+		ZENGL_SYS_MEM_COPY((cachePtr + offset), mempool->points[i].point, mempool->points[i].size);
+		api_mempool[i].point = mempool->points[i].point;
+		api_mempool[i].size = mempool->points[i].size;
+		api_mempool[i].offset = offset;
+		offset += mempool->points[i].size;
+	}
+	// 将api_mempool动态数组中的指针值按照从小到大的顺序进行排列
+	for(i=0;i < (mempool->count - 1);i++)
+	{
+		k = i;
+		for(j=i+1;j < (mempool->count - 1);j++)
+			if(api_mempool[k].point > api_mempool[j].point)
+				k = j;
+		if(k!=i)
+		{
+			temp = api_mempool[i];
+			api_mempool[i] = api_mempool[k];
+			api_mempool[k] = temp;
+		}
+	}
+}
+
+/**
+ * 从api_mempool动态数组中，采用折中算法，搜索point指针对应的缓存偏移值，并将偏移值返回
+ * 返回的值是实际的偏移值加一，这样可以和NULL空指针区分开
+ */
+static ZL_INT zengl_api_search_api_mempool(API_MEM_POOL_POINT_TYPE * api_mempool, ZL_INT count, ZL_VOID * point)
+{
+	ZL_VOID * min, * max;
+	min = api_mempool[0].point;
+	max = api_mempool[count - 1].point;
+	if(point == min) {
+		return (api_mempool[0].offset + 1);
+	}
+	else if(point == max) {
+		return (api_mempool[count - 1].offset + 1);
+	}
+	else {
+		ZL_INT minIndex=0,maxIndex=count - 1,diff;
+		ZL_VOID * diffpoint;
+		do
+		{
+			diff = (maxIndex - minIndex)/2;
+			if(diff == 0) {
+				return -1;
+			}
+			else {
+				diffpoint = api_mempool[minIndex + diff].point;
+				if(point == diffpoint) {
+					return (api_mempool[minIndex + diff].offset + 1);
+				}
+				else if(point > diffpoint) {
+					minIndex += diff;
+				}
+				else
+					maxIndex = minIndex + diff;
+			}
+		}while(ZL_TRUE);
+	}
+}
+
+/**
+ * 计算内存池的实际总大小
+ */
+static ZL_INT zengl_api_compute_mempool_realsize(ZENGL_MEM_POOL_TYPE * mempool)
+{
+	ZL_INT i, realsize = 0;
+	for(i=0;i < mempool->count;i++) {
+		realsize += mempool->points[i].size;
+	}
+	return realsize;
+}
+
+/**
+ * API接口，将编译器和解释器中主要的内存数据缓存起来，缓存的内存数据可以存储到文件或者别的地方，
+ * 之后可以利用缓存起来的内存数据跳过编译过程，直接执行虚拟汇编指令，缓存起来的内存数据只可以用于当前机器
+ */
+ZL_EXPORT ZL_EXP_INT zenglApi_CacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID ** cachePoint, ZL_EXP_INT * cacheSize)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_EXPORT_API_CACHE_TYPE * api_cache;
+	ZL_BYTE * cachePtr, * api_mempool, * api_cache_mempool, * tmp_point, * tmp_point2, * tp;
+	ZL_INT baseSize, totalSize, mempoolRealSize, instListSize, instDataStringPoolSize, tmpIndex, i;
+	ZL_LONG offset, file_offset;
+	ZL_CHAR * ApiName = "zenglApi_CacheMemData";
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_AFTER_RUN:
+	case ZL_API_ST_REUSE:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	compile = &VM->compile;
+	run = &VM->run;
+	/* compile->mempool + compile->def_StringPool + compile->def_table + compile->HashTable +
+	 * compile->LineCols + compile->FileStackList + compile->SymGlobalTable + compile->SymLocalTable +
+	 * compile->SymClassTable + compile->SymClassMemberTable + compile->SymFunTable + compile->LDAddrList +
+	 * compile->AST_nodes + compile->Token_StringPool */
+	baseSize = sizeof(ZENGL_EXPORT_API_CACHE_TYPE) + sizeof(ZENGL_STRING_POOL_TYPE) + sizeof(ZENGL_DEF_TABLE) +
+				sizeof(ZL_INT) * ZL_SYM_HASH_TOTAL_SIZE + sizeof(ZENGL_LINECOL_TABLE) +
+				sizeof(ZENGL_FILE_STACKLIST_TYPE) + sizeof(ZENGL_SYM_GLOBAL_TABLE) +
+				sizeof(ZENGL_SYM_LOCAL_TABLE) + sizeof(ZENGL_SYM_CLASS_TABLE) +
+				sizeof(ZENGL_SYM_CLASSMEMBER_TABLE) + sizeof(ZENGL_SYM_FUN_TABLE) + sizeof(ZENGL_LD_ADDRLIST_TYPE) +
+				sizeof(ZENGL_AST_TYPE) + sizeof(ZENGL_TOKEN_STRING_POOL);
+	mempoolRealSize = zengl_api_compute_mempool_realsize(&compile->mempool);
+	instListSize = sizeof(ZENGL_RUN_INST_LIST) + run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER);
+	instDataStringPoolSize = sizeof(ZENGL_RUN_INST_DATA_STRING_POOL) + (run->InstData_StringPool.count * sizeof(ZL_CHAR));
+	totalSize = baseSize + mempoolRealSize + instListSize + instDataStringPoolSize;
+	cachePtr = (ZL_BYTE *)run->memAlloc(VM_ARG,totalSize, &tmpIndex);
+	ZENGL_SYS_MEM_SET(cachePtr, 0, totalSize);
+	api_cache = (ZENGL_EXPORT_API_CACHE_TYPE *)cachePtr;
+	api_cache->signer = ZL_EXP_API_CACHE_SIGNER;  // 设置缓存签名，方便判断是否是有效的缓存数据
+	api_cache->mempoolRealSize = mempoolRealSize; // 内存池的实际大小
+	api_cache->mempoolOffset = baseSize; // 拷贝到缓存中的内存池的偏移值
+	api_cache->totalSize = totalSize; // 缓存数据的总大小
+	api_mempool = (ZL_BYTE *)run->memAlloc(VM_ARG, compile->mempool.count * sizeof(API_MEM_POOL_POINT_TYPE), &tmpIndex);
+	api_cache_mempool = cachePtr + api_cache->mempoolOffset;
+	zengl_api_make_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, &compile->mempool, api_cache_mempool);
+
+	// 将def_StringPool宏定义常量的字符串池拷贝到缓存中
+	tmp_point = cachePtr + sizeof(ZENGL_EXPORT_API_CACHE_TYPE); // compile->def_StringPool
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->def_StringPool, sizeof(ZENGL_STRING_POOL_TYPE));
+	if(compile->def_StringPool.ptr != ZL_NULL) {
+		// 将指针转为offset(缓存偏移值)，并存储到缓存里，重利用缓存时，只需将offset加上缓存基址，即可得到指针值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->def_StringPool.ptr);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_STRING_POOL_TYPE *)tmp_point)->ptr = (ZL_CHAR *)offset;
+	}
+
+	// 将def_table宏定义动态数组拷贝到缓存中
+	tmp_point += sizeof(ZENGL_STRING_POOL_TYPE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->def_table, sizeof(ZENGL_DEF_TABLE));
+	if(compile->def_table.defs != ZL_NULL) {
+		// 将指针转为offset(缓存中的偏移值)
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->def_table.defs);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_DEF_TABLE *)tmp_point)->defs = (ZENGL_DEF_TABLE_MEMBER *)offset;
+	}
+
+	// 将哈希表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_DEF_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, compile->HashTable, sizeof(ZL_INT) * ZL_SYM_HASH_TOTAL_SIZE);
+
+	// 将存储行列号的动态数组拷贝到缓存中
+	tmp_point += sizeof(ZL_INT) * ZL_SYM_HASH_TOTAL_SIZE;
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->LineCols, sizeof(ZENGL_LINECOL_TABLE));
+	if(compile->LineCols.lines != ZL_NULL) {
+		// 将LineCols.lines指针转为offset缓存偏移值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->LineCols.lines);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_LINECOL_TABLE *)tmp_point)->lines = (ZENGL_LINECOL *)offset;
+		tmp_point2 = api_cache_mempool + (offset - 1);
+		tp = ZL_NULL;
+		offset = 0;
+		for(i=0; i < compile->LineCols.count ;i++) {
+			if(compile->LineCols.lines[i].filename != ZL_NULL) {
+				// 将行列号信息中的filename文件名指针转为缓存偏移值
+				if(tp != (ZL_BYTE *)compile->LineCols.lines[i].filename) {
+					offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->LineCols.lines[i].filename);
+					if(offset < 0) {
+						VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+						return -1;
+					}
+					tp = (ZL_BYTE *)compile->LineCols.lines[i].filename;
+				}
+				((ZENGL_LINECOL *)tmp_point2)[i].filename = (ZL_CHAR *)offset;
+			}
+		}
+	}
+
+	// 将inc加载的文件信息的堆栈拷贝到缓存中
+	tmp_point += sizeof(ZENGL_LINECOL_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->FileStackList, sizeof(ZENGL_FILE_STACKLIST_TYPE));
+	if(compile->FileStackList.stacks != ZL_NULL) {
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->FileStackList.stacks);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_FILE_STACKLIST_TYPE *)tmp_point)->stacks = (ZENGL_FILE_STACK_TYPE *)offset;
+		tmp_point2 = api_cache_mempool + (offset - 1);
+		tp = ZL_NULL;
+		offset = 0;
+		for(i=0; i < compile->FileStackList.count ;i++) {
+			// 将source中的filename指针转为offset缓存偏移值
+			if(compile->FileStackList.stacks[i].source.filename != ZL_NULL) {
+				if(tp != (ZL_BYTE *)compile->FileStackList.stacks[i].source.filename) {
+					offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count,
+							compile->FileStackList.stacks[i].source.filename);
+					if(offset < 0) {
+						VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+						return -1;
+					}
+					tp = (ZL_BYTE *)compile->FileStackList.stacks[i].source.filename;
+				}
+				((ZENGL_FILE_STACK_TYPE *)tmp_point2)[i].source.filename = (ZL_CHAR *)offset;
+				((ZENGL_FILE_STACK_TYPE *)tmp_point2)[i].source.file = ZL_NULL;
+			}
+		}
+
+		// FileStackList.filenames中存储了所有加载过的文件的文件名信息，将这些文件名指针都转为offset缓存偏移值并存储到缓存里
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->FileStackList.filenames);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_FILE_STACKLIST_TYPE *)tmp_point)->filenames = (ZL_CHAR **)offset;
+		api_cache->filenames = (ZL_CHAR **)offset;
+		api_cache->filenames_count = compile->FileStackList.filenames_count;
+		tmp_point2 = api_cache_mempool + (offset - 1);
+		tp = ZL_NULL;
+		offset = 0;
+		for(i=0; i < compile->FileStackList.filenames_count; i++) {
+			if(compile->FileStackList.filenames[i] != ZL_NULL) {
+				// 将加载过的文件名指针都转为offset缓存偏移值
+				if(tp != (ZL_BYTE *)compile->FileStackList.filenames[i]) {
+					offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count,
+												compile->FileStackList.filenames[i]);
+					if(offset < 0) {
+						VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+						return -1;
+					}
+					tp = (ZL_BYTE *)compile->FileStackList.filenames[i];
+				}
+				((ZL_CHAR **)tmp_point2)[i] = (ZL_CHAR *)offset;
+			}
+		}
+	}
+
+	// 将全局变量符号表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_FILE_STACKLIST_TYPE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->SymGlobalTable, sizeof(ZENGL_SYM_GLOBAL_TABLE));
+	if(compile->SymGlobalTable.sym != ZL_NULL) {
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->SymGlobalTable.sym);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_SYM_GLOBAL_TABLE *)tmp_point)->sym = (ZENGL_SYM_GLOBAL_TABLE_MEMBER *)offset;
+	}
+
+	// 将脚本函数参数和局部变量符号表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_SYM_GLOBAL_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->SymLocalTable, sizeof(ZENGL_SYM_LOCAL_TABLE));
+	if(compile->SymLocalTable.local != ZL_NULL) {
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->SymLocalTable.local);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_SYM_LOCAL_TABLE *)tmp_point)->local = (ZENGL_SYM_LOCAL_TABLE_MEMBER *)offset;
+	}
+
+	// 将类符号表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_SYM_LOCAL_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->SymClassTable, sizeof(ZENGL_SYM_CLASS_TABLE));
+	if(compile->SymClassTable.classTable != ZL_NULL) {
+		// 将类符号表中的classTable动态数组的指针转为offset缓存偏移值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->SymClassTable.classTable);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_SYM_CLASS_TABLE *)tmp_point)->classTable = (ZENGL_SYM_CLASS_TABLE_MEMBER *)offset;
+	}
+
+	// 将类成员符号表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_SYM_CLASS_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->SymClassMemberTable, sizeof(ZENGL_SYM_CLASSMEMBER_TABLE));
+	if(compile->SymClassMemberTable.members != ZL_NULL) {
+		// 将类成员符号表的members动态数组的指针转为offset缓存偏移值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->SymClassMemberTable.members);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_SYM_CLASSMEMBER_TABLE *)tmp_point)->members = (ZENGL_SYM_CLASSMEMBER_TABLE_MEMBER *)offset;
+	}
+
+	// 将函数符号表拷贝到缓存中
+	tmp_point += sizeof(ZENGL_SYM_CLASSMEMBER_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->SymFunTable, sizeof(ZENGL_SYM_FUN_TABLE));
+	if(compile->SymFunTable.funs != ZL_NULL) {
+		// 将函数符号表的动态数组的指针值转为offset缓存偏移值，并存储到缓存里
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->SymFunTable.funs);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_SYM_FUN_TABLE *)tmp_point)->funs = (ZENGL_SYM_FUN_TABLE_MEMBER *)offset;
+	}
+
+	// 将链接地址动态数组拷贝到缓存中
+	tmp_point += sizeof(ZENGL_SYM_FUN_TABLE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->LDAddrList, sizeof(ZENGL_LD_ADDRLIST_TYPE));
+	if(compile->LDAddrList.addr != ZL_NULL) {
+		// 将动态数组的指针转为缓存偏移值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->LDAddrList.addr);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_LD_ADDRLIST_TYPE *)tmp_point)->addr = (ZENGL_LD_ADDR_TYPE *)offset;
+	}
+
+	// 将AST抽象语法树拷贝到缓存中
+	tmp_point += sizeof(ZENGL_LD_ADDRLIST_TYPE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->AST_nodes, sizeof(ZENGL_AST_TYPE));
+	if(compile->AST_nodes.nodes != ZL_NULL) {
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->AST_nodes.nodes);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_AST_TYPE *)tmp_point)->nodes = (ZENGL_AST_NODE_TYPE *)offset;
+		tmp_point2 = api_cache_mempool + (offset - 1);
+		tp = ZL_NULL;
+		offset = 0;
+		file_offset = 0;
+		for(i=0; i < compile->AST_nodes.count ;i++) {
+			// 将语法树的每个节点中包含的文件名指针转为偏移值
+			if(compile->AST_nodes.nodes[i].filename != ZL_NULL) {
+				if(tp != (ZL_BYTE *)compile->AST_nodes.nodes[i].filename) {
+					file_offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->AST_nodes.nodes[i].filename);
+					if(file_offset < 0) {
+						VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+						return -1;
+					}
+					tp = (ZL_BYTE *)compile->AST_nodes.nodes[i].filename;
+				}
+				((ZENGL_AST_NODE_TYPE *)tmp_point2)[i].filename = (ZL_CHAR *)file_offset;
+			}
+			// 将节点的extchilds扩展子节点动态数组的指针值转为offset偏移值
+			if(compile->AST_nodes.nodes[i].childs.extchilds != ZL_NULL) {
+				offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->AST_nodes.nodes[i].childs.extchilds);
+				if(offset < 0) {
+					VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+					return -1;
+				}
+				((ZENGL_AST_NODE_TYPE *)tmp_point2)[i].childs.extchilds = (ZL_INT *)offset;
+			}
+		}
+	}
+
+	// 将token字符串池拷贝到缓存中
+	tmp_point += sizeof(ZENGL_AST_TYPE);
+	ZENGL_SYS_MEM_COPY(tmp_point, &compile->Token_StringPool, sizeof(ZENGL_TOKEN_STRING_POOL));
+	if(compile->Token_StringPool.ptr != ZL_NULL) {
+		// 将token字符串的指针转为offset偏移值
+		offset = zengl_api_search_api_mempool((API_MEM_POOL_POINT_TYPE *)api_mempool, compile->mempool.count, compile->Token_StringPool.ptr);
+		if(offset < 0) {
+			VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_SEARCH_MEMPOOL_POINT_FAILED, ApiName , ApiName);
+			return -1;
+		}
+		((ZENGL_TOKEN_STRING_POOL *)tmp_point)->ptr = (ZL_CHAR *)offset;
+	}
+
+	// 将解释器的指令列表相关的结构体拷贝到缓存中
+	tmp_point = cachePtr + (baseSize + mempoolRealSize);
+	ZENGL_SYS_MEM_COPY(tmp_point, &run->inst_list, sizeof(ZENGL_RUN_INST_LIST));
+	((ZENGL_RUN_INST_LIST *)tmp_point)->size = ((ZENGL_RUN_INST_LIST *)tmp_point)->count;
+	((ZENGL_RUN_INST_LIST *)tmp_point)->mempool_index = 0;
+	((ZENGL_RUN_INST_LIST *)tmp_point)->insts = ZL_NULL;
+
+	// 将指令列表中所有的指令都拷贝到缓存中
+	tmp_point += sizeof(ZENGL_RUN_INST_LIST);
+	ZENGL_SYS_MEM_COPY(tmp_point, run->inst_list.insts, run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER));
+
+	tmp_point = cachePtr + (baseSize + mempoolRealSize + instListSize);
+	// 将指令操作数字符串池相关的结构体拷贝到缓存中
+	ZENGL_SYS_MEM_COPY(tmp_point, &run->InstData_StringPool, sizeof(ZENGL_RUN_INST_DATA_STRING_POOL));
+	((ZENGL_RUN_INST_DATA_STRING_POOL *)tmp_point)->size = ((ZENGL_RUN_INST_DATA_STRING_POOL *)tmp_point)->count;
+	((ZENGL_RUN_INST_DATA_STRING_POOL *)tmp_point)->mempool_index = 0;
+	((ZENGL_RUN_INST_DATA_STRING_POOL *)tmp_point)->ptr = ZL_NULL;
+
+	tmp_point += sizeof(ZENGL_RUN_INST_DATA_STRING_POOL);
+	// 将指令操作数字符串池中的所有字符都拷贝到缓存中
+	ZENGL_SYS_MEM_COPY(tmp_point, run->InstData_StringPool.ptr, run->InstData_StringPool.count * sizeof(ZL_CHAR));
+
+	// 将缓存指针和缓存大小通过指针参数返回给调用者
+	(*cachePoint) = cachePtr;
+	(*cacheSize) = totalSize;
+	return 0;
+}
+
+/* API接口，重利用缓存数据，就可以跳过编译过程 */
+ZL_EXPORT ZL_EXP_INT zenglApi_ReUseCacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * cachePoint, ZL_EXP_INT cacheSize)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZENGL_RUN_TYPE * run;
+	ZENGL_EXPORT_API_CACHE_TYPE * api_cache;
+	ZL_BYTE * mempoolPtr, * tmp_point, * cachePtr;
+	ZL_INT i, str_Index;
+	ZL_LONG offset;
+	ZL_CHAR * ApiName = "zenglApi_ReUseCacheMemData";
+	ZL_CHAR * inst_data_string_ptr;
+	//ZENGL_RUN_INST_DATA_STRING_POOL tmp_inst_data_str_pool;
+	cachePtr = (ZL_BYTE *)cachePoint;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	switch(VM->ApiState)
+	{
+	case ZL_API_ST_OPEN:
+	case ZL_API_ST_RESET:
+		break;
+	default:
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_INVALID_CALL_POSITION, ApiName , ApiName);
+		return -1;
+		break;
+	}
+	compile = &VM->compile;
+	run = &VM->run;
+	api_cache = (ZENGL_EXPORT_API_CACHE_TYPE *)cachePoint;
+	// 通过缓存签名，判断是否是有效的缓存数据
+	if(api_cache->signer != ZL_EXP_API_CACHE_SIGNER) {
+		VM->run.SetApiErrorEx(VM_ARG,ZL_ERR_VM_API_CACHE_INVALID_CACHE_DATA, ApiName , ApiName);
+		return -1;
+	}
+	mempoolPtr = (ZL_BYTE *)compile->memAlloc(VM_ARG, api_cache->mempoolRealSize);
+	// 将缓存中保存的内存池数据，拷贝到编译器中
+	ZENGL_SYS_MEM_COPY(mempoolPtr, (cachePtr + api_cache->mempoolOffset), api_cache->mempoolRealSize);
+
+	tmp_point = cachePtr + sizeof(ZENGL_EXPORT_API_CACHE_TYPE);
+	// 将缓存中的def宏定义常量的字符串池拷贝到编译器中
+	ZENGL_SYS_MEM_COPY(&compile->def_StringPool, tmp_point, sizeof(ZENGL_STRING_POOL_TYPE));
+	offset = (ZL_LONG)compile->def_StringPool.ptr;
+	if(offset > 0) // 将缓存中的偏移值转为可以使用的指针值
+		compile->def_StringPool.ptr = (ZL_CHAR *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_STRING_POOL_TYPE);
+	// 将def_table宏定义动态数组拷贝到编译器中
+	ZENGL_SYS_MEM_COPY(&compile->def_table, tmp_point, sizeof(ZENGL_DEF_TABLE));
+	offset = (ZL_LONG)compile->def_table.defs;
+	if(offset > 0) // 将缓存偏移值转为指针值
+		compile->def_table.defs = (ZENGL_DEF_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_DEF_TABLE);
+	// 将缓存的哈希表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(compile->HashTable, tmp_point, sizeof(ZL_INT) * ZL_SYM_HASH_TOTAL_SIZE);
+
+	tmp_point += sizeof(ZL_INT) * ZL_SYM_HASH_TOTAL_SIZE;
+	// 将缓存的行列号动态数组拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->LineCols, tmp_point, sizeof(ZENGL_LINECOL_TABLE));
+	offset = (ZL_LONG)compile->LineCols.lines;
+	if(offset > 0) {
+		compile->LineCols.lines = (ZENGL_LINECOL *)(mempoolPtr + offset - 1);
+		for(i=0; i < compile->LineCols.count ;i++) {
+			// 将缓存偏移值转为指针值
+			offset = (ZL_LONG)(compile->LineCols.lines[i].filename);
+			if(offset > 0)
+				compile->LineCols.lines[i].filename = (ZL_CHAR *)(mempoolPtr + offset - 1);
+		}
+	}
+
+	tmp_point += sizeof(ZENGL_LINECOL_TABLE);
+	// 将缓存的inc加载的文件信息堆栈拷贝到编译器，并将缓存偏移值转为可以使用的指针值
+	ZENGL_SYS_MEM_COPY(&compile->FileStackList, tmp_point, sizeof(ZENGL_FILE_STACKLIST_TYPE));
+	offset = (ZL_LONG)compile->FileStackList.stacks;
+	if(offset > 0) {
+		compile->FileStackList.stacks = (ZENGL_FILE_STACK_TYPE *)(mempoolPtr + offset - 1);
+		for(i=0; i < compile->FileStackList.count ;i++) {
+			offset = (ZL_LONG)(compile->FileStackList.stacks[i].source.filename);
+			if(offset > 0)
+				compile->FileStackList.stacks[i].source.filename = (ZL_CHAR *)(mempoolPtr + offset - 1);
+		}
+	}
+
+	tmp_point += sizeof(ZENGL_FILE_STACKLIST_TYPE);
+	// 将缓存的全局符号表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->SymGlobalTable, tmp_point, sizeof(ZENGL_SYM_GLOBAL_TABLE));
+	offset = (ZL_LONG)compile->SymGlobalTable.sym;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->SymGlobalTable.sym = (ZENGL_SYM_GLOBAL_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_SYM_GLOBAL_TABLE);
+	// 将缓存的局部变量(包括函数参数)符号表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->SymLocalTable, tmp_point, sizeof(ZENGL_SYM_LOCAL_TABLE));
+	offset = (ZL_LONG)compile->SymLocalTable.local;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->SymLocalTable.local = (ZENGL_SYM_LOCAL_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_SYM_LOCAL_TABLE);
+	// 将缓存的类符号表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->SymClassTable, tmp_point, sizeof(ZENGL_SYM_CLASS_TABLE));
+	offset = (ZL_LONG)compile->SymClassTable.classTable;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->SymClassTable.classTable = (ZENGL_SYM_CLASS_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_SYM_CLASS_TABLE);
+	// 将缓存的类成员符号表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->SymClassMemberTable, tmp_point, sizeof(ZENGL_SYM_CLASSMEMBER_TABLE));
+	offset = (ZL_LONG)compile->SymClassMemberTable.members;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->SymClassMemberTable.members = (ZENGL_SYM_CLASSMEMBER_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_SYM_CLASSMEMBER_TABLE);
+	// 将缓存的函数符号表拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->SymFunTable, tmp_point, sizeof(ZENGL_SYM_FUN_TABLE));
+	offset = (ZL_LONG)compile->SymFunTable.funs;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->SymFunTable.funs = (ZENGL_SYM_FUN_TABLE_MEMBER *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_SYM_FUN_TABLE);
+	// 将缓存的链接地址动态数组拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->LDAddrList, tmp_point, sizeof(ZENGL_LD_ADDRLIST_TYPE));
+	offset = (ZL_LONG)compile->LDAddrList.addr;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->LDAddrList.addr = (ZENGL_LD_ADDR_TYPE *)(mempoolPtr + offset - 1);
+
+	tmp_point += sizeof(ZENGL_LD_ADDRLIST_TYPE);
+	// 将缓存的AST抽象语法树拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->AST_nodes, tmp_point, sizeof(ZENGL_AST_TYPE));
+	offset = (ZL_LONG)compile->AST_nodes.nodes;
+	if(offset > 0) { // 将节点中的各个缓存偏移值转为指针值
+		compile->AST_nodes.nodes = (ZENGL_AST_NODE_TYPE *)(mempoolPtr + offset - 1);
+		for(i=0; i < compile->AST_nodes.count ;i++) {
+			offset = (ZL_LONG)(compile->AST_nodes.nodes[i].filename);
+			if(offset > 0)
+				compile->AST_nodes.nodes[i].filename = (ZL_CHAR *)(mempoolPtr + offset - 1);
+			offset = (ZL_LONG)(compile->AST_nodes.nodes[i].childs.extchilds);
+			if(offset > 0)
+				compile->AST_nodes.nodes[i].childs.extchilds = (ZL_INT *)(mempoolPtr + offset - 1);
+		}
+	}
+
+	tmp_point += sizeof(ZENGL_AST_TYPE);
+	// 将缓存的token字符串池拷贝到编译器
+	ZENGL_SYS_MEM_COPY(&compile->Token_StringPool, tmp_point, sizeof(ZENGL_TOKEN_STRING_POOL));
+	offset = (ZL_LONG)compile->Token_StringPool.ptr;
+	if(offset > 0) // 将缓存偏移转为指针
+		compile->Token_StringPool.ptr = (ZL_CHAR *)(mempoolPtr + offset - 1);
+
+	tmp_point = cachePtr + (api_cache->mempoolOffset + api_cache->mempoolRealSize);
+	// 将缓存的指令列表相关的结构体拷贝到解释器
+	ZENGL_SYS_MEM_COPY( &run->inst_list, tmp_point, sizeof(ZENGL_RUN_INST_LIST));
+	run->inst_list.insts = (ZENGL_RUN_INST_LIST_MEMBER *)run->memAlloc(VM_ARG, run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER),
+			&run->inst_list.mempool_index);
+
+	tmp_point += sizeof(ZENGL_RUN_INST_LIST);
+	// 将缓存的指令列表中的所有指令都拷贝到解释器
+	ZENGL_SYS_MEM_COPY(run->inst_list.insts, tmp_point, run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER));
+
+	tmp_point += run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER);
+	//ZENGL_SYS_MEM_COPY(&tmp_inst_data_str_pool, tmp_point, sizeof(ZENGL_RUN_INST_DATA_STRING_POOL));
+	tmp_point += sizeof(ZENGL_RUN_INST_DATA_STRING_POOL);
+	inst_data_string_ptr = (ZL_CHAR *)tmp_point;
+	// 将缓存的指令操作数字符串通过InstDataStringPoolAdd函数添加到当前解释器中，并相应的调整指令中的str_Index的值(字符串在字符串池中的索引)
+	for(i=0; i < run->inst_list.count ;i++) {
+		if(run->inst_list.insts[i].src.type == ZL_R_DT_STR) {
+			str_Index = run->inst_list.insts[i].src.val.str_Index;
+			if(str_Index > 0)
+				run->inst_list.insts[i].src.val.str_Index = run->InstDataStringPoolAdd(VM_ARG, (inst_data_string_ptr + str_Index));
+		}
+		if(run->inst_list.insts[i].dest.type == ZL_R_DT_STR) {
+			str_Index = run->inst_list.insts[i].dest.val.str_Index;
+			if(str_Index > 0)
+				run->inst_list.insts[i].dest.val.str_Index = run->InstDataStringPoolAdd(VM_ARG, (inst_data_string_ptr + str_Index));
+		}
+	}
+	// 在将缓存的编译数据都拷贝到虚拟机中后，就可以将编译器的isReUse设置为ZL_TRUE，这样在解释执行时，就可以跳过编译过程
+	VM->compile.isReUse = ZL_TRUE;
+	return 0;
+}

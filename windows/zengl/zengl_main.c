@@ -1320,7 +1320,7 @@ ZL_VOID zengl_include_file(ZL_VOID * VM_ARG)
 		if(token != ZL_TK_SEMI)
 			compile->exit(VM_ARG,ZL_ERR_CP_INC_NO_END_SEMI,
 			compile->tokenInfo.start_line,compile->tokenInfo.start_col,compile->tokenInfo.filename);
-		compile->push_FileStack(VM_ARG,&compile->source,compile->line_no,compile->col_no);
+		compile->push_FileStack(VM_ARG,&compile->source,compile->line_no,compile->col_no, newfilename);
 		compile->source.file = ZL_NULL;	 //file文件指针字段设为NULL，这样扫描器就会重新去打开新的文件。
 		compile->source.needread = ZL_TRUE;
 		compile->source.cur = 0;
@@ -1388,7 +1388,7 @@ ZL_CHAR * zengl_makePathFileName(ZL_VOID * VM_ARG,ZL_CHAR * filename)
 file2.zl进行扫描)前，必须先将file1.zl压入栈，当file2.zl扫描结束后，
 再将file1.zl信息弹出栈，接着从file1.zl的inc语句后继续扫描。
 */
-ZL_VOID zengl_push_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col)
+ZL_VOID zengl_push_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT line,ZL_INT col, ZL_CHAR * inc_filename)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_SOURCE_TYPE * dest;
@@ -1402,11 +1402,21 @@ ZL_VOID zengl_push_FileStack(ZL_VOID * VM_ARG , ZENGL_SOURCE_TYPE * src,ZL_INT l
 		ZENGL_SYS_MEM_SET(compile->FileStackList.stacks + (compile->FileStackList.size - ZL_FILE_STACK_SIZE),0,
 			ZL_FILE_STACK_SIZE * sizeof(ZENGL_FILE_STACK_TYPE));
 	}
+	if(compile->FileStackList.filenames_count == compile->FileStackList.filenames_size)
+	{
+		compile->FileStackList.filenames_size += ZL_FILE_STACK_SIZE;
+		compile->FileStackList.filenames = compile->memReAlloc(VM_ARG,compile->FileStackList.filenames,
+				compile->FileStackList.filenames_size * sizeof(ZL_CHAR *));
+		ZENGL_SYS_MEM_SET(compile->FileStackList.filenames + (compile->FileStackList.filenames_size - ZL_FILE_STACK_SIZE), 0,
+				ZL_FILE_STACK_SIZE * sizeof(ZL_CHAR *));
+	}
 	dest = &compile->FileStackList.stacks[compile->FileStackList.count].source;
 	ZENGL_SYS_MEM_COPY(dest,src,sizeof(ZENGL_SOURCE_TYPE));
 	compile->FileStackList.stacks[compile->FileStackList.count].line = line;
 	compile->FileStackList.stacks[compile->FileStackList.count].col = col;
 	compile->FileStackList.count++;
+	compile->FileStackList.filenames[compile->FileStackList.filenames_count] = inc_filename;
+	compile->FileStackList.filenames_count++;
 }
 
 /*
@@ -1435,12 +1445,16 @@ ZL_VOID zengl_initFileStack(ZL_VOID * VM_ARG)
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	if(compile->FileStackList.isInit)
 		return;
-	compile->FileStackList.count = 0;
-	compile->FileStackList.size = ZL_FILE_STACK_SIZE;
+	compile->FileStackList.filenames_count = compile->FileStackList.count = 0;
+	compile->FileStackList.filenames_size = compile->FileStackList.size = ZL_FILE_STACK_SIZE;
 	compile->FileStackList.stacks = compile->memAlloc(VM_ARG,compile->FileStackList.size * sizeof(ZENGL_FILE_STACK_TYPE));
 	if(compile->FileStackList.stacks == ZL_NULL)
 		compile->exit(VM_ARG,ZL_ERR_CP_INC_FILESTACKLIST_MALLOC_FAILED);
+	compile->FileStackList.filenames = compile->memAlloc(VM_ARG,compile->FileStackList.filenames_size * sizeof(ZL_CHAR *));
+	if(compile->FileStackList.filenames == ZL_NULL)
+		compile->exit(VM_ARG,ZL_ERR_CP_INC_FILESTACKLIST_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(compile->FileStackList.stacks,0,compile->FileStackList.size * sizeof(ZENGL_FILE_STACK_TYPE));
+	ZENGL_SYS_MEM_SET(compile->FileStackList.filenames,0,compile->FileStackList.filenames_size * sizeof(ZL_CHAR *));
 	compile->FileStackList.isInit = ZL_TRUE;
 }
 
@@ -1584,18 +1598,27 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
 	ZENGL_COMPILE_TYPE * compile = &VM->compile;
-	ZL_INT i;
+	ZL_INT i, len;
+	ZL_CHAR * filename;
 	compile->isinCompiling = ZL_TRUE;
 	compile->start_time = ZENGL_SYS_TIME_CLOCK();
+	if(compile->userdef_info == ZL_NULL)
+		compile->userdef_info = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_info;
+	if(compile->userdef_compile_error == ZL_NULL)
+		compile->userdef_compile_error = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_compile_error;
+	if(compile->TokenOperateStringCount == 0) {
+		for(i=0;(ZL_LONG)(compile->TokenOperateString[i]) != -1L;i++)
+			;
+		compile->TokenOperateStringCount = i;
+	}
 	if(compile->isReUse == ZL_TRUE)
 		return;
-	compile->source.filename = script_file;
-	compile->userdef_info = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_info;
-	compile->userdef_compile_error = (ZL_VM_API_INFO_FUN_HANDLE)vm_main_args->userdef_compile_error;
+	len = ZENGL_SYS_STRLEN(script_file);
+	filename = compile->memAlloc(VM_ARG,len+1);
+	ZENGL_SYS_STRNCPY(filename,script_file,len);
+	filename[len] = ZL_STRNULL;
+	compile->source.filename = filename;
 	compile->source.needread = ZL_TRUE;
-	for(i=0;(ZL_LONG)(compile->TokenOperateString[i]) != -1L;i++)
-		;
-	compile->TokenOperateStringCount = i;
 	compile->source.encrypt = VM->initEncrypt; //使用虚拟机的初始加密结构体来初始化source的encrypt成员
 }
 
