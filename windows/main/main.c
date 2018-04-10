@@ -516,7 +516,7 @@ ZL_EXP_INT main_debug_break(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * cur_filename,ZL_E
 				ret = zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,ZL_EXP_NULL,ZL_EXP_NULL);
 				if(ret == 1)
 				{
-					zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,ZL_EXP_NULL,ZL_EXP_NULL);
+					// zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,ZL_EXP_NULL,ZL_EXP_NULL); // 该行会让r返回到上一层的上一层，多返回一层，所以注释掉
 					pc++;
 					size = zenglApi_DebugGetBreak(VM_ARG,-1,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL,ZL_EXP_NULL);
 					for(i=0;i<size;i++)
@@ -1103,6 +1103,30 @@ ZL_EXP_VOID main_builtin_get_str_len(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 	zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, str_len, 0);
 }
 
+/**
+ * bltCount模块函数，获取数组的有效成员数，或者获取字符串的有效长度
+ */
+ZL_EXP_VOID main_builtin_count(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	int retcount;
+	if(argcount < 1)
+		zenglApi_Exit(VM_ARG,"usage: bltCount(data)");
+	zenglApi_GetFunArg(VM_ARG,1,&arg);
+	switch(arg.type) {
+	case ZL_EXP_FAT_STR:
+		retcount = strlen(arg.val.str);
+		break;
+	case ZL_EXP_FAT_MEMBLOCK:
+		retcount = zenglApi_GetMemBlockNNCount(VM_ARG, &arg.val.memblock);
+		break;
+	default:
+		retcount = 0;
+		break;
+	}
+	zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, retcount, 0);
+}
+
 ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG);
 
 /*bltLoadScript模块函数，新建一个虚拟机，加载并执行某个脚本*/
@@ -1229,6 +1253,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetArrayNNCount",main_builtin_get_array_nncount);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltSetArray",main_builtin_set_array);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetStrLen",main_builtin_get_str_len);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltCount",main_builtin_count);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);

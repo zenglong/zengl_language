@@ -26,6 +26,12 @@
 
 #include "zengl_global.h"
 
+// 专用于VMemBlockOps，VMemListOps，VStackListOps的内存块释放函数
+static ZL_VOID zenglrun_memblock_free_for_ops(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * memblock,ZL_INT * index, ZENGL_RUN_VMEM_OP_TYPE op, ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem);
+
+// 该函数专门用于释放局部变量中的内存块，当内存块被赋值给AX寄存器进行脚本函数返回时，就只将refcount数减一，而不进行实际的释放操作。这样外部脚本函数的调用者就可以使用返回的内存块了。
+static ZL_VOID zenglrun_memblock_free_local(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * memblock,ZL_INT * index);
+
 /*
 	添加汇编指令，使用ZL_DOUBLE传值，double占8个字节，可以代表8字节以内的值，再强制转换类型即可
 */
@@ -171,8 +177,7 @@ realloc:
 		//如果所访问的内存原先是个数组之类的内存块的话，就将该内存块的内存空间释放掉
 		if(run->vmem_list.mem_array[memloc].runType == ZL_R_RDT_MEM_BLOCK && run->vmem_list.mem_array[memloc].val.memblock != ZL_NULL)
 		{
-			run->memblock_free(VM_ARG,run->vmem_list.mem_array[memloc].val.memblock,
-				&run->vmem_list.mem_array[memloc].memblk_Index);
+			zenglrun_memblock_free_for_ops(VM_ARG,run->vmem_list.mem_array[memloc].val.memblock, &run->vmem_list.mem_array[memloc].memblk_Index, opType, &argval);
 			run->vmem_list.mem_array[memloc].val.memblock = ZL_NULL;
 		}
 		else if(run->vmem_list.mem_array[memloc].runType == ZL_R_RDT_ADDR_MEMBLK) //如果是内存块引用，则直接将memblock内存块指针设为ZL_NULL
@@ -378,6 +383,13 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VStackListOps(ZL_VOID * VM_ARG,ZENGL_RUN_V
 			case ZL_R_RDT_ADDR_LOC: ////如果是局部变量栈内存的引用，就通过VStackListOps来访问
 				retmem = run->VStackListOps(VM_ARG,opType,run->vstack_list.mem_array[run->vstack_list.count - 1].val.dword,argval,ZL_TRUE);
 				break;
+			case ZL_R_RDT_MEM_BLOCK: // 如果要弹出的数据是内存块，则将引用数减一，这样之前PUSH操作增加的引用数就可以被还原
+				{
+					ZENGL_RUN_VIRTUAL_MEM_LIST * tmp_memblock = run->vstack_list.mem_array[run->vstack_list.count - 1].val.memblock;
+					tmp_memblock->refcount--;
+					if(tmp_memblock->refcount < 0)
+						tmp_memblock->refcount = 0;
+				} // 继续执行default里的操作，将最后一个元素返回，所以这里不需要break
 			default:
 				retmem = run->vstack_list.mem_array[run->vstack_list.count - 1]; //如果不是引用，就将栈中最后一个元素返回
 				break;
@@ -414,8 +426,8 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VStackListOps(ZL_VOID * VM_ARG,ZENGL_RUN_V
 			if(run->vstack_list.mem_array[index].runType == ZL_R_RDT_MEM_BLOCK && 
 				run->vstack_list.mem_array[index].val.memblock != ZL_NULL) //如果栈中该元素之前是个数组之类的内存块，就将内存块进行释放
 			{
-				run->memblock_free(VM_ARG,run->vstack_list.mem_array[index].val.memblock,
-					&run->vstack_list.mem_array[index].memblk_Index);
+				zenglrun_memblock_free_for_ops(VM_ARG,run->vstack_list.mem_array[index].val.memblock,
+					&run->vstack_list.mem_array[index].memblk_Index, opType, &argval);
 				run->vstack_list.mem_array[index].val.memblock = ZL_NULL;
 			}
 			else if(run->vstack_list.mem_array[index].runType == ZL_R_RDT_ADDR_MEMBLK) //如果是内存块引用，就直接将memblock内存块指针设为ZL_NULL
@@ -2170,7 +2182,7 @@ ZENGL_RUN_VIRTUAL_MEM_STRUCT zenglrun_VMemBlockOps(ZL_VOID * VM_ARG,ZENGL_RUN_VM
 		}
 		else if(ptr->mem_array[index].runType == ZL_R_RDT_MEM_BLOCK) //在设置某数组元素时，如果该数组元素本身又是一个数组，则将该数组元素分配的内存块释放掉。
 		{
-			run->memblock_free(VM_ARG,(ZENGL_RUN_VIRTUAL_MEM_LIST *)ptr->mem_array[index].val.memblock,&ptr->mem_array[index].memblk_Index);
+			zenglrun_memblock_free_for_ops(VM_ARG,(ZENGL_RUN_VIRTUAL_MEM_LIST *)ptr->mem_array[index].val.memblock,&ptr->mem_array[index].memblk_Index, op, tmpmem);
 			ptr->mem_array[index].val.memblock = ZL_NULL;
 		}
 	}
@@ -2297,6 +2309,67 @@ ZL_VOID zenglrun_memblock_free(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * mem
 			}
 		}
 		run->memFreeIndex(VM_ARG,memblock->mem_array,&memblock->mempool_index); //没有这条就会内存一直增大，导致内存泄漏。。
+		if(memblock->hash_array.hash_code_table.members != ZL_NULL)
+			run->memFreeIndex(VM_ARG,memblock->hash_array.hash_code_table.members,&(memblock->hash_array.hash_code_table.mempool_index)); // 释放哈希数组中的哈希表
+		if(memblock->hash_array.str_pool.ptr != ZL_NULL)
+			run->memFreeIndex(VM_ARG,memblock->hash_array.str_pool.ptr,&(memblock->hash_array.str_pool.mempool_index)); // 释放哈希数组中的字符串池
+		run->memFreeIndex(VM_ARG,memblock,index); // 将内存块自己给释放掉
+	}
+}
+
+// 专用于VMemBlockOps，VMemListOps，VStackListOps的内存块释放函数
+static ZL_VOID zenglrun_memblock_free_for_ops(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * memblock,ZL_INT * index, ZENGL_RUN_VMEM_OP_TYPE op, ZENGL_RUN_VIRTUAL_MEM_STRUCT * tmpmem)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	// 如果和要操作的数据相同，则不进行实际的释放操作，例如假设变量b是一个数组，那么b = b;语句在执行时就不会将自己给释放掉
+	switch(op) {
+		case ZL_R_VMOPT_SETMEM_MEMBLOCK:
+		case ZL_R_VMOPT_ADDMEM_MEMBLOCK:
+			if(memblock == tmpmem->val.memblock) {
+				memblock->refcount--;
+				if(memblock->refcount < 0)
+					memblock->refcount = 0;
+				return;
+			}
+		break;
+	}
+	// 否则执行实际的释放操作
+	run->memblock_free(VM_ARG, memblock, index);
+}
+
+// 该函数专门用于释放局部变量中的内存块，当内存块被赋值给AX寄存器进行脚本函数返回时，就只将refcount数减一，而不进行实际的释放操作。这样外部脚本函数的调用者就可以使用返回的内存块了。
+static ZL_VOID zenglrun_memblock_free_local(ZL_VOID * VM_ARG,ZENGL_RUN_VIRTUAL_MEM_LIST * memblock,ZL_INT * index)
+{
+	ZENGL_RUN_TYPE * run = &((ZENGL_VM_TYPE *)VM_ARG)->run;
+	ZL_INT i;
+	if(memblock == ZL_NULL)
+		return;
+	memblock->refcount--;
+	// 如果当前局部变量的内存块等于AX返回寄存器的内存块，说明该内存块很有可能会被外部调用者使用，就只将refcount引用计数减一，而不执行具体的释放内存块的操作。
+	if(ZENGL_RUN_REG(ZL_R_RT_AX).runType == ZL_R_RDT_MEM_BLOCK && ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock == memblock) 
+	{
+		if(memblock->refcount < 0)
+			memblock->refcount = 0;
+		return; // 直接返回，不进行后面的释放操作
+	}
+	if(memblock->refcount <= 0)
+	{
+		for(i=0;i<memblock->size;i++)
+		{
+			if(memblock->mem_array[i].runType == ZL_R_RDT_STR && 
+				memblock->mem_array[i].str_Index > 0)
+			{
+				run->memFreeIndex(VM_ARG,memblock->mem_array[i].val.str,&memblock->mem_array[i].str_Index);
+				memblock->mem_array[i].val.str = ZL_NULL;
+			}
+			else if(memblock->mem_array[i].runType == ZL_R_RDT_MEM_BLOCK &&
+				memblock->mem_array[i].val.memblock != ZL_NULL)
+			{
+				zenglrun_memblock_free_local(VM_ARG,(ZENGL_RUN_VIRTUAL_MEM_LIST *)memblock->mem_array[i].val.memblock,&memblock->mem_array[i].memblk_Index);
+				memblock->mem_array[i].val.memblock = ZL_NULL;
+			}
+		}
+		run->memFreeIndex(VM_ARG,memblock->mem_array,&memblock->mempool_index); // 将内存块的mem_array动态数组释放掉
 		if(memblock->hash_array.hash_code_table.members != ZL_NULL)
 			run->memFreeIndex(VM_ARG,memblock->hash_array.hash_code_table.members,&(memblock->hash_array.hash_code_table.mempool_index)); // 释放哈希数组中的哈希表
 		if(memblock->hash_array.str_pool.ptr != ZL_NULL)
@@ -2675,17 +2748,7 @@ ZL_VOID zenglrun_memblock_freeall_local(ZL_VOID * VM_ARG)
 		case ZL_R_RDT_MEM_BLOCK:
 			if(run->vstack_list.mem_array[locIndex].val.memblock != ZL_NULL)
 			{
-				// 如果当前局部变量的内存块等于AX返回寄存器的内存块，说明该内存块很有可能会被外部调用者使用，就只将refcount引用计数减一，而不执行具体的释放内存块的操作。
-				if(ZENGL_RUN_REG(ZL_R_RT_AX).runType == ZL_R_RDT_MEM_BLOCK &&
-				   ZENGL_RUN_REGVAL(ZL_R_RT_AX).memblock == run->vstack_list.mem_array[locIndex].val.memblock) {
-					ZL_INT refcount = ((ZENGL_RUN_VIRTUAL_MEM_LIST *)(run->vstack_list.mem_array[locIndex].val.memblock))->refcount;
-					refcount = ((refcount - 1) >= 0) ? (refcount - 1) : 0; // refcount的最小值为0
-					((ZENGL_RUN_VIRTUAL_MEM_LIST *)(run->vstack_list.mem_array[locIndex].val.memblock))->refcount = refcount;
-				}
-				else {
-					run->memblock_free(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock,
-						&run->vstack_list.mem_array[locIndex].memblk_Index);
-				}
+				zenglrun_memblock_free_local(VM_ARG,run->vstack_list.mem_array[locIndex].val.memblock, &run->vstack_list.mem_array[locIndex].memblk_Index);
 				run->vstack_list.mem_array[locIndex].runType = ZL_R_RDT_NONE;
 				run->vstack_list.mem_array[locIndex].val.dword = 0;
 				run->vstack_list.mem_array[locIndex].val.memblock = ZL_NULL;

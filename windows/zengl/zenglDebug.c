@@ -471,7 +471,11 @@ ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG)
 			VM->compile.SymClassTable.global_classid = PVM->compile.SymFunTable.funs[PFunID].classid;
 			VM->compile.SymFunTable.global_funid = PVM->compile.SymFunTable.funs[PFunID].funid;
 			run->reg_list[ZL_R_RT_ARG].val.dword = arg;
+			// 如果不设置ZL_R_RDT_INT，则默认是ZL_R_RDT_NONE类型，ZL_R_RDT_NONE类型的寄存器在PUSH的时候会被强制当成0，这样设置的dword值就会失效了!
+			run->reg_list[ZL_R_RT_ARG].runType = ZL_R_RDT_INT;
 			run->reg_list[ZL_R_RT_LOC].val.dword = loc;
+			// 和上面同理
+			run->reg_list[ZL_R_RT_LOC].runType = ZL_R_RDT_INT;
 			return 0;
 		}
 		else if(PRun->inst_list.insts[PJmp].type == ZL_R_IT_CALL)
@@ -493,7 +497,11 @@ ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG)
 			VM->compile.SymClassTable.global_classid = PVM->compile.SymFunTable.funs[PFunID].classid;
 			VM->compile.SymFunTable.global_funid = PVM->compile.SymFunTable.funs[PFunID].funid;
 			run->reg_list[ZL_R_RT_ARG].val.dword = arg;
+			// 如果不设置ZL_R_RDT_INT，则默认是ZL_R_RDT_NONE类型，ZL_R_RDT_NONE类型的寄存器在PUSH的时候会被强制当成0，这样设置的dword值就会失效了!
+			run->reg_list[ZL_R_RT_ARG].runType = ZL_R_RDT_INT;
 			run->reg_list[ZL_R_RT_LOC].val.dword = loc;
+			// 和上面同理
+			run->reg_list[ZL_R_RT_LOC].runType = ZL_R_RDT_INT;
 			return 0;
 		}
 		else

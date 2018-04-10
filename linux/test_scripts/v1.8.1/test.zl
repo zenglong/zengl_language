@@ -1,0 +1,38 @@
+use builtin;
+def TRUE 1;
+def FALSE 0;
+
+fun test()
+	a['test'] = array();
+	a['test', 'name'] = 'zengl';
+	print 'test,name:'+a['test', 'name'];
+	return a['test']; // 测试返回数组成员
+endfun
+
+fun show_bool(bool = TRUE)
+	// 测试r调试命令是否会返回上一层
+	print bool ? "true" : "false";
+endfun
+
+fun test2(posts = 0)
+	// 测试p bltCount(posts) && posts['id'] > 0调试命令是否会得到整数1
+	if(bltCount(posts) && posts['id'] > 0)
+		show_bool(TRUE);
+	else
+		show_bool(FALSE);
+	endif
+
+	// 测试POP指令是否会将posts数组的refcount引用计数器还原
+	if(posts && posts['id'] > 0)
+		show_bool(TRUE);
+	else
+		show_bool(FALSE);
+	endif
+endfun
+
+b = test();
+b = b; // 测试是否会释放掉自己
+print 'b,name:'+b['name'];
+print 'test2:';
+posts['id'] = 12;
+test2(posts);

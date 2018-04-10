@@ -3189,6 +3189,18 @@ ZL_EXPORT ZL_EXP_INT zenglApi_CacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID ** 
 	// 将指令列表中所有的指令都拷贝到缓存中
 	tmp_point += sizeof(ZENGL_RUN_INST_LIST);
 	ZENGL_SYS_MEM_COPY(tmp_point, run->inst_list.insts, run->inst_list.count * sizeof(ZENGL_RUN_INST_LIST_MEMBER));
+	for(i=0; i < run->inst_list.count ;i++) {
+		if(run->inst_list.insts[i].type == ZL_R_IT_CALL) {
+			// 如果CALL指令的src源操作数在执行时，被替换为了模块函数的整数索引值，则将其还原为字符串。
+			// 如果不进行还原操作，那么当客户端调整了模块函数时，原索引值可能会对应到错误的模块函数
+			if(run->inst_list.insts[i].src.type == ZL_R_DT_NUM) {
+				ZENGL_RUN_INST_LIST_MEMBER * tmp_member = (((ZENGL_RUN_INST_LIST_MEMBER *)tmp_point) + i);
+				tmpIndex = run->inst_list.insts[i].src.val.num;
+				tmp_member->src.type = ZL_R_DT_STR;
+				tmp_member->src.val.str_Index = run->ModFunTable.mod_funs[tmpIndex].strIndex;
+			}
+		}
+	}
 
 	tmp_point = cachePtr + (baseSize + mempoolRealSize + instListSize);
 	// 将指令操作数字符串池相关的结构体拷贝到缓存中
