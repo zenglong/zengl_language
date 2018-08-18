@@ -59,6 +59,12 @@ ZL_VOID zengl_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 		compile->isDestroyed = ZL_TRUE;
 	}
 	compile->isinCompiling = ZL_FALSE;
+	/**
+	 * 编译结束后，如果打开的脚本文件没有被关闭的话(compile->source.file不等于空指针时)，就将其关闭掉，否则会发生内存泄露
+	 */
+	if(compile->source.file != ZL_NULL) {
+		ZENGL_SYS_FILE_CLOSE(compile->source.file);
+	}
 	if(VM->errorno == ZL_NO_ERR_SUCCESS)
 		ZENGL_SYS_JMP_LONGJMP_TO(compile->jumpBuffer, 1);
 	else

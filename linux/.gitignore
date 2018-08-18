@@ -1,0 +1,5 @@
+*.o
+libzengl.so
+libzengl.a
+encrypt
+zengl
