@@ -64,6 +64,7 @@ ZL_VOID zengl_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 	 */
 	if(compile->source.file != ZL_NULL) {
 		ZENGL_SYS_FILE_CLOSE(compile->source.file);
+		compile->source.file = ZL_NULL; // 在关闭文件后，将文件指针设置为0，这样在调用ReUse接口后，重利用之前的脚本运行时，就不会因为再次关闭文件而导致段错误
 	}
 	if(VM->errorno == ZL_NO_ERR_SUCCESS)
 		ZENGL_SYS_JMP_LONGJMP_TO(compile->jumpBuffer, 1);

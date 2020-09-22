@@ -1,0 +1,18 @@
+use builtin;
+def TRUE 1;
+def FALSE 0;
+class Fatal
+	fun fatal_error(error, stack)
+		print '\n *** hahaha fatal error callback: *** \n  ' + error + '\n *** backtrace: *** \n' + stack + '\n';
+	endfun
+endclass
+
+bltFatalErrorCallback('fatal_error', 'Fatal', FALSE);
+
+class Test
+	fun test()
+		a = bltTestHa();
+	endfun
+endclass
+
+Test.test();

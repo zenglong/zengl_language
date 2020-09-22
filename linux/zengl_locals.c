@@ -78,6 +78,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: bracket can't empty except funcall (语法错误：普通的括号表达式不能为空，除非是函数的参数括号，因为函数可以没有参数)\n", //ZL_ERR_CP_SYNTAX_BRACKET_EMPTY
 	"\n syntax error: ')' have no '(' (语法错误：右括号没有对应的左括号)\n", //ZL_ERR_CP_SYNTAX_RBRACKET_NO_LBRACKET
 	"\n syntax error: '(' have no ')' (语法错误：左括号没有对应的右括号)\n", //ZL_ERR_CP_SYNTAX_LBRACKET_NO_RBRACKET
+	"\n syntax error: invalid token in parser express (语法错误：表达式中的token无效，此token不能用于表达式)\n", //ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_INVALID_TOKEN
 	"\n syntax error: unknown state in parser express , may be can't analysis token (语法错误：在parser生成语法树的express函数中遇到无效的状态机，可能是还无法解析的token)\n", //ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_UNKNOWN_STATE
 	"\n syntax error: '[' must with id or float or num or string or ++,-- or ! or '(' or ']' (语法错误：左中括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减，或取反运算符，或负号，或者左括号，或者右中括号)\n", //ZL_ERR_CP_SYNTAX_LMBRACKET_INVALID_NEXT_NODE
 	"\n syntax error: invalid array item (语法错误：无效的数组元素格式，数组元素必须是test[a]这样的变量标识符加左中括号加表达式加右中括号的格式，其中表达式可以为空)\n", //ZL_ERR_CP_SYNTAX_INVALID_ARRAY_ITEM
@@ -108,6 +109,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: fun arg list invalid token (语法错误：fun函数参数列表遇到无效的token)\n", //ZL_ERR_CP_SYNTAX_FUN_ARGLIST_INVALID_TOKEN
 	"\n syntax error: fun have no fun name (语法错误：fun函数定义没有函数名)\n", //ZL_ERR_CP_SYNTAX_FUN_NO_NAME
 	"\n syntax error: it's not endfun (语法错误：fun必须以endfun结束)\n", //ZL_ERR_CP_SYNTAX_ITS_NOT_ENDFUN
+	"\n syntax error: invalid express after print reserve (语法错误：print关键字后面的表达式无效)\n", // ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_PRINT
 	"\n syntax error: invalid express after global reserve (语法错误：global关键字后面是无效的表达式，global后面的表达式只能包含变量标识符和逗号，并以分号结束)\n", //ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_GLOBAL
 	"\n syntax error: invalid express after use reserve (语法错误：use关键字后面是无效的表达式，use后面的表达式只能包含变量标识符和逗号，并以分号结束)\n", //ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_USE
 	"\n syntax error: invalid break express (语法错误：无效的break语句，break后面应该直接以分号结束)\n", //ZL_ERR_CP_SYNTAX_INVALID_BREAK_EXP

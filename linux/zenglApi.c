@@ -617,6 +617,11 @@ ZL_EXPORT ZL_EXP_INT zenglApi_ReUse(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT isClear)
 		VM->run.FreeAllForReUse(VM_ARG);
 	}
 	VM->run.reg_list[ZL_R_RT_PC].val.dword = 0; //将PC寄存器重置为0
+	VM->run.reg_list[ZL_R_RT_ARGTMP].val.dword = 0; // 将ARGTMP寄存器重置为0
+	VM->run.reg_list[ZL_R_RT_LOC].val.dword = 0; // 将LOC寄存器重置为0
+	VM->run.reg_list[ZL_R_RT_ARG].val.dword = 0; // 将ARG寄存器重置为0
+	VM->run.memblock_freeall_local(VM); // 将之前的栈空间中的内存块释放掉
+	VM->run.vstack_list.count = 0;      // 将栈顶位置重置为0
 	VM->run.isUserWantStop = ZL_FALSE; //将解释器的停止标志重置为 ZL_FALSE
 	VM->isUseApiSetErrThenStop = ZL_FALSE; //重置API中设置的错误停止标志
 	VM->ApiState = ZL_API_ST_REUSE;
