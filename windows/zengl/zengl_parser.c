@@ -686,7 +686,7 @@ ZL_INT zengl_statement(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
-	ZL_INT p;
+	ZL_INT p, child_exp_no;
 	
 	if(compile->parser_curnode+1 > compile->AST_nodes.count - 1 ||
 		!ZENGL_AST_ISTOK_VALIDX(compile->parser_curnode+1))
@@ -699,7 +699,12 @@ ZL_INT zengl_statement(ZL_VOID * VM_ARG)
 		{
 		case ZL_RSV_PRINT:
 			p = compile->parser_curnode;
-			compile->ASTAddNodeChild(VM_ARG,p,compile->express(VM_ARG));
+			child_exp_no = compile->express(VM_ARG);
+			if(child_exp_no < 0) {
+				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_PRINT);
+			}
+			else
+				compile->ASTAddNodeChild(VM_ARG,p,child_exp_no);
 			break;
 		case ZL_RSV_IF:
 			p = compile->parser_curnode;
@@ -1868,6 +1873,9 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 				break;
 			case ZL_TK_BIT_REVERSE:
 				compile->exp_struct.state = ZL_ST_PARSER_INBIT_REVERSE;
+				break;
+			default:
+				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_INVALID_TOKEN);
 				break;
 			}
 			break;

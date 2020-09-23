@@ -77,6 +77,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYNTAX_BRACKET_EMPTY, //语法错误：普通的括号表达式不能为空，除非是函数的参数括号，因为函数可以没有参数
 	ZL_ERR_CP_SYNTAX_RBRACKET_NO_LBRACKET, //语法错误：右括号没有对应的左括号
 	ZL_ERR_CP_SYNTAX_LBRACKET_NO_RBRACKET, //语法错误：左括号没有对应的右括号
+	ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_INVALID_TOKEN, // 语法错误：表达式中的token无效，此token不能用于表达式
 	ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_UNKNOWN_STATE, //语法错误：在parser生成语法树的express函数中遇到无效的状态机，可能是还无法解析的token
 	ZL_ERR_CP_SYNTAX_LMBRACKET_INVALID_NEXT_NODE, //语法错误：右中括号后面必须是id变量标识符，浮点数，数字，字符串或加加减减 .....
 	ZL_ERR_CP_SYNTAX_INVALID_ARRAY_ITEM, //语法错误：无效的数组元素格式
@@ -107,6 +108,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYNTAX_FUN_ARGLIST_INVALID_TOKEN, //语法错误：fun函数参数列表遇到无效的token
 	ZL_ERR_CP_SYNTAX_FUN_NO_NAME, //语法错误：fun函数定义没有函数名
 	ZL_ERR_CP_SYNTAX_ITS_NOT_ENDFUN, //语法错误：fun必须以endfun结束
+	ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_PRINT, //语法错误：print关键字后面的表达式无效
 	ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_GLOBAL, //语法错误：global关键字后面是无效的表达式
 	ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_USE,	 //语法错误：use关键字后面是无效的表达式
 	ZL_ERR_CP_SYNTAX_INVALID_BREAK_EXP, //语法错误：无效的break语句

@@ -132,6 +132,10 @@ SOURCE=.\zenglrun_func.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\zenglrun_hash_array.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\zenglrun_main.c
 # End Source File
 # End Group
@@ -148,7 +152,15 @@ SOURCE=.\zengl_global.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\zengl_global_header.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\zengl_locals.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\zenglrun_hash_array.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
