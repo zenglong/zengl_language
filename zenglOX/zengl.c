@@ -5,6 +5,8 @@
 #define STRNULL '\0'
 #define DEBUG_INPUT_MAX 50
 
+#define MAIN_INFO_STRING_SIZE 200
+
 typedef struct{
 	char str[50];
 	int ptrIndex;	//str在内存池中分配的指针的索引
@@ -13,9 +15,155 @@ typedef struct{
 	int cur;
 }ReadStr_Type; //字符串动态数组，用于存放用户从终端输入的信息
 
-FILE * debuglog;
+typedef struct{
+	ZL_EXP_CHAR * function_name;
+	ZL_EXP_CHAR * class_name;
+	ZL_EXP_CHAR * error_string;
+	int default_cmd_action;
+}FatalError_Type;
+
+typedef struct _MAIN_INFO_STRING{
+	ZL_EXP_CHAR * str;   //字符串指针
+	int size;  //字符串的动态大小
+	int count; //存放的字符数
+	int cur;   //当前游标
+} MAIN_INFO_STRING;
+
+FILE * debuglog = NULL;
+BOOL need_debuglog = FALSE;
 ReadStr_Type ReadStr;
 int random_seed=0;
+
+FatalError_Type MainFatalError = {0};
+
+static void main_get_stack_backtrace(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * debug_info);
+
+static void main_free_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr);
+
+static ZL_EXP_CHAR * main_fatal_error_copy_string(ZL_EXP_CHAR * from, ZL_EXP_CHAR * to)
+{
+	int from_len = 0;
+	if(to != NULL) {
+		free(to);
+	}
+	from_len = strlen(from);
+	if(from_len <= 0)
+		return NULL;
+	to = malloc(from_len + 1);
+	memcpy(to, from, from_len);
+	to[from_len] = '\0';
+	return to;
+}
+
+static void main_fatal_error_set_function_name(ZL_EXP_CHAR * function_name)
+{
+	MainFatalError.function_name = main_fatal_error_copy_string(function_name, MainFatalError.function_name);
+}
+
+static void main_fatal_error_set_class_name(ZL_EXP_CHAR * class_name)
+{
+	MainFatalError.class_name = main_fatal_error_copy_string(class_name, MainFatalError.class_name);
+}
+
+static void main_fatal_error_set_error_string(ZL_EXP_CHAR * error_string)
+{
+	MainFatalError.error_string = main_fatal_error_copy_string(error_string, MainFatalError.error_string);
+}
+
+static int main_fatal_error_callback_exec(ZL_EXP_VOID * VM, ZL_EXP_CHAR * script_file, ZL_EXP_CHAR * fatal_error)
+{
+	MAIN_INFO_STRING debug_info = {0};
+	if(MainFatalError.function_name == NULL) {
+		return 0;
+	}
+	main_get_stack_backtrace(VM, &debug_info);
+	zenglApi_ReUse(VM,0);
+	zenglApi_Push(VM,ZL_EXP_FAT_STR,fatal_error,0,0);
+	zenglApi_Push(VM,ZL_EXP_FAT_STR,debug_info.str,0,0);
+	main_free_info_string(VM, &debug_info);
+	if(zenglApi_Call(VM, script_file, MainFatalError.function_name, MainFatalError.class_name) == -1) {
+		return -1;
+	}
+	return 0;
+}
+
+static void main_make_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr, const ZL_EXP_CHAR * format, ...)
+{
+	va_list arglist;
+	int retcount = -1;
+	if(infoStringPtr->str == NULL)
+	{
+		infoStringPtr->size = MAIN_INFO_STRING_SIZE;
+		infoStringPtr->str = zenglApi_AllocMem(VM_ARG,infoStringPtr->size * sizeof(ZL_EXP_CHAR));
+	}
+	do
+	{
+		va_start(arglist, format);
+		retcount = vsnprintf((infoStringPtr->str + infoStringPtr->cur),
+							(infoStringPtr->size - infoStringPtr->count), format, arglist);
+		va_end(arglist);
+		if(retcount >= 0 && retcount < (infoStringPtr->size - infoStringPtr->count))
+		{
+			infoStringPtr->count += retcount;
+			infoStringPtr->cur = infoStringPtr->count;
+			infoStringPtr->str[infoStringPtr->cur] = '\0';
+			return;
+		}
+
+		infoStringPtr->size += MAIN_INFO_STRING_SIZE;
+		infoStringPtr->str = zenglApi_ReAllocMem(VM_ARG, infoStringPtr->str, infoStringPtr->size * sizeof(ZL_EXP_CHAR));
+	} while(ZL_EXP_TRUE);
+}
+
+static void main_free_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr)
+{
+	if(infoStringPtr->str != NULL) {
+		zenglApi_FreeMem(VM_ARG, infoStringPtr->str);
+		infoStringPtr->str = NULL;
+	}
+	infoStringPtr->count = infoStringPtr->cur = infoStringPtr->size = 0;
+}
+
+static void main_get_stack_backtrace(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * debug_info)
+{
+	int arg = -1;
+	int loc = -1;
+	int pc = -1;
+	int ret;
+	int line = 0;
+	ZL_EXP_CHAR * fileName = ZL_EXP_NULL;
+	ZL_EXP_CHAR * className = ZL_EXP_NULL;
+	ZL_EXP_CHAR * funcName = ZL_EXP_NULL;
+	while(ZL_EXP_TRUE)
+	{
+		ret = zenglApi_DebugGetTrace(VM_ARG,&arg,&loc,&pc,&fileName,&line,&className,&funcName);
+		if(ret == 1)
+		{
+			main_make_info_string(VM_ARG, debug_info, " %s:%d ",fileName,line);
+			if(className != ZL_EXP_NULL)
+				main_make_info_string(VM_ARG, debug_info, "%s:",className);
+			if(funcName != ZL_EXP_NULL)
+				main_make_info_string(VM_ARG, debug_info, "%s",funcName);
+			main_make_info_string(VM_ARG, debug_info, "\n");
+			continue;
+		}
+		else if(ret == 0)
+		{
+			main_make_info_string(VM_ARG, debug_info, " %s:%d ",fileName,line);
+			if(className != ZL_EXP_NULL)
+				main_make_info_string(VM_ARG, debug_info, "%s:",className);
+			if(funcName != ZL_EXP_NULL)
+				main_make_info_string(VM_ARG, debug_info, "%s",funcName);
+			main_make_info_string(VM_ARG, debug_info, "\n");
+			break;
+		}
+		else if(ret == -1)
+		{
+			main_make_info_string(VM_ARG, debug_info, "%s",zenglApi_GetErrorString(VM_ARG));
+			break;
+		}
+	}
+}
 
 ZL_EXP_CHAR * getDebugArg(ZL_EXP_CHAR * str,ZL_EXP_INT * start,ZL_EXP_BOOL needNull)
 {
@@ -606,7 +754,8 @@ ZL_EXP_INT main_userdef_info(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount,Z
 {
 	UNUSED(infoStrCount);
 	UNUSED(VM_ARG);
-	fprintf(debuglog,"%s",infoStrPtr);
+	if(need_debuglog && debuglog != NULL)
+		fprintf(debuglog,"%s",infoStrPtr);
 	return 0;
 }
 
@@ -622,7 +771,8 @@ ZL_EXP_INT main_userdef_run_info(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCou
 {
 	UNUSED(infoStrCount);
 	UNUSED(VM_ARG);
-	fprintf(debuglog,"%s",infoStrPtr);
+	if(need_debuglog && debuglog != NULL)
+		fprintf(debuglog,"%s",infoStrPtr);
 	return 0;
 }
 
@@ -857,6 +1007,9 @@ ZL_EXP_VOID main_builtin_load_script(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 					  main_userdef_module_init,
 					  ZL_EXP_CP_AF_IN_DEBUG_MODE | 
 					  ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO};
+	if(!need_debuglog)
+		vm_main_args.flags = ZL_EXP_CP_AF_IN_DEBUG_MODE;
+
 	zenglApi_GetFunArg(VM_ARG,1,&arg); //获取第一个参数为脚本名
 	if(arg.type != ZL_EXP_FAT_STR)
 		zenglApi_Exit(VM_ARG,"bltLoadScript函数第一个参数必须字符串，代表要加载的脚本文件名");
@@ -885,6 +1038,43 @@ ZL_EXP_VOID main_builtin_get_extraData(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 		zenglApi_Exit(VM_ARG,"bltGetExtraData函数第一个参数必须是字符串，表示额外数据名称");
 	extraName = arg.val.str;
 	zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,(ZL_EXP_CHAR *)zenglApi_GetExtraData(VM_ARG,extraName),0,0);
+}
+
+ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
+{
+	ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
+	const ZL_EXP_CHAR * func_name = "bltFatalErrorCallback";
+	ZL_EXP_CHAR * function_name = NULL;
+	ZL_EXP_CHAR * class_name = NULL;
+	if(argcount < 1)
+		zenglApi_Exit(VM_ARG,"usage: %s(function_name[, class_name[, default_cmd_action]])", func_name);
+	zenglApi_GetFunArg(VM_ARG,1,&arg);
+	if(arg.type != ZL_EXP_FAT_STR) {
+		zenglApi_Exit(VM_ARG,"the first argument [function_name] of %s must be string", func_name);
+	}
+	function_name = (ZL_EXP_CHAR *)arg.val.str;
+	if(strlen(function_name) == 0) {
+		zenglApi_Exit(VM_ARG,"the first argument [function_name] of %s can't be empty", func_name);
+	}
+	main_fatal_error_set_function_name(function_name);
+	if(argcount > 1) {
+		zenglApi_GetFunArg(VM_ARG,2,&arg);
+		if(arg.type != ZL_EXP_FAT_STR) {
+			zenglApi_Exit(VM_ARG,"the second argument [class_name] of %s must be string", func_name);
+		}
+		class_name = (ZL_EXP_CHAR *)arg.val.str;
+		if(strlen(class_name) > 0) {
+			main_fatal_error_set_class_name(class_name);
+		}
+		if(argcount > 2) {
+			zenglApi_GetFunArg(VM_ARG,3,&arg);
+			if(arg.type != ZL_EXP_FAT_INT) {
+				zenglApi_Exit(VM_ARG,"the third argument [default_cmd_action] of %s must be integer", func_name);
+			}
+			MainFatalError.default_cmd_action = (int)arg.val.integer;
+		}
+	}
+	zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, 0, 0);
 }
 
 /*debug调试模块函数*/
@@ -934,6 +1124,7 @@ ZL_EXP_VOID main_builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltLoadScript",main_builtin_load_script);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetZLVersion",main_builtin_get_zl_version);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltGetExtraData",main_builtin_get_extraData);
+	zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltFatalErrorCallback",main_builtin_fatal_error_callback);
 	zenglApi_SetModFunHandle(VM_ARG,moduleID,"debug",main_builtin_debug);
 }
 
@@ -1117,21 +1308,36 @@ int main(VOID * task, int argc, char * argv[])
 	ZL_EXP_INT builtinID;
 	ZL_EXP_VOID * VM;
 
+	MainFatalError.default_cmd_action = 1;
+
 	if(argc < 2)
 	{
-		printf("usage: %s <script_filename> \n",argv[0]);
+		printf("usage: %s [-v][<script_filename> [-l][-d]]\n",argv[0]);
 		exit(-1);
 	}
-	else if(argc == 2 && (strcmp(argv[1], "-v")==0))
+	else if(argc == 2)
 	{
-		printf("zengl lib version is v%d.%d.%d", 
+		if(strcmp(argv[1], "-v")==0)
+		{
+			printf("zengl lib version is v%d.%d.%d", 
 				ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION);
-		return 0;
+			return 0;
+		}
 	}
+	else if((strcmp(argv[2],"-l") == 0) || 
+		 (strcmp(argv[2],"-d") == 0))
+		need_debuglog = TRUE;
 
-	debuglog = fopen("hd/zl.log", "w");
+	ZENGL_EXPORT_VM_MAIN_ARG_FLAGS flags = 0;
+	if(need_debuglog)
+	{
+		debuglog = fopen("hd/zl.log", "w");
+		flags = (ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO);
+	}
+	else
+		flags = ZL_EXP_CP_AF_IN_DEBUG_MODE;
 	VM = zenglApi_Open();
-	zenglApi_SetFlags(VM,(ZENGL_EXPORT_VM_MAIN_ARG_FLAGS)(ZL_EXP_CP_AF_IN_DEBUG_MODE | ZL_EXP_CP_AF_OUTPUT_DEBUG_INFO));
+	zenglApi_SetFlags(VM, flags);
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_COMPILE_INFO,main_userdef_info);
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_RUN_INFO,main_userdef_run_info);
 	zenglApi_SetHandle(VM,ZL_EXP_VFLAG_HANDLE_RUN_PRINT,main_userdef_run_print);
@@ -1141,11 +1347,19 @@ int main(VOID * task, int argc, char * argv[])
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
 
-	if(zenglApi_Run(VM,argv[1]) == -1) //编译执行zengl脚本
-		main_exit(VM,"compile and run <%s> failed：%s\n",argv[1],zenglApi_GetErrorString(VM));
+	if(zenglApi_Run(VM,argv[1]) == -1) { //编译执行zengl脚本
+		main_fatal_error_set_error_string(zenglApi_GetErrorString(VM));
+		if(main_fatal_error_callback_exec(VM, argv[1], MainFatalError.error_string) == -1) {
+			main_exit(VM,"\n the fatal error callback of <%s> failed：\n%s\n", argv[1], zenglApi_GetErrorString(VM));
+		}
+		else if(MainFatalError.default_cmd_action) {
+			main_exit(VM,"compile and run <%s> failed: %s\n", argv[1], MainFatalError.error_string);
+		}
+	}
 	zenglApi_Close(VM);
-	fclose(debuglog);
-	
+	if(debuglog != NULL)
+		fclose(debuglog);
+
 	return 0;
 }
 
