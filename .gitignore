@@ -12,6 +12,8 @@ libzengl.so
 libzengl.dylib
 libzengl.dylib.dSYM
 
+!/android/app/src/main/java/com/zengl/
+
 #################
 ## Eclipse
 #################

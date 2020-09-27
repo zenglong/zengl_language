@@ -1,3 +1,1 @@
-首先要下载配置android ndk，然后导入该工程，给工程加入Native支持，然后就可以运行调试C源码了。
-
-详情请查看官网www.zengl.com中有关v1.3.1版本的介绍部分(android是从v1.3.1版本开始引入的)。
+首先下载安装android studio，然后安装ndk相关的插件，接着导入该项目即可。
