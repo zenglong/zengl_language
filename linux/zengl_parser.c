@@ -700,7 +700,7 @@ ZL_INT zengl_statement(ZL_VOID * VM_ARG)
 		case ZL_RSV_PRINT:
 			p = compile->parser_curnode;
 			child_exp_no = compile->express(VM_ARG);
-			if(child_exp_no < 0) {
+			if(child_exp_no < 0) { // 当child_exp_no小于0时，说明print后面是一个无效的表达式，例如 print ; 这个语句就是无效的语句，此时会返回相应的语法错误
 				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_INVALID_EXP_AFTER_PRINT);
 			}
 			else
@@ -1874,7 +1874,7 @@ ZL_INT zengl_express(ZL_VOID * VM_ARG)
 			case ZL_TK_BIT_REVERSE:
 				compile->exp_struct.state = ZL_ST_PARSER_INBIT_REVERSE;
 				break;
-			default:
+			default: // 此处如果没有default默认处理的话，就会出现解析表达式时，跳过某些token的情况，就无法定位语法错误的具体位置和原因，还可能导致错误的语法解析
 				compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_PARSER_EXPRESS_INVALID_TOKEN);
 				break;
 			}
