@@ -8,14 +8,14 @@
 #define ZL_EXP_OS_IN_ARM_GCC
 #include "zengl_exportfuns.h"
 
-#define MAIN_INFO_STRING_SIZE 200
+#define MAIN_INFO_STRING_SIZE 200 // 动态字符串的初始化和动态扩容的字节大小
 
 typedef struct{
-    ZL_EXP_CHAR * function_name;
-    ZL_EXP_CHAR * class_name;
-    ZL_EXP_CHAR * error_string;
-    int default_cmd_action;
-}FatalError_Type;
+    ZL_EXP_CHAR * function_name; // 回调函数名
+    ZL_EXP_CHAR * class_name;    // 如果回调函数属于某个类，即回调函数是某个类里的方法，则该字段会记录具体的类名
+    ZL_EXP_CHAR * error_string;  // 记录具体的运行时错误信息
+    int default_cmd_action;      // 是否需要执行默认动作，默认情况下，会将错误信息输出到命令行，如果在脚本的回调函数里，已经将错误信息输出到了命令行的话，可以将该字段设为0，从而不会将错误信息再次输出到命令行
+}FatalError_Type; // 脚本发生严重的运行时错误时，需要调用的脚本中的回调函数，脚本可以在该回调函数中获取错误信息和函数栈追踪信息，从而可以在脚本中直接处理错误信息(例如写入日志或输出到终端等)
 
 typedef struct _strPrintEnv{
     JNIEnv* env;
@@ -23,19 +23,28 @@ typedef struct _strPrintEnv{
     jmethodID functionID;
     FILE * debuglog;
     FatalError_Type * MainFatalError;
-}strPrintEnv;
+}strPrintEnv; // 需要传递给zengl虚拟机的额外参数
 
 typedef struct _MAIN_INFO_STRING{
     ZL_EXP_CHAR * str;   //字符串指针
     int size;  //字符串的动态大小
     int count; //存放的字符数
     int cur;   //当前游标
-} MAIN_INFO_STRING;
+} MAIN_INFO_STRING; // 动态字符串类型，该结构中的str字符串指针所指向的字符串可以根据需要，动态的扩充大小
 
+/**
+ * 获取函数栈追踪信息，从而可以知道当前执行的代码，是从哪些函数(或者脚本的哪个位置)执行进来的
+ */
 static void main_get_stack_backtrace(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * debug_info);
 
+/**
+ * 释放动态字符串占用的内存资源
+ */
 static void main_free_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr);
 
+/**
+ * 用于运行时错误回调函数名，类名和错误信息相关的字符串拷贝操作
+ */
 static ZL_EXP_CHAR * main_fatal_error_copy_string(ZL_EXP_CHAR * from, ZL_EXP_CHAR * to)
 {
     int from_len = 0;
@@ -51,21 +60,62 @@ static ZL_EXP_CHAR * main_fatal_error_copy_string(ZL_EXP_CHAR * from, ZL_EXP_CHA
     return to;
 }
 
+/**
+ * 将运行时错误回调函数名，类名和错误信息相关的字符串给释放掉
+ */
+static void main_fatal_error_free_ptrs(FatalError_Type * MainFatalError)
+{
+    if(MainFatalError->function_name != NULL) {
+        free(MainFatalError->function_name);
+        MainFatalError->function_name = NULL;
+    }
+    if(MainFatalError->class_name != NULL) {
+        free(MainFatalError->class_name);
+        MainFatalError->class_name = NULL;
+    }
+    if(MainFatalError->error_string != NULL) {
+        free(MainFatalError->error_string);
+        MainFatalError->error_string = NULL;
+    }
+}
+
+/**
+ * 将运行时错误回调函数名，类名，错误信息以及是否执行默认动作等重置为默认值
+ */
+static void main_fatal_error_reset_to_default_values(FatalError_Type * MainFatalError)
+{
+    main_fatal_error_free_ptrs(MainFatalError);
+    MainFatalError->default_cmd_action = 1;
+}
+
+/**
+ * 设置运行时错误回调函数名
+ */
 static void main_fatal_error_set_function_name(ZL_EXP_CHAR * function_name, FatalError_Type * MainFatalError)
 {
     MainFatalError->function_name = main_fatal_error_copy_string(function_name, MainFatalError->function_name);
 }
 
+/**
+ * 设置运行时错误回调相关的类名，如果回调函数属于某个类中定义的方法的话，就需要通过此函数来设置回调相关的类名
+ */
 static void main_fatal_error_set_class_name(ZL_EXP_CHAR * class_name, FatalError_Type * MainFatalError)
 {
     MainFatalError->class_name = main_fatal_error_copy_string(class_name, MainFatalError->class_name);
 }
 
+/**
+ * 设置运行时错误发生时，需要传递给回调函数的错误信息
+ */
 static void main_fatal_error_set_error_string(ZL_EXP_CHAR * error_string, FatalError_Type * MainFatalError)
 {
     MainFatalError->error_string = main_fatal_error_copy_string(error_string, MainFatalError->error_string);
 }
 
+/**
+ * 当脚本发生运行时错误时，如果脚本中设置过运行时错误回调函数的话，就调用该函数来处理运行时错误，
+ * 同时会将错误信息和函数栈追踪信息，通过参数传递给回调函数
+ */
 static int main_fatal_error_callback_exec(ZL_EXP_VOID * VM, ZL_EXP_CHAR * script_file, ZL_EXP_CHAR * fatal_error, FatalError_Type * MainFatalError)
 {
     MAIN_INFO_STRING debug_info = {0};
@@ -83,6 +133,9 @@ static int main_fatal_error_callback_exec(ZL_EXP_VOID * VM, ZL_EXP_CHAR * script
     return 0;
 }
 
+/**
+ * 将字符串追加到MAIN_INFO_STRING类型定义的动态字符串的末尾，format定义了需要追加的字符串的格式，具体格式可以参考vsnprintf库函数的相关文档
+ */
 static void main_make_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr, const ZL_EXP_CHAR * format, ...)
 {
     va_list arglist;
@@ -111,6 +164,9 @@ static void main_make_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoS
     } while(ZL_EXP_TRUE);
 }
 
+/**
+ * 释放动态字符串占用的内存资源
+ */
 static void main_free_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoStringPtr)
 {
     if(infoStringPtr->str != NULL) {
@@ -120,6 +176,9 @@ static void main_free_info_string(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * infoS
     infoStringPtr->count = infoStringPtr->cur = infoStringPtr->size = 0;
 }
 
+/**
+ * 获取函数栈追踪信息，从而可以知道当前执行的代码，是从哪些函数(或者脚本的哪个位置)执行进来的
+ */
 static void main_get_stack_backtrace(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * debug_info)
 {
     int arg = -1;
@@ -161,6 +220,11 @@ static void main_get_stack_backtrace(ZL_EXP_VOID * VM_ARG, MAIN_INFO_STRING * de
     }
 }
 
+/**
+ * 调用java提供的函数，将arg指向的字符串给打印显示出来
+ * @param myenv
+ * @param arg
+ */
 void java_printcall(strPrintEnv * myenv ,ZL_EXP_CHAR * arg)
 {
     JNIEnv* env = myenv->env;
@@ -183,6 +247,13 @@ static int main_full_path_append(ZL_EXP_CHAR * full_path, int full_path_length, 
     return append_path_length;
 }
 
+/**
+ * 计算md5值
+ * @param buf 用于存储根据str参数生成的md5值
+ * @param str 源字符串
+ * @param isLowerCase 是否生成小写的md5
+ * @param is32 生成32位还是16位的md5
+ */
 static void main_compute_md5(ZL_EXP_CHAR * buf, ZL_EXP_CHAR * str, ZL_EXP_BOOL isLowerCase, ZL_EXP_BOOL is32)
 {
     MD5_CTX md5;
@@ -368,6 +439,13 @@ static void main_write_zengl_cache_to_file(ZL_EXP_VOID * VM, ZL_EXP_CHAR * cache
     fclose(ptr_fp);
 }
 
+/**
+ * 脚本中print语句对应的用户自定义C函数句柄
+ * @param infoStrPtr print需要打印的字符串信息
+ * @param infoStrCount 需要打印的字符串的字节大小
+ * @param VM_ARG zengl虚拟机指针
+ * @return
+ */
 ZL_EXP_INT run_print(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG)
 {
     strPrintEnv * myenv = (strPrintEnv *)zenglApi_GetExtraData(VM_ARG,"extra");
@@ -376,6 +454,13 @@ ZL_EXP_INT run_print(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_V
     return 0;
 }
 
+/**
+ * 用户自定义的处理编译信息的C函数，下面会将编译相关的信息写入日志文件，编译信息里包含了编译生成的语法树等信息
+ * @param infoStrPtr 编译相关信息对应的字符串
+ * @param infoStrCount 编译相关信息对应的字符串的字节大小
+ * @param VM_ARG zengl虚拟机指针
+ * @return
+ */
 ZL_EXP_INT debug_compile_info(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount,ZL_EXP_VOID * VM_ARG)
 {
     strPrintEnv * myenv = (strPrintEnv *)zenglApi_GetExtraData(VM_ARG,"extra");
@@ -383,6 +468,13 @@ ZL_EXP_INT debug_compile_info(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount,
     return 0;
 }
 
+/**
+ * 用户自定义的处理运行时信息的C函数，下面会将运行时相关的信息写入日志文件，运行时信息里包含了编译生成的需要运行的虚拟汇编指令等信息
+ * @param infoStrPtr 运行时信息对应的字符串
+ * @param infoStrCount 运行时信息对应的字符串的字节大小
+ * @param VM_ARG zengl虚拟机指针
+ * @return
+ */
 ZL_EXP_INT debug_run_info(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount,ZL_EXP_VOID * VM_ARG)
 {
     strPrintEnv * myenv = (strPrintEnv *)zenglApi_GetExtraData(VM_ARG,"extra");
@@ -490,6 +582,14 @@ ZL_EXP_VOID builtin_get_zl_version(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
     zenglApi_SetRetVal(VM_ARG,ZL_EXP_FAT_STR,version,0,0);
 }
 
+/**
+ * bltFatalErrorCallback模块函数，设置当发生运行时错误时，需要调用的脚本函数名，如果是类中定义的方法，还可以设置相关的类名
+ * 第一个参数function_name表示需要设置的脚本函数名(必须是字符串类型，且不能为空字符串)
+ * 第二个参数class_name是可选参数，表示需要设置的类名(也必须是字符串类型，如果第一个参数function_name是某个类中定义的方法的话，就可以通过此参数来设置类名)
+ * 		- 默认值是空字符串，表示不设置类名，当需要跳过该参数设置第三个default_cmd_action参数时，也可以手动传递空字符串来表示不设置类名
+ * 第三个参数default_cmd_action也是可选的，表示在执行完运行时错误回调函数后，是否还需要执行默认的输出错误信息到命令行的动作，
+ * 		- 默认值为1，表示需要执行默认动作，如果脚本回调函数里已经将错误信息输出到了命令行的话，就可以将该参数设置为0，表示不需要再执行默认动作了
+ */
 ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount)
 {
     ZENGL_EXPORT_MOD_FUN_ARG arg = {ZL_EXP_FAT_NONE,{0}};
@@ -498,7 +598,7 @@ ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT ar
     ZL_EXP_CHAR * class_name = NULL;
     strPrintEnv * myenv = (strPrintEnv *)zenglApi_GetExtraData(VM_ARG,"extra");
     if(argcount < 1)
-        zenglApi_Exit(VM_ARG,"usage: %s(function_name[, class_name[, default_cmd_action]])", func_name);
+        zenglApi_Exit(VM_ARG,"usage: %s(function_name[, class_name = ''[, default_cmd_action = 1]])", func_name);
     zenglApi_GetFunArg(VM_ARG,1,&arg);
     if(arg.type != ZL_EXP_FAT_STR) {
         zenglApi_Exit(VM_ARG,"the first argument [function_name] of %s must be string", func_name);
@@ -507,6 +607,8 @@ ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT ar
     if(strlen(function_name) == 0) {
         zenglApi_Exit(VM_ARG,"the first argument [function_name] of %s can't be empty", func_name);
     }
+    // 在设置运行时错误回调函数名之前，先将之前可能设置过的回调函数相关的函数名，类名等重置为默认值，可以防止受到之前设置的影响
+    main_fatal_error_reset_to_default_values(myenv->MainFatalError);
     main_fatal_error_set_function_name(function_name, myenv->MainFatalError);
     if(argcount > 1) {
         zenglApi_GetFunArg(VM_ARG,2,&arg);
@@ -528,6 +630,11 @@ ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT ar
     zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, 0, 0);
 }
 
+/**
+ * builtin模块相关的初始化代码，里面定义了builtin模块相关的模块函数以及对应的底层C处理函数
+ * @param VM_ARG zengl虚拟机指针
+ * @param moduleID 当前模块的模块ID
+ */
 ZL_EXP_VOID builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
 {
     zenglApi_SetModFunHandle(VM_ARG,moduleID,"printf",builtin_printf);
@@ -542,6 +649,15 @@ ZL_EXP_VOID builtin_module_init(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID)
     zenglApi_SetModFunHandle(VM_ARG,moduleID,"bltFatalErrorCallback",main_builtin_fatal_error_callback);
 }
 
+/**
+ * 执行zengl脚本的入口函数
+ * @param env java传递过来的包含环境信息的指针
+ * @param obj java传递过来的MainActivity对象指针
+ * @param Path zengl测试脚本在手机存储中的目录路径
+ * @param s 需要执行的脚本文件名
+ * @param debuginfo 是否需要将zengl脚本相关的编译信息写入zengl_debuglogs.txt日志文件
+ * @return
+ */
 JNIEXPORT jstring JNICALL
 Java_com_zengl_script_MainActivity_RunZenglFromJNI( JNIEnv* env,
                                                           jobject obj,
@@ -609,15 +725,8 @@ Java_com_zengl_script_MainActivity_RunZenglFromJNI( JNIEnv* env,
         java_printcall(&myenv,tmp_str);
     }
 
-    if(MainFatalError.function_name != NULL) {
-        free(MainFatalError.function_name);
-    }
-    if(MainFatalError.class_name != NULL) {
-        free(MainFatalError.class_name);
-    }
-    if(MainFatalError.error_string != NULL) {
-        free(MainFatalError.error_string);
-    }
+    // 如果设置了运行时错误回调函数的话，就将运行时错误回调函数名，类名和错误信息相关的字符串给释放掉
+    main_fatal_error_free_ptrs(&MainFatalError);
 
     zenglApi_Close(VM);
     if(debuglog != NULL)
