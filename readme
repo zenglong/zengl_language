@@ -1,3 +1,9 @@
+  v1.8.3 修复zenglApi_ReUse接口可能导致Call接口无法获取正确参数的问题，修复ReUse后因重复关闭文件可能报的段错误问题，完善语法错误检测，尤其是和print相关的表达式的语法检测，android测试项目使用android studio进行开发，当前版本在windows(vc6和vs2008)，linux(主要是CentOS和Ubuntu)，Mac OS X(10.13)，android(使用android studio开发)，zenglOX(3.2.0版本)中进行了相关测试。
+
+  作者：zenglong
+  时间：2020年10月04日
+  官网：www.zengl.com
+
   v1.8.2 修复编译结束后，因没有关闭打开的脚本文件，而可能导致的内存泄露问题。
 
   作者：zenglong
