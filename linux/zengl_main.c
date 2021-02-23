@@ -1130,6 +1130,10 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	if(token != ZL_TK_ID)
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_MUST_WITH_ID,
 		temp_line,temp_col,compile->tokenInfo.filename);
+	if(compile->SymIsSelfToken(VM_ARG, ZL_NULL)) {
+		compile->exit(VM_ARG,ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF,
+				temp_line,temp_col,compile->tokenInfo.filename);
+	}
 	nameIndex = compile->DefPoolAddString(VM_ARG,compile->tokenInfo.str);
 	compile->freeTokenStr(VM_ARG);
 	temp_line = compile->tokenInfo.start_line;
@@ -1627,6 +1631,7 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 	compile->source.filename = filename;
 	compile->source.needread = ZL_TRUE;
 	compile->source.encrypt = VM->initEncrypt; //使用虚拟机的初始加密结构体来初始化source的encrypt成员
+	compile->SymSelfClassTable.cur_class_nodenum = -1;
 }
 
 /*编译器入口函数*/

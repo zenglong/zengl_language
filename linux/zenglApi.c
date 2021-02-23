@@ -63,6 +63,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			{0}, //SymClassTable
 			{0}, //SymClassMemberTable
 			{0}, //SymFunTable
+			{0}, //SymSelfClassTable
 			/*和zengl_assemble.c汇编代码生成相关的成员*/
 			{0}, //gencode_struct
 			{0}, //AsmGCStackList
@@ -152,6 +153,8 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_SymInsertHashTableForLocal,
 			zengl_SymInsertLocalTable,
 			zengl_SymInitLocalTable,
+			zengl_SymIsSelfToken,
+			zengl_SymAddNodeNumToSelfClassTable,
 			zengl_SymPrintTables,
 			/*定义在zengl_assemble.c中的相关函数*/
 			zengl_buildAsmCode,

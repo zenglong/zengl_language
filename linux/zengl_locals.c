@@ -46,6 +46,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: def_table's tmpindex is not valid when insert_HashTableForDef (编译器异常：在函数insert_HashTableForDef中，tmpindex不是有效的索引)\n", //ZL_ERR_CP_DEF_TABLE_INVALID_INDEX
 	"\n syntax error: the same def '%s' in %d:%d <'%s'> and %d:%d <'%s'> (语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查)\n", //ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND
 	"\n syntax error: def must with id type! line:%d col:%d <'%s'> (语法错误：def关键字后面必须是有效的id标识符)\n", //ZL_ERR_CP_DEF_MUST_WITH_ID
+	"\n syntax error: def can not with self! line:%d col:%d <'%s'> (语法错误：def关键字后面不可以使用self作为宏名称)\n", //ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF
 	"\n syntax error: def must end with semi! line:%d col:%d <'%s'> (语法错误：def定义宏必须以分号结束)\n", //ZL_ERR_CP_DEF_NO_END_SEMI
 	"\n syntax error: def const must be int num,float num or string! line:%d col:%d <'%s'> (语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串)\n", //ZL_ERR_CP_DEF_INVALID_VALUE_TYPE
 	"\n syntax error: filename <'%s'> is too long (语法错误：文件路径信息太长)\n", //ZL_ERR_CP_INC_FILENAME_TOO_LONG
@@ -156,6 +157,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: fun %s has been defined in line:%d,col:%d <'%s'> (%s脚本函数已经被定义过了)\n", //ZL_ERR_CP_SYM_FUN_HAS_BEEN_DEFINED
 	"\n err: compile symbol err , zengl_SymPrintTables function print SymFunTable[%d] has no linecols (编译器异常：SymFunTable函数符号表中的[%d]索引对应的函数定义中没有行列号信息)\n", //ZL_ERR_CP_SYM_FUN_TABLE_INDEX_HAVE_NO_LINECOL_WHEN_PRINT
 	"\n syntax error: class name '%s' does not exists (语法错误：类名'%s'不存在)\n", //ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS
+	"\n syntax error: self must be use in class (语法错误：self必须用于class结构中)\n", //ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS
 	"\n err: compile symbol err , zengl_SymLookupClass function SymClassTable's tmpindex is not valid (编译器异常：zengl_SymLookupClass函数在SymClassTable类符号表中找到的tmpindex是无效的索引)\n", //ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP
 	"\n err: compile symbol err , SymClassMemberTable alloc failure in zengl_SymInitClassMemberTable (编译器异常：在zengl_SymInitClassMemberTable为SymClassMemberTable类成员符号表动态数组分配内存初始化失败)\n", //ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_MALLOC_FAILED
 	"\n err: compile symbol err , zengl_SymInsertClassMemberTable function can't find non-valid index in SymClassMemberTable (编译器异常：zengl_SymInsertClassMemberTable函数无法在类成员符号表中找到没被占用的索引)\n", //ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_NO_NOT_VALID_INDEX
@@ -213,6 +215,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: compile symbol err , can't find '%s' memloc in SymLocalTable (编译器异常：无法找到'%s'变量的内存地址)\n", //ZL_ERR_CP_SYM_CAN_NOT_FIND_LOCAL_ID_MEMLOC
 	"\n err: compile symbol err , invalid funid in zengl_SymLookupID (编译器异常：局部变量符号信息对应的函数ID无效)\n", //ZL_ERR_CP_SYM_LOCAL_ID_INVALID_FUN_ID
 	"\n err: compile symbol err , invalid local type in zengl_SymLookupID (编译器异常：无效的局部符号类型)\n", //ZL_ERR_CP_SYM_LOCAL_ID_INVALID_TYPE
+	"\n err: compile symbol err , SymSelfClassTable alloc failure (编译器异常：self节点对应的类信息动态数组分配失败)\n", //ZL_ERR_CP_SYM_SELF_CLASS_TABLE_MALLOC_FAILED
 	"\n err: run main err , fun return address must int pc=%d (解释器运行时错误：函数的汇编返回地址必须是整数)\n", //ZL_ERR_RUN_MAIN_INVALID_FUN_RET_ADDRESS
 	"\n err: run main err , fun virtual stack struct exception pc=%d (解释器运行时错误：函数的虚拟栈结构异常)\n", //ZL_ERR_RUN_MAIN_FUN_VSTACK_STRUCT_EXCEPTION
 	"\n syntax error: use reserve must have child node! (语法错误：use关键字后面不可以为空节点即空语句)\n", //ZL_ERR_CP_SYNTAX_SYM_USE_MUST_HAVE_CHILD_NODE

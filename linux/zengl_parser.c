@@ -141,6 +141,10 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 			compile->AST_nodes.nodes[compile->AST_nodes.count].tok_op_level = ZL_OP_LEVEL_QUESTION;
 			break;
 		case ZL_TK_ID:
+			if(compile->SymIsSelfToken(VM_ARG, ZL_NULL)) {
+				compile->SymAddNodeNumToSelfClassTable(VM_ARG, compile->AST_nodes.count);
+			}
+			/* no break */
 		case ZL_TK_NUM:
 		case ZL_TK_FLOAT:
 		case ZL_TK_STR:
@@ -208,6 +212,7 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 						);
 			}
 			compile->opLevel_push_stack(VM_ARG,compile->AST_nodes.count-1);
+			compile->SymSelfClassTable.cur_class_nodenum = (compile->AST_nodes.count - 1);
 			break;
 		case ZL_RSV_ENDIF:
 		case ZL_RSV_ENDSWT:
@@ -240,6 +245,7 @@ ZL_VOID zengl_ASTAddNode(ZL_VOID * VM_ARG,ZENGL_TOKENTYPE token)
 			case ZL_RSV_ENDCLS:
 				detect_from_keyword = "endcls or endclass";
 				stack_compare_rsv = ZL_RSV_CLASS;
+				compile->SymSelfClassTable.cur_class_nodenum = -1;
 				break;
 			} //switch
 			last_stack = compile->opLevel_pop_stack(VM_ARG,-1);

@@ -348,11 +348,13 @@ typedef struct _ZENGL_FILE_STACKLIST_TYPE{
 		下面是和zengl_symbol.c符号表处理相关的结构体和枚举等定义
 ********************************************************************************/
 
+#define ZL_SYM_SELF_TOKEN_STR "self"
 #define ZL_SYM_GLOBAL_TABLE_SIZE 211 //全局变量符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_LOCAL_TABLE_SIZE 211	 //局部变量(包括函数参数)符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_CLASS_TABLE_SIZE 50 //存放类信息的动态数组初始化和动态扩容的大小
 #define ZL_SYM_CLASSMEMBER_TABLE_SIZE 211 //类成员符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_FUN_TABLE_SIZE 100 //函数符号表的动态数组初始化和动态扩容的大小
+#define ZL_SYM_SELF_CLASS_TABLE_SIZE 20
 
 typedef enum _ZENGL_SYM_ENUM_LOCAL_TYPE{
 	ZL_SYM_ENUM_LOCAL_TYPE_START,	//默认初始值，不对应任何类型
@@ -446,6 +448,21 @@ typedef struct _ZENGL_SYM_FUN_TABLE{
 	ZENGL_SYM_FUN_TABLE_MEMBER * funs;
 	ZL_INT global_funid; //函数id计数器
 }ZENGL_SYM_FUN_TABLE; //函数表动态数组的结构定义
+
+typedef struct _ZENGL_SYM_SELF_CLASS_TABLE_MEMBER{
+	ZL_BOOL isvalid;
+	ZL_INT self_nodenum;
+	ZL_INT class_nodenum;
+	ZL_INT classid;
+}ZENGL_SYM_SELF_CLASS_TABLE_MEMBER; // self节点对应的类信息的动态数组的成员的结构定义
+
+typedef struct _ZENGL_SYM_SELF_CLASS_TABLE{
+	ZL_BOOL isInit;
+	ZL_INT size;
+	ZL_INT count;
+	ZENGL_SYM_SELF_CLASS_TABLE_MEMBER * members;
+	ZL_INT cur_class_nodenum;
+}ZENGL_SYM_SELF_CLASS_TABLE; // 存储self节点对应的类信息的动态数组的结构定义
 
 /********************************************************************************
 		上面是和zengl_symbol.c符号表处理相关的结构体和枚举等定义
@@ -1176,6 +1193,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZENGL_SYM_CLASS_TABLE SymClassTable; //类符号表(存放类信息的动态数组)
 	ZENGL_SYM_CLASSMEMBER_TABLE SymClassMemberTable; //类成员符号表(存放所有类成员信息的动态数组)
 	ZENGL_SYM_FUN_TABLE SymFunTable; //函数符号表
+	ZENGL_SYM_SELF_CLASS_TABLE SymSelfClassTable; // self节点类信息动态数组
 	/*和zengl_assemble.c汇编代码生成相关的成员*/
 	ZENGL_ASM_GENCODE_STRUCT gencode_struct; //在zengl_AsmGenCodes函数中会用到的一些变量，统一放在一个结构体中
 	ZENGL_ASM_STACKLIST_TYPE AsmGCStackList; //assemble生成汇编代码时需要用到的解决内部嵌套问题的堆栈
@@ -1268,6 +1286,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_BOOL (* SymInsertHashTableForLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中 对应 zengl_SymInsertHashTableForLocal
 	ZL_INT (* SymInsertLocalTable)(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量名和局部变量的类型插入到SymLocalTable动态数组中。对应 zengl_SymInsertLocalTable
 	ZL_VOID (* SymInitLocalTable)(ZL_VOID * VM_ARG); //初始化SymLocalTable局部符号表对应的动态数组 对应 zengl_SymInitLocalTable
+	ZL_BOOL (* SymIsSelfToken)(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
+	ZL_BOOL (* SymAddNodeNumToSelfClassTable)(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
 	ZL_VOID (* SymPrintTables)(ZL_VOID * VM_ARG);	  //打印符号表 对应 zengl_SymPrintTables
 	/*定义在zengl_assemble.c中的相关函数*/
 	ZL_VOID (* buildAsmCode)(ZL_VOID * VM_ARG); //组建汇编代码的主程式 对应 zengl_buildAsmCode
@@ -1620,6 +1640,8 @@ ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫�
 ZL_BOOL zengl_SymInsertHashTableForLocal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中
 ZL_INT zengl_SymInsertLocalTable(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量名和局部变量的类型插入到SymLocalTable动态数组中。
 ZL_VOID zengl_SymInitLocalTable(ZL_VOID * VM_ARG); //初始化SymLocalTable局部符号表对应的动态数组
+ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
+ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
 ZL_VOID zengl_SymPrintTables(ZL_VOID * VM_ARG);		//打印符号表
 
 //下面是定义在zengl_assemble.c中的函数
