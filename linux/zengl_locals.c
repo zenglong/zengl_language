@@ -158,6 +158,8 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n err: compile symbol err , zengl_SymPrintTables function print SymFunTable[%d] has no linecols (编译器异常：SymFunTable函数符号表中的[%d]索引对应的函数定义中没有行列号信息)\n", //ZL_ERR_CP_SYM_FUN_TABLE_INDEX_HAVE_NO_LINECOL_WHEN_PRINT
 	"\n syntax error: class name '%s' does not exists (语法错误：类名'%s'不存在)\n", //ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS
 	"\n syntax error: self must be use in class (语法错误：self必须用于class结构中)\n", //ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS
+	"\n syntax error: class name can not use in debug express (语法错误：不能在调试表达式中使用类名)\n", //ZL_ERR_CP_SYNTAX_CLASS_NAME_CAN_NOT_USE_IN_DEBUG
+	"\n syntax error: script function call can not use in debug express (语法错误：不能在调试表达式中调用用户自定义的脚本函数)\n", //ZL_ERR_CP_SYNTAX_SCRIPT_FUN_CALL_CAN_NOT_USE_IN_DEBUG
 	"\n err: compile symbol err , zengl_SymLookupClass function SymClassTable's tmpindex is not valid (编译器异常：zengl_SymLookupClass函数在SymClassTable类符号表中找到的tmpindex是无效的索引)\n", //ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP
 	"\n err: compile symbol err , SymClassMemberTable alloc failure in zengl_SymInitClassMemberTable (编译器异常：在zengl_SymInitClassMemberTable为SymClassMemberTable类成员符号表动态数组分配内存初始化失败)\n", //ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_MALLOC_FAILED
 	"\n err: compile symbol err , zengl_SymInsertClassMemberTable function can't find non-valid index in SymClassMemberTable (编译器异常：zengl_SymInsertClassMemberTable函数无法在类成员符号表中找到没被占用的索引)\n", //ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_NO_NOT_VALID_INDEX

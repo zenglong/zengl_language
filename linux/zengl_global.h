@@ -1505,6 +1505,7 @@ typedef struct _ZENGL_DEBUG_TYPE
 	ZL_INT (* SymLookupID_ForDot)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时 对应 zenglDebug_SymLookupID_ForDot
 	ZL_INT (* SymLookupClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息 对应 zenglDebug_SymLookupClass
 	ZL_INT (* SymLookupClassMember)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息 对应 zenglDebug_SymLookupClassMember
+	ZL_INT (* SymLookupFun)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
 	ZL_INT (* LookupModFunTable)(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引 对应 zenglDebug_LookupModFunTable
 	ZL_INT (* LookupFunID)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值 对应 zenglDebug_LookupFunID
 	ZL_INT (* SetFunInfo)(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境 对应 zenglDebug_SetFunInfo
@@ -1811,6 +1812,7 @@ ZENGL_RUN_INST_OP_DATA zenglDebug_SymLookupID(ZL_VOID * VM_ARG,ZL_INT nodenum); 
 ZL_INT zenglDebug_SymLookupID_ForDot(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时
 ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息
 ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息
+ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
 ZL_INT zenglDebug_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引
 ZL_INT zenglDebug_LookupFunID(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值
 ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境

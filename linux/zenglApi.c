@@ -354,6 +354,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 				zenglDebug_SymLookupID_ForDot,
 				zenglDebug_SymLookupClass,
 				zenglDebug_SymLookupClassMember,
+				zenglDebug_SymLookupFun,
 				zenglDebug_LookupModFunTable,
 				zenglDebug_LookupFunID,
 				zenglDebug_SetFunInfo,
@@ -2479,6 +2480,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 		DebugVM->compile.SymLocalTable = VM->compile.SymLocalTable;
 		DebugVM->compile.SymClassTable = VM->compile.SymClassTable;
 		DebugVM->compile.SymClassMemberTable = VM->compile.SymClassMemberTable;
+		DebugVM->compile.SymFunTable = VM->compile.SymFunTable;
 		//将编译过程中的查询符号信息的函数重定向到调试器自定义的函数
 		DebugVM->compile.ReplaceDefConst = DebugVM->debug.ReplaceDefConst;
 		DebugVM->compile.lookupDefTable = DebugVM->debug.lookupDefTable;
@@ -2486,6 +2488,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 		DebugVM->compile.SymLookupID_ForDot = DebugVM->debug.SymLookupID_ForDot;
 		DebugVM->compile.SymLookupClass = DebugVM->debug.SymLookupClass;
 		DebugVM->compile.SymLookupClassMember = DebugVM->debug.SymLookupClassMember;
+		DebugVM->compile.SymLookupFun = DebugVM->debug.SymLookupFun;
 		DebugVM->run.LookupModFunTable = DebugVM->debug.LookupModFunTable;
 	}
 	if(debug_str == ZL_NULL)
@@ -2511,7 +2514,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
 		DebugVM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
-		DebugVM->debug.Run(DebugVM);
+		retcode = DebugVM->debug.Run(DebugVM);
 		DebugVM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
 	}
 	if(retcode == -1)

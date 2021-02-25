@@ -85,6 +85,7 @@ ZL_INT zenglDebug_Run(ZL_VOID * VM_ARG)
 	ZENGL_RUN_VIRTUAL_MEM_LIST orig_vmem_list = run->vmem_list;
 	ZENGL_RUN_VIRTUAL_MEM_LIST orig_vstack_list = run->vstack_list;
 	ZENGL_RUN_MOD_FUN_TABLE orig_ModFunTable = run->ModFunTable;
+	ZL_INT pvm_orig_vstack_list_count = PVM->run.vstack_list.count;
 	VM->debug.orig_run_totalsize = run->totalsize;
 	VM->debug.orig_vm_totalsize = VM->totalsize;
 	ZENGL_SYS_MEM_COPY(&VM->run.HashTable,&PVM->run.HashTable,ZL_R_HASH_TOTAL_SIZE * sizeof(ZL_INT));
@@ -115,6 +116,7 @@ ZL_INT zenglDebug_Run(ZL_VOID * VM_ARG)
 	PVM->run.memfreepool = run->memfreepool;
 	PVM->run.vmem_list = run->vmem_list;
 	PVM->run.vstack_list = run->vstack_list;
+	PVM->run.vstack_list.count = pvm_orig_vstack_list_count;
 	run->mempool = orig_mempool;
 	run->memfreepool = orig_memfreepool; //解释器的内存释放池
 	run->vmem_list = orig_vmem_list;
@@ -344,23 +346,10 @@ FindGlobalSymLoc:
 ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
-	ZENGL_VM_TYPE * PVM = VM->debug.DeubugPVM;
 	ZENGL_COMPILE_TYPE * compile = &VM->compile;
-	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
-	ZL_CHAR * name = compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
-	ZL_INT h = compile->hash(VM_ARG,name) + ZL_SYM_HASH_SIZE * ZL_HASH_TYPE_CLASS_TABLE;
-	ZL_INT tmpindex = compile->HashTable[h];
-	while(tmpindex != 0 && compile->SymClassTable.classTable[tmpindex].isvalid == ZL_TRUE &&
-		  ZENGL_SYS_STRCMP(name,compile->TokenStringPoolGetPtr(PVM,compile->SymClassTable.classTable[tmpindex].nameIndex)) != 0)
-		tmpindex = compile->SymClassTable.classTable[tmpindex].next;
-	if(tmpindex == 0)
-	{
-		compile->parser_curnode = nodenum;
-		compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS,name,name);
-	}
-	else if(compile->SymClassTable.classTable[tmpindex].isvalid == ZL_FALSE)
-		compile->exit(VM_ARG,ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP);
-	return compile->SymClassTable.classTable[tmpindex].classid;
+	compile->parser_curnode = nodenum;
+	compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_CLASS_NAME_CAN_NOT_USE_IN_DEBUG);
+	return -1;
 }
 
 /*
@@ -392,6 +381,30 @@ ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT pa
 	{
 		return tmpindex;
 	}
+	return -1;
+}
+
+ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_VM_TYPE * PVM = VM->debug.DeubugPVM;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZENGL_AST_NODE_TYPE * node = nodes + nodenum;
+	ZL_CHAR * name = compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
+	ZL_INT h = compile->hash(VM_ARG,name) + ZL_SYM_HASH_SIZE * ZL_HASH_TYPE_FUN_TABLE;
+	ZL_INT tmpindex = compile->HashTable[h];
+
+	while(tmpindex != 0 && compile->SymFunTable.funs[tmpindex].isvalid == ZL_TRUE &&
+		 (classid != compile->SymFunTable.funs[tmpindex].classid ||
+		  ZENGL_SYS_STRCMP(name,compile->TokenStringPoolGetPtr(PVM,compile->SymFunTable.funs[tmpindex].nameIndex)) != 0)) //循环查找同名函数或类函数
+		tmpindex = compile->SymFunTable.funs[tmpindex].next;
+	if(tmpindex == 0)
+		return 0; //如果没找到，说明不是用户自定义的函数，那么有可能是模块里的函数。
+	else if(compile->SymFunTable.funs[tmpindex].isvalid == ZL_FALSE)
+		compile->exit(VM_ARG,ZL_ERR_CP_SYM_FUN_TABLE_FIND_NOT_VALID_INDEX);
+	compile->parser_curnode = nodenum;
+	compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_SCRIPT_FUN_CALL_CAN_NOT_USE_IN_DEBUG);
 	return -1;
 }
 
