@@ -47,6 +47,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: the same def '%s' in %d:%d <'%s'> and %d:%d <'%s'> (语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查)\n", //ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND
 	"\n syntax error: def must with id type! line:%d col:%d <'%s'> (语法错误：def关键字后面必须是有效的id标识符)\n", //ZL_ERR_CP_DEF_MUST_WITH_ID
 	"\n syntax error: def can not with self! line:%d col:%d <'%s'> (语法错误：def关键字后面不可以使用self作为宏名称)\n", //ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF
+	"\n syntax error: can not find the value of '%s' or no def lookup handle line:%d col:%d <'%s'> (语法错误：无法查询到def关键字后面的'%s'所对应的值，或者没有定义相关的def查询函数)\n", //ZL_ERR_CP_DEF_LOOKUP_NOT_FOUND
 	"\n syntax error: def must end with semi! line:%d col:%d <'%s'> (语法错误：def定义宏必须以分号结束)\n", //ZL_ERR_CP_DEF_NO_END_SEMI
 	"\n syntax error: def const must be int num,float num or string! line:%d col:%d <'%s'> (语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串)\n", //ZL_ERR_CP_DEF_INVALID_VALUE_TYPE
 	"\n syntax error: filename <'%s'> is too long (语法错误：文件路径信息太长)\n", //ZL_ERR_CP_INC_FILENAME_TOO_LONG
@@ -157,7 +158,7 @@ ZL_CONST ZL_CHAR * ZL_Error_String[] = {
 	"\n syntax error: fun %s has been defined in line:%d,col:%d <'%s'> (%s脚本函数已经被定义过了)\n", //ZL_ERR_CP_SYM_FUN_HAS_BEEN_DEFINED
 	"\n err: compile symbol err , zengl_SymPrintTables function print SymFunTable[%d] has no linecols (编译器异常：SymFunTable函数符号表中的[%d]索引对应的函数定义中没有行列号信息)\n", //ZL_ERR_CP_SYM_FUN_TABLE_INDEX_HAVE_NO_LINECOL_WHEN_PRINT
 	"\n syntax error: class name '%s' does not exists (语法错误：类名'%s'不存在)\n", //ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS
-	"\n syntax error: self must be use in class (语法错误：self必须用于class结构中)\n", //ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS
+	"\n syntax error: self must be use in class and can not use to define class name (语法错误：self必须用于class结构中，且不能用于定义class的类名称)\n", //ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS
 	"\n syntax error: class name can not use in debug express (语法错误：不能在调试表达式中使用类名)\n", //ZL_ERR_CP_SYNTAX_CLASS_NAME_CAN_NOT_USE_IN_DEBUG
 	"\n syntax error: script function call can not use in debug express (语法错误：不能在调试表达式中调用用户自定义的脚本函数)\n", //ZL_ERR_CP_SYNTAX_SCRIPT_FUN_CALL_CAN_NOT_USE_IN_DEBUG
 	"\n err: compile symbol err , zengl_SymLookupClass function SymClassTable's tmpindex is not valid (编译器异常：zengl_SymLookupClass函数在SymClassTable类符号表中找到的tmpindex是无效的索引)\n", //ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP

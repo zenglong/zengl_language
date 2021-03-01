@@ -46,6 +46,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND, //语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查
 	ZL_ERR_CP_DEF_MUST_WITH_ID, //语法错误：def关键字后面必须是有效的id标识符
 	ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF, // 语法错误：def关键字后面不可以使用self作为宏名称
+	ZL_ERR_CP_DEF_LOOKUP_NOT_FOUND,  // 语法错误：无法查询到def关键字后面的'%s'所对应的值，或者没有定义相关的def查询函数
 	ZL_ERR_CP_DEF_NO_END_SEMI, //语法错误：def定义宏必须以分号结束
 	ZL_ERR_CP_DEF_INVALID_VALUE_TYPE, //语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串
 	ZL_ERR_CP_INC_FILENAME_TOO_LONG, //语法错误：文件路径信息太长
@@ -156,7 +157,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYM_FUN_HAS_BEEN_DEFINED,		//%s脚本函数已经被定义过了
 	ZL_ERR_CP_SYM_FUN_TABLE_INDEX_HAVE_NO_LINECOL_WHEN_PRINT,		//编译器异常：SymFunTable函数符号表中的[%d]索引对应的函数定义中没有行列号信息
 	ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS,	//语法错误：类名'%s'不存在
-	ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS,         //语法错误：self必须用于class结构中
+	ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS,         //语法错误：self必须用于class结构中，且不能用于定义class的类名称
 	ZL_ERR_CP_SYNTAX_CLASS_NAME_CAN_NOT_USE_IN_DEBUG,   //语法错误：不能在调试表达式中使用类名
 	ZL_ERR_CP_SYNTAX_SCRIPT_FUN_CALL_CAN_NOT_USE_IN_DEBUG,   //语法错误：不能在调试表达式中调用用户自定义的脚本函数
 	ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP,		//编译器异常：zengl_SymLookupClass函数在SymClassTable类符号表中找到的tmpindex是无效的索引

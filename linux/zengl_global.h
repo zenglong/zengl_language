@@ -314,6 +314,14 @@ typedef struct _ZENGL_DEF_TABLE{
 	ZENGL_DEF_TABLE_MEMBER * defs;
 } ZENGL_DEF_TABLE;  //def宏定义动态数组
 
+typedef struct _ZENGL_DEF_LOOKUP_TYPE{
+	ZL_BOOL isInLookupHandle;
+	ZL_VM_API_DEF_LOOKUP_HANDLE lookupHandle;
+	ZL_BOOL hasFound;
+	ZENGL_TOKENTYPE token;
+	ZL_INT valIndex;
+} ZENGL_DEF_LOOKUP_TYPE;
+
 typedef struct _ZENGL_LINECOL{
 	ZL_INT lineno;
 	ZL_INT colno;
@@ -1180,6 +1188,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT TokenOperateStringCount; //TokenOperateString成员的个数
 	ZENGL_STRING_POOL_TYPE def_StringPool; //def宏定义常量的字符串池
 	ZENGL_DEF_TABLE def_table; //宏定义动态数组。
+	ZENGL_DEF_LOOKUP_TYPE def_lookup;
 	ZL_BOOL isinCompiling; //判断编译器是否正在编译
 	ZL_BOOL isDestroyed; //判断编译器的内存池等资源是否被释放了
 	ZL_BOOL isReUse;	//用户是否需要重利用虚拟机之前已经编译好的资源，如果需要则不执行具体的编译操作，可以直接执行之前编译好的指令代码
