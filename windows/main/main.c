@@ -24,6 +24,7 @@
 
 #define STRNULL '\0'
 #define DEBUG_INPUT_MAX 50
+#define DEF_VERSION "dv01"
 
 #define MAIN_INFO_STRING_SIZE 200 // 动态字符串的初始化和动态扩容的字节大小
 
@@ -290,13 +291,13 @@ static void main_compute_md5(char * buf, char * str, ZL_EXP_BOOL isLowerCase, ZL
 static void main_get_zengl_cache_path(char * cache_path, int cache_path_size, char * full_path)
 {
 	char fullpath_md5[33];
-	char cache_prefix[20] = {0};
+	char cache_prefix[30] = {0};
 	const char * cache_path_prefix = "caches/"; // 缓存文件都放在caches目录中
 	int append_length;
 	main_compute_md5(fullpath_md5, full_path, ZL_EXP_TRUE, ZL_EXP_TRUE); // 将full_path进行md5编码
 	// 在缓存路径前面加上zengl版本号和指针长度，不同的zengl版本生成的缓存有可能会不一样，另外，32位和64位环境下生成的内存缓存数据也是不一样的
 	// 32位系统中生成的缓存数据放到64位中运行，或者反过来，都会报内存相关的错误
-	sprintf(cache_prefix, "%d_%d_%d_%ld_", ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION, sizeof(char *));
+	sprintf(cache_prefix, "%d_%d_%d_%ld_%s_", ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION, sizeof(char *), DEF_VERSION);
 	append_length = main_full_path_append(cache_path, 0, cache_path_size, (char *)cache_path_prefix);
 	append_length += main_full_path_append(cache_path, append_length, cache_path_size, cache_prefix);
 	append_length += main_full_path_append(cache_path, append_length, cache_path_size, fullpath_md5);
@@ -1533,6 +1534,26 @@ ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG)
 	zenglApi_SetModInitHandle(VM_ARG,"sdl",main_sdl_module_init);
 }
 
+ZL_EXP_VOID main_def_lookup_handle(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defValName)
+{
+	if(strcmp(defValName, "___TRUE___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "1");
+	}
+	else if(strcmp(defValName, "___FALSE___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "0");
+	}
+	else if(strcmp(defValName, "___PI___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_FLOAT, "3.141592653");
+	}
+	else if(strcmp(defValName, "___TEST_STR___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_STR, "this is a test string by user defined");
+	}
+}
+
 void main_exit(void * VM,char * err_format,...)
 {
 	va_list arg;
@@ -1811,6 +1832,8 @@ int main(int argc,char * argv[])
 
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
+
+	zenglApi_SetDefLookupHandle(VM, main_def_lookup_handle);
 
 	// 根据脚本文件名得到缓存文件的路径信息
 	main_get_zengl_cache_path(cache_path, sizeof(cache_path), argv[1]);

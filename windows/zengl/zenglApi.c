@@ -50,6 +50,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			0, //TokenOperateStringCount
 			{0}, //def_StringPool
 			{0}, //def_table
+			{0}, //def_lookup
 			ZL_FALSE, //isinCompiling
 			ZL_FALSE, //isDestroyed
 			ZL_FALSE, //isReUse
@@ -63,6 +64,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			{0}, //SymClassTable
 			{0}, //SymClassMemberTable
 			{0}, //SymFunTable
+			{0}, //SymSelfClassTable
 			/*和zengl_assemble.c汇编代码生成相关的成员*/
 			{0}, //gencode_struct
 			{0}, //AsmGCStackList
@@ -152,6 +154,8 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 			zengl_SymInsertHashTableForLocal,
 			zengl_SymInsertLocalTable,
 			zengl_SymInitLocalTable,
+			zengl_SymIsSelfToken,
+			zengl_SymAddNodeNumToSelfClassTable,
 			zengl_SymPrintTables,
 			/*定义在zengl_assemble.c中的相关函数*/
 			zengl_buildAsmCode,
@@ -351,6 +355,7 @@ ZENGL_VM_TYPE ZL_Api_Const_VM =
 				zenglDebug_SymLookupID_ForDot,
 				zenglDebug_SymLookupClass,
 				zenglDebug_SymLookupClassMember,
+				zenglDebug_SymLookupFun,
 				zenglDebug_LookupModFunTable,
 				zenglDebug_LookupFunID,
 				zenglDebug_SetFunInfo,
@@ -2476,6 +2481,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 		DebugVM->compile.SymLocalTable = VM->compile.SymLocalTable;
 		DebugVM->compile.SymClassTable = VM->compile.SymClassTable;
 		DebugVM->compile.SymClassMemberTable = VM->compile.SymClassMemberTable;
+		DebugVM->compile.SymFunTable = VM->compile.SymFunTable;
 		//将编译过程中的查询符号信息的函数重定向到调试器自定义的函数
 		DebugVM->compile.ReplaceDefConst = DebugVM->debug.ReplaceDefConst;
 		DebugVM->compile.lookupDefTable = DebugVM->debug.lookupDefTable;
@@ -2483,6 +2489,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 		DebugVM->compile.SymLookupID_ForDot = DebugVM->debug.SymLookupID_ForDot;
 		DebugVM->compile.SymLookupClass = DebugVM->debug.SymLookupClass;
 		DebugVM->compile.SymLookupClassMember = DebugVM->debug.SymLookupClassMember;
+		DebugVM->compile.SymLookupFun = DebugVM->debug.SymLookupFun;
 		DebugVM->run.LookupModFunTable = DebugVM->debug.LookupModFunTable;
 	}
 	if(debug_str == ZL_NULL)
@@ -2502,13 +2509,13 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 	DebugVM->compile.source.run_str = debug_str;
 	DebugVM->compile.source.run_str_len = ZENGL_SYS_STRLEN(debug_str);
 	DebugVM->debug.SetFunInfo(DebugVM); //设置调试所在的函数或类函数环境
-	DebugVM->compile.AsmGCStackPush(DebugVM,DebugVM->compile.SymClassTable.global_classid,ZL_ASM_STACK_ENUM_FUN_CLASSID);
+	// DebugVM->compile.AsmGCStackPush(DebugVM,DebugVM->compile.SymClassTable.global_classid,ZL_ASM_STACK_ENUM_FUN_CLASSID);
 	retcode = DebugVM->debug.Compile(DebugVM,ApiName,DebugVM->vm_main_args);
-	DebugVM->compile.AsmGCStackPop(DebugVM,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
+	// DebugVM->compile.AsmGCStackPop(DebugVM,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
 		DebugVM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
-		DebugVM->debug.Run(DebugVM);
+		retcode = DebugVM->debug.Run(DebugVM);
 		DebugVM->ApiState = ZL_API_ST_AFTER_RUN; //设置为AFTER_RUN状态
 	}
 	if(retcode == -1)
@@ -3401,5 +3408,48 @@ ZL_EXPORT ZL_EXP_INT zenglApi_ReUseCacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOI
 	}
 	// 在将缓存的编译数据都拷贝到虚拟机中后，就可以将编译器的isReUse设置为ZL_TRUE，这样在解释执行时，就可以跳过编译过程
 	VM->compile.isReUse = ZL_TRUE;
+	return 0;
+}
+
+ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupHandle(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * argDefLookupHandle)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	ZL_VM_API_DEF_LOOKUP_HANDLE defLookupHandle = (ZL_VM_API_DEF_LOOKUP_HANDLE)argDefLookupHandle;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	compile = &VM->compile;
+	compile->def_lookup.lookupHandle = defLookupHandle;
+	return 0;
+}
+
+ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupResult(ZL_EXP_VOID * VM_ARG, ZENGL_EXPORT_MOD_FUN_ARG_TYPE valType, ZL_EXP_CHAR * valStr)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile;
+	if(VM->signer != ZL_VM_SIGNER) //通过虚拟机签名判断是否是有效的虚拟机
+		return -1;
+	compile = &VM->compile;
+	if(!compile->def_lookup.isInLookupHandle)
+		return -1;
+	if(compile->def_lookup.hasFound)
+		return -2;
+	switch(valType)
+	{
+	case ZL_EXP_FAT_INT:
+		compile->def_lookup.token = ZL_TK_NUM;
+		break;
+	case ZL_EXP_FAT_FLOAT:
+		compile->def_lookup.token = ZL_TK_FLOAT;
+		break;
+	case ZL_EXP_FAT_STR:
+		compile->def_lookup.token = ZL_TK_STR;
+		break;
+	default:
+		return -1;
+		break;
+	}
+	compile->def_lookup.valIndex = compile->DefPoolAddString(VM_ARG, valStr);
+	compile->def_lookup.hasFound = ZL_TRUE;
 	return 0;
 }

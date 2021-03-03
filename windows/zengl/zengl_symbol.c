@@ -26,6 +26,59 @@
 
 #include "zengl_global.h"
 
+static ZL_VOID zengl_static_SymInitSelfClassTable(ZL_VOID * VM_ARG)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	if(compile->SymSelfClassTable.isInit)
+		return;
+	compile->SymSelfClassTable.count = 0;
+	compile->SymSelfClassTable.size = ZL_SYM_SELF_CLASS_TABLE_SIZE;
+	compile->SymSelfClassTable.members = compile->memAlloc(VM_ARG,compile->SymSelfClassTable.size * sizeof(ZENGL_SYM_SELF_CLASS_TABLE_MEMBER));
+	if(compile->SymSelfClassTable.members == ZL_NULL)
+		compile->exit(VM_ARG,ZL_ERR_CP_SYM_SELF_CLASS_TABLE_MALLOC_FAILED);
+	ZENGL_SYS_MEM_SET(compile->SymSelfClassTable.members,0,compile->SymSelfClassTable.size * sizeof(ZENGL_SYM_SELF_CLASS_TABLE_MEMBER));
+	compile->SymSelfClassTable.isInit = ZL_TRUE;
+}
+
+static ZL_VOID zengl_static_SymSelfClassTableSetClassID(ZL_VOID * VM_ARG, ZL_INT class_nodenum)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
+	ZL_INT classname_nodenum = nodes[class_nodenum].childs.childnum[0];
+	ZL_INT classid = compile->SymLookupClass(VM_ARG,classname_nodenum);
+	ZL_INT i = 0;
+	if(compile->SymSelfClassTable.count > 0)
+	{
+		for(; i < compile->SymSelfClassTable.count; i++)
+		{
+			if(compile->SymSelfClassTable.members[i].isvalid == ZL_TRUE &&
+				compile->SymSelfClassTable.members[i].class_nodenum == class_nodenum)
+			{
+				compile->SymSelfClassTable.members[i].classid = classid;
+			}
+		}
+	}
+}
+
+static ZL_INT zengl_static_SymSelfClassTableFindClassID(ZL_VOID * VM_ARG, ZL_INT self_nodenum)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	ZL_INT classid = 0;
+	ZL_INT i = 0;
+	if(compile->SymSelfClassTable.count > 0)
+	{
+		for(; i < compile->SymSelfClassTable.count; i++)
+		{
+			if(compile->SymSelfClassTable.members[i].isvalid == ZL_TRUE &&
+				compile->SymSelfClassTable.members[i].self_nodenum == self_nodenum)
+			{
+				classid = compile->SymSelfClassTable.members[i].classid;
+			}
+		}
+	}
+	return classid;
+}
+
 /**
 	hash哈希散列算法，通过节点token的标示符名字来计算出该标示符在符号hash表里的索引值。
 */
@@ -106,6 +159,7 @@ ZL_VOID zengl_buildSymTable(ZL_VOID * VM_ARG)
 			break;
 		case ZL_RSV_CLASS:
 			compile->SymInsertHashTableForClass(VM_ARG,nodes[tmpNodeNum].childs.childnum[0]);
+			zengl_static_SymSelfClassTableSetClassID(VM_ARG, tmpNodeNum);
 			break;
 		case ZL_RSV_FUN:
 			compile->SymInsertHashTableForFun(VM_ARG,nodes[tmpNodeNum].childs.childnum[0],0);
@@ -545,6 +599,17 @@ ZL_INT zengl_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 	ZL_CHAR * name = compile->TokenStringPoolGetPtr(VM_ARG,nodes[nodenum].strindex);
 	ZL_INT h = compile->hash(VM_ARG,name) + ZL_SYM_HASH_SIZE * ZL_HASH_TYPE_CLASS_TABLE;
 	ZL_INT tmpindex = compile->HashTable[h];
+	ZL_INT self_classid = 0;
+	if(compile->SymIsSelfToken(VM_ARG, name))
+	{
+		self_classid = zengl_static_SymSelfClassTableFindClassID(VM_ARG, nodenum);
+		if(!self_classid)
+		{
+			compile->parser_curnode = nodenum;
+			compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS);
+		}
+		return self_classid;
+	}
 	while(tmpindex != 0 && compile->SymClassTable.classTable[tmpindex].isvalid == ZL_TRUE &&
 		  ZENGL_SYS_STRCMP(name,compile->TokenStringPoolGetPtr(VM_ARG,compile->SymClassTable.classTable[tmpindex].nameIndex)) != 0)
 		tmpindex = compile->SymClassTable.classTable[tmpindex].next;
@@ -1620,6 +1685,42 @@ ZL_VOID zengl_SymInitLocalTable(ZL_VOID * VM_ARG)
 		compile->exit(VM_ARG,ZL_ERR_CP_SYM_LOCAL_TABLE_MALLOC_FAILED);
 	ZENGL_SYS_MEM_SET(compile->SymLocalTable.local,0,compile->SymLocalTable.size * sizeof(ZENGL_SYM_LOCAL_TABLE_MEMBER));
 	compile->SymLocalTable.isInit = ZL_TRUE;
+}
+
+ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	if(token_name == ZL_NULL)
+		token_name = compile->tokenInfo.str;
+	if(ZENGL_SYS_STRCMP(token_name, ZL_SYM_SELF_TOKEN_STR) == 0)
+	{
+		return ZL_TRUE;
+	}
+	else
+		return ZL_FALSE;
+}
+
+ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum)
+{
+	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
+	if(compile->SymSelfClassTable.cur_class_nodenum < 0)
+		return ZL_FALSE;
+	if(!compile->SymSelfClassTable.isInit)
+		zengl_static_SymInitSelfClassTable(VM_ARG);
+	if(compile->SymSelfClassTable.count == compile->SymSelfClassTable.size)
+	{
+		compile->SymSelfClassTable.size += ZL_SYM_SELF_CLASS_TABLE_SIZE;
+		compile->SymSelfClassTable.members = compile->memReAlloc(VM_ARG, compile->SymSelfClassTable.members,
+				compile->SymSelfClassTable.size * sizeof(ZENGL_SYM_SELF_CLASS_TABLE_MEMBER));
+		ZENGL_SYS_MEM_SET(compile->SymSelfClassTable.members + (compile->SymSelfClassTable.size - ZL_SYM_SELF_CLASS_TABLE_SIZE),0,
+				ZL_SYM_SELF_CLASS_TABLE_SIZE * sizeof(ZENGL_SYM_SELF_CLASS_TABLE_MEMBER));
+	}
+	compile->SymSelfClassTable.members[compile->SymSelfClassTable.count].class_nodenum = compile->SymSelfClassTable.cur_class_nodenum;
+	compile->SymSelfClassTable.members[compile->SymSelfClassTable.count].classid = 0;
+	compile->SymSelfClassTable.members[compile->SymSelfClassTable.count].self_nodenum = self_nodenum;
+	compile->SymSelfClassTable.members[compile->SymSelfClassTable.count].isvalid = ZL_TRUE;
+	compile->SymSelfClassTable.count++;
+	return ZL_TRUE;
 }
 
 /*

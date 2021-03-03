@@ -22,6 +22,30 @@ see <http://www.gnu.org/licenses/>.
 
 #include "zengl_global.h"
 
+static ZL_BOOL zengl_static_DefLookupHandle(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE * token, ZL_INT * valIndex)
+{
+	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
+	ZENGL_COMPILE_TYPE * compile = &VM->compile;
+	ZL_BOOL hasFound = ZL_FALSE;
+	if(compile->def_lookup.lookupHandle != ZL_NULL)
+	{
+		compile->def_lookup.hasFound = ZL_FALSE;
+		compile->def_lookup.isInLookupHandle = ZL_TRUE;
+		compile->def_lookup.lookupHandle(VM_ARG, compile->tokenInfo.str); //TODO
+		compile->def_lookup.isInLookupHandle = ZL_FALSE;
+		if(compile->def_lookup.hasFound)
+		{
+			hasFound = ZL_TRUE;
+			(*token) = compile->def_lookup.token;
+			(*valIndex) = compile->def_lookup.valIndex;
+			compile->def_lookup.hasFound = ZL_FALSE;
+			compile->def_lookup.token = ZL_TK_START_NONE;
+			compile->def_lookup.valIndex = 0;
+		}
+	}
+	return hasFound;
+}
+
 /*编译器退出函数，可以输出相关的出错信息*/
 ZL_VOID zengl_exit(ZL_VOID * VM_ARG,ZENGL_ERRORNO errorno, ...)
 {
@@ -180,7 +204,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				}
 				continue;
 			}
-			else if(ch >= 0 && ZENGL_SYS_CTYPE_IS_ALPHA(ch)) //判断读取的字符是否是英文字母。
+			else if(ch >= 0 && (ZENGL_SYS_CTYPE_IS_ALPHA(ch) || ch == '_')) //判断读取的字符是否是英文字母。
 			{
 				state = ZL_ST_INID; //如果是字母，我们就将state状态机设置为ZL_ST_INID 。
 				compile->makeTokenStr(VM_ARG,ch); //然后将读取出来的ch字符通过函数makeTokenStr加入到tokenInfo的动态字符串里
@@ -1118,6 +1142,7 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
 	ZENGL_TOKENTYPE token;
+	ZL_BOOL defLookupHasFound = ZL_FALSE;
 	ZL_INT nameIndex, valIndex;
 	ZL_INT temp_line,temp_col;
 	ZL_INT def_start_line,def_start_col; //def定义的起始行列号，以def关键字的行列号为准
@@ -1130,16 +1155,40 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	if(token != ZL_TK_ID)
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_MUST_WITH_ID,
 		temp_line,temp_col,compile->tokenInfo.filename);
+	if(compile->SymIsSelfToken(VM_ARG, ZL_NULL)) {
+		compile->exit(VM_ARG,ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF,
+				temp_line,temp_col,compile->tokenInfo.filename);
+	}
 	nameIndex = compile->DefPoolAddString(VM_ARG,compile->tokenInfo.str);
 	compile->freeTokenStr(VM_ARG);
 	temp_line = compile->tokenInfo.start_line;
 	temp_col = compile->tokenInfo.start_col;
+	valIndex = 0;
 	token = compile->getToken(VM_ARG);
-	if(token == ZL_TK_MINIS) //def定义的宏值可以是负数
+	if(token == ZL_TK_ID)
+	{
+		if(compile->def_lookup.lookupHandle != ZL_NULL)
+		{
+			defLookupHasFound = zengl_static_DefLookupHandle(VM_ARG, &token, &valIndex);
+		}
+		if(!defLookupHasFound)
+		{
+			compile->exit(VM_ARG,ZL_ERR_CP_DEF_LOOKUP_NOT_FOUND,
+					compile->tokenInfo.str,
+					compile->tokenInfo.start_line,
+					compile->tokenInfo.start_col,
+					compile->tokenInfo.filename,
+					compile->tokenInfo.str);
+		}
+	}
+	else if(token == ZL_TK_MINIS) //def定义的宏值可以是负数
 		token = compile->getToken(VM_ARG);
 	if(token == ZL_TK_NUM || token == ZL_TK_FLOAT || token == ZL_TK_STR)
 	{
-		valIndex =  compile->DefPoolAddString(VM_ARG,compile->tokenInfo.str);
+		if(valIndex == 0)
+		{
+			valIndex =  compile->DefPoolAddString(VM_ARG,compile->tokenInfo.str);
+		}
 		compile->insert_HashTableForDef(VM_ARG,nameIndex,token,valIndex,
 			def_start_line,def_start_col);
 		compile->freeTokenStr(VM_ARG);
@@ -1627,6 +1676,7 @@ ZL_VOID zengl_init(ZL_VOID * VM_ARG,ZL_CHAR * script_file,ZENGL_EXPORT_VM_MAIN_A
 	compile->source.filename = filename;
 	compile->source.needread = ZL_TRUE;
 	compile->source.encrypt = VM->initEncrypt; //使用虚拟机的初始加密结构体来初始化source的encrypt成员
+	compile->SymSelfClassTable.cur_class_nodenum = -1;
 }
 
 /*编译器入口函数*/

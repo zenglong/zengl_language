@@ -45,6 +45,8 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_DEF_TABLE_INVALID_INDEX, //编译器异常：在函数insert_HashTableForDef中，tmpindex不是有效的索引
 	ZL_ERR_CP_DEF_TABLE_SAME_DEF_FOUND, //语法错误：存在相同的def宏 '%s' 定义，请根据行列号进行检查
 	ZL_ERR_CP_DEF_MUST_WITH_ID, //语法错误：def关键字后面必须是有效的id标识符
+	ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF, // 语法错误：def关键字后面不可以使用self作为宏名称
+	ZL_ERR_CP_DEF_LOOKUP_NOT_FOUND,  // 语法错误：无法查询到def关键字后面的'%s'所对应的值，或者没有定义相关的def查询函数
 	ZL_ERR_CP_DEF_NO_END_SEMI, //语法错误：def定义宏必须以分号结束
 	ZL_ERR_CP_DEF_INVALID_VALUE_TYPE, //语法错误：def定义的宏对应的值必须是数字，浮点数，或字符串
 	ZL_ERR_CP_INC_FILENAME_TOO_LONG, //语法错误：文件路径信息太长
@@ -155,6 +157,9 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYM_FUN_HAS_BEEN_DEFINED,		//%s脚本函数已经被定义过了
 	ZL_ERR_CP_SYM_FUN_TABLE_INDEX_HAVE_NO_LINECOL_WHEN_PRINT,		//编译器异常：SymFunTable函数符号表中的[%d]索引对应的函数定义中没有行列号信息
 	ZL_ERR_CP_SYNTAX_CLASS_NAME_OF_CLS_STMT_NOT_EXISTS,	//语法错误：类名'%s'不存在
+	ZL_ERR_CP_SYNTAX_SELF_MUST_BE_USE_IN_CLASS,         //语法错误：self必须用于class结构中，且不能用于定义class的类名称
+	ZL_ERR_CP_SYNTAX_CLASS_NAME_CAN_NOT_USE_IN_DEBUG,   //语法错误：不能在调试表达式中使用类名
+	ZL_ERR_CP_SYNTAX_SCRIPT_FUN_CALL_CAN_NOT_USE_IN_DEBUG,   //语法错误：不能在调试表达式中调用用户自定义的脚本函数
 	ZL_ERR_CP_SYM_CLASS_TABLE_FIND_NOT_VALID_INDEX_WHEN_LOOKUP,		//编译器异常：zengl_SymLookupClass函数在SymClassTable类符号表中找到的tmpindex是无效的索引
 	ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_MALLOC_FAILED,		//编译器异常：在zengl_SymInitClassMemberTable为SymClassMemberTable类成员符号表动态数组分配内存初始化失败
 	ZL_ERR_CP_SYM_CLASSMEMBER_TABLE_NO_NOT_VALID_INDEX,	//编译器异常：zengl_SymInsertClassMemberTable函数无法在类成员符号表中找到没被占用的索引
@@ -212,6 +217,7 @@ typedef enum _ZENGL_ERRORNO{
 	ZL_ERR_CP_SYM_CAN_NOT_FIND_LOCAL_ID_MEMLOC,	//编译器异常：无法找到'%s'变量的内存地址
 	ZL_ERR_CP_SYM_LOCAL_ID_INVALID_FUN_ID,		//编译器异常：局部变量符号信息对应的函数ID无效
 	ZL_ERR_CP_SYM_LOCAL_ID_INVALID_TYPE,		//编译器异常：无效的局部符号类型
+	ZL_ERR_CP_SYM_SELF_CLASS_TABLE_MALLOC_FAILED,	//编译器异常：self节点对应的类信息动态数组分配失败
 	ZL_ERR_RUN_MAIN_INVALID_FUN_RET_ADDRESS,	//解释器运行时错误：函数的汇编返回地址必须是整数
 	ZL_ERR_RUN_MAIN_FUN_VSTACK_STRUCT_EXCEPTION,//解释器运行时错误：函数的虚拟栈结构异常
 	ZL_ERR_CP_SYNTAX_SYM_USE_MUST_HAVE_CHILD_NODE,		//语法错误：use关键字后面不可以为空节点即空语句

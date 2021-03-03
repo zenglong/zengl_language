@@ -2509,9 +2509,9 @@ ZL_EXPORT ZL_EXP_INT zenglApi_Debug(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * debug_str
 	DebugVM->compile.source.run_str = debug_str;
 	DebugVM->compile.source.run_str_len = ZENGL_SYS_STRLEN(debug_str);
 	DebugVM->debug.SetFunInfo(DebugVM); //设置调试所在的函数或类函数环境
-	DebugVM->compile.AsmGCStackPush(DebugVM,DebugVM->compile.SymClassTable.global_classid,ZL_ASM_STACK_ENUM_FUN_CLASSID);
+	// DebugVM->compile.AsmGCStackPush(DebugVM,DebugVM->compile.SymClassTable.global_classid,ZL_ASM_STACK_ENUM_FUN_CLASSID);
 	retcode = DebugVM->debug.Compile(DebugVM,ApiName,DebugVM->vm_main_args);
-	DebugVM->compile.AsmGCStackPop(DebugVM,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
+	// DebugVM->compile.AsmGCStackPop(DebugVM,ZL_ASM_STACK_ENUM_FUN_CLASSID,ZL_TRUE);
 	if(retcode == 0) //如果编译成功，则进入解释器
 	{
 		DebugVM->ApiState = ZL_API_ST_RUN; //设置为RUN状态
