@@ -1,0 +1,37 @@
+use builtin;
+
+class Test
+	act;
+	arg;
+	fun Do(act, arg, obj)
+		self obj;
+		obj.act = act;
+		obj.arg = arg;
+		if(act == 'play')
+			self.play(arg);
+		else
+			self.other(arg);
+		endif
+		self.Print(obj);
+	endfun
+
+	fun play(game)
+		print 'play: ' + game;
+	endfun
+
+	fun other(str)
+		print 'other: ' + str;
+	endfun
+
+	fun Print(obj)
+		self obj;
+		print 'obj.act: ' + obj.act;
+		print 'obj.arg: ' + obj.arg;
+	endfun
+endclass
+
+Test test;
+test = array();
+Test.Do('play', 'football', test);
+Test.Do('hello', 'worlds', test);
+Test.Print(test);
