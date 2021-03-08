@@ -8,6 +8,8 @@
 #define ZL_EXP_OS_IN_ARM_GCC
 #include "zengl_exportfuns.h"
 
+#define DEF_VERSION "dv01"
+
 #define MAIN_INFO_STRING_SIZE 200 // 动态字符串的初始化和动态扩容的字节大小
 
 typedef struct{
@@ -282,13 +284,13 @@ static void main_compute_md5(ZL_EXP_CHAR * buf, ZL_EXP_CHAR * str, ZL_EXP_BOOL i
 static void main_get_zengl_cache_path(ZL_EXP_CHAR * cache_path, int cache_path_size, ZL_EXP_CHAR * full_path, ZL_EXP_CHAR * script_root_dir)
 {
     ZL_EXP_CHAR fullpath_md5[33];
-    ZL_EXP_CHAR cache_prefix[20] = {0};
+    ZL_EXP_CHAR cache_prefix[30] = {0};
     const ZL_EXP_CHAR * cache_path_prefix = "/caches/"; // 缓存文件都放在caches目录中
     int append_length;
     main_compute_md5(fullpath_md5, full_path, ZL_EXP_TRUE, ZL_EXP_TRUE); // 将full_path进行md5编码
     // 在缓存路径前面加上zengl版本号和指针长度，不同的zengl版本生成的缓存有可能会不一样，另外，32位和64位环境下生成的内存缓存数据也是不一样的
     // 32位系统中生成的缓存数据放到64位中运行，或者反过来，都会报内存相关的错误
-    sprintf(cache_prefix, "%d_%d_%d_%ld_", ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION, (long)sizeof(ZL_EXP_CHAR *));
+    sprintf(cache_prefix, "%d_%d_%d_%ld_%s_", ZL_EXP_MAJOR_VERSION, ZL_EXP_MINOR_VERSION, ZL_EXP_REVISION, (long)sizeof(ZL_EXP_CHAR *), DEF_VERSION);
     append_length = main_full_path_append(cache_path, 0, cache_path_size, (char *)script_root_dir);
     append_length += main_full_path_append(cache_path, append_length, cache_path_size, (char *)cache_path_prefix);
     append_length += main_full_path_append(cache_path, append_length, cache_path_size, cache_prefix);
@@ -630,6 +632,26 @@ ZL_EXP_VOID main_builtin_fatal_error_callback(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT ar
     zenglApi_SetRetVal(VM_ARG, ZL_EXP_FAT_INT, ZL_EXP_NULL, 0, 0);
 }
 
+ZL_EXP_VOID main_def_lookup_handle(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defValName)
+{
+    if(strcmp(defValName, "___TRUE___") == 0)
+    {
+        zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "1");
+    }
+    else if(strcmp(defValName, "___FALSE___") == 0)
+    {
+        zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "0");
+    }
+    else if(strcmp(defValName, "___PI___") == 0)
+    {
+        zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_FLOAT, "3.141592653");
+    }
+    else if(strcmp(defValName, "___TEST_STR___") == 0)
+    {
+        zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_STR, "this is a test string by user defined");
+    }
+}
+
 /**
  * builtin模块相关的初始化代码，里面定义了builtin模块相关的模块函数以及对应的底层C处理函数
  * @param VM_ARG zengl虚拟机指针
@@ -698,6 +720,8 @@ Java_com_zengl_script_MainActivity_RunZenglFromJNI( JNIEnv* env,
     zenglApi_SetModInitHandle(VM,"builtin",builtin_module_init);
     zenglApi_SetExtraData(VM,"extra",&myenv);
     //if(zenglApi_RunStr(VM,run_str,run_str_len,"runstr") == -1) //编译执行字符串脚本
+
+    zenglApi_SetDefLookupHandle(VM, main_def_lookup_handle);
 
     // 根据脚本文件名得到缓存文件的路径信息
     main_get_zengl_cache_path(cache_path, sizeof(cache_path), scriptPath, tmpPath);

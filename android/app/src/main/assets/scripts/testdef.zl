@@ -1,0 +1,12 @@
+use builtin;
+
+def TRU ___TRUE___;
+def FAL ___FALSE___;
+def PI ___PI___;
+def STR ___TEST_STR___;
+
+print 'TRU: ' + TRU;
+print 'FAL: ' + FAL;
+print 'PI: ' + PI;
+print '2 * PI: ' + (2 * PI);
+print 'STR: ' + STR;

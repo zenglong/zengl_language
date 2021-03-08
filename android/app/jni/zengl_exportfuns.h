@@ -24,8 +24,8 @@
 #define _ZENGL_EXPORT_FUNCTIONS_H_
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
-#define ZL_EXP_MINOR_VERSION 8 //zengl子版本号
-#define ZL_EXP_REVISION 3      //zengl修正版本号
+#define ZL_EXP_MINOR_VERSION 9 //zengl子版本号
+#define ZL_EXP_REVISION 0      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed
@@ -46,6 +46,7 @@ typedef unsigned char ZL_EXP_BOOL; //定义bool类型
 typedef ZL_EXP_VOID (* ZL_VM_API_MODS_INIT)(ZL_EXP_VOID * VM_ARG); //全局模块初始化函数，会在run解释器入口处执行
 typedef ZL_EXP_VOID (* ZL_VM_API_MOD_INIT_FUNC)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT moduleID); //单个模块初始化函数，use指令执行时会调用该函数
 typedef ZL_EXP_VOID (* ZL_VM_API_MOD_FUN_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_INT argcount); //脚本中的模块函数在执行时调用的用户自定义函数
+typedef ZL_EXP_VOID (* ZL_VM_API_DEF_LOOKUP_HANDLE)(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defName);
 typedef ZL_EXP_INT (* ZL_VM_API_INFO_FUN_HANDLE)(ZL_EXP_CHAR * infoStrPtr, ZL_EXP_INT infoStrCount, ZL_EXP_VOID * VM_ARG); //一些调试信息或print指令等调用的用户自定义的函数指针
 typedef ZL_EXP_INT (* ZL_VM_API_DEBUG_BREAK_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * log); //用户自定义的断点调试函数
 typedef ZL_EXP_INT (* ZL_VM_API_DEBUG_CON_ERROR_HANDLE)(ZL_EXP_VOID * VM_ARG,ZL_EXP_CHAR * filename,ZL_EXP_INT line,ZL_EXP_INT breakIndex,ZL_EXP_CHAR * error); //用户自定义的条件断点中条件出错时的调用函数
@@ -319,6 +320,10 @@ ZL_EXPORT ZL_EXP_INT zenglApi_CacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID ** 
 
 /* 重利用缓存数据，就可以跳过编译过程 */
 ZL_EXPORT ZL_EXP_INT zenglApi_ReUseCacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * cachePoint, ZL_EXP_INT cacheSize);
+
+ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupHandle(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * argDefLookupHandle);
+
+ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupResult(ZL_EXP_VOID * VM_ARG, ZENGL_EXPORT_MOD_FUN_ARG_TYPE valType, ZL_EXP_CHAR * valStr);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
