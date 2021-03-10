@@ -1209,6 +1209,26 @@ ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG)
 	zenglApi_SetModInitHandle(VM_ARG,"sdl",main_sdl_module_init);
 }
 
+ZL_EXP_VOID main_def_lookup_handle(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defValName)
+{
+	if(strcmp(defValName, "___TRUE___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "1");
+	}
+	else if(strcmp(defValName, "___FALSE___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_INT, "0");
+	}
+	else if(strcmp(defValName, "___PI___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_FLOAT, "3.141592653");
+	}
+	else if(strcmp(defValName, "___TEST_STR___") == 0)
+	{
+		zenglApi_SetDefLookupResult(VM_ARG, ZL_EXP_FAT_STR, "this is a test string by user defined");
+	}
+}
+
 void main_exit(void * VM,char * err_format,...)
 {
 	va_list arg;
@@ -1418,6 +1438,8 @@ int main(VOID * task, int argc, char * argv[])
 
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
+
+	zenglApi_SetDefLookupHandle(VM, main_def_lookup_handle);
 
 	if(zenglApi_Run(VM,argv[1]) == -1) { //编译执行zengl脚本
 		main_fatal_error_set_error_string(zenglApi_GetErrorString(VM));
