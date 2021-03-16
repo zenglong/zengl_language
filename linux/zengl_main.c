@@ -22,6 +22,11 @@ see <http://www.gnu.org/licenses/>.
 
 #include "zengl_global.h"
 
+/**
+ * 通过用户自定义的def宏值查询函数，查询出对应的宏值
+ * 并将查找出来的宏值的token类型设置到token参数，以及将宏值在def_StringPool字符串池中的索引值设置到valIndex参数
+ * 如果查询到了宏值就返回ZL_TRUE，否则返回ZL_FALSE
+ */
 static ZL_BOOL zengl_static_DefLookupHandle(ZL_VOID * VM_ARG, ZENGL_TOKENTYPE * token, ZL_INT * valIndex)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
@@ -204,7 +209,7 @@ ZENGL_TOKENTYPE zengl_getToken(ZL_VOID * VM_ARG)
 				}
 				continue;
 			}
-			else if(ch >= 0 && (ZENGL_SYS_CTYPE_IS_ALPHA(ch) || ch == '_')) //判断读取的字符是否是英文字母。
+			else if(ch >= 0 && (ZENGL_SYS_CTYPE_IS_ALPHA(ch) || ch == '_')) //判断读取的字符是否是英文字母或下划线，标识符可以用英文字母或下划线开头
 			{
 				state = ZL_ST_INID; //如果是字母，我们就将state状态机设置为ZL_ST_INID 。
 				compile->makeTokenStr(VM_ARG,ch); //然后将读取出来的ch字符通过函数makeTokenStr加入到tokenInfo的动态字符串里
@@ -1155,7 +1160,7 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	if(token != ZL_TK_ID)
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_MUST_WITH_ID,
 		temp_line,temp_col,compile->tokenInfo.filename);
-	if(compile->SymIsSelfToken(VM_ARG, ZL_NULL)) {
+	if(compile->SymIsSelfToken(VM_ARG, ZL_NULL)) { // def关键字后面不可以使用self作为宏名称，因为self已经被用于在类结构中表示当前所在类的类名了
 		compile->exit(VM_ARG,ZL_ERR_CP_DEF_CAN_NOT_WITH_SELF,
 				temp_line,temp_col,compile->tokenInfo.filename);
 	}
@@ -1165,6 +1170,7 @@ ZL_VOID zengl_AddDefConst(ZL_VOID * VM_ARG)
 	temp_col = compile->tokenInfo.start_col;
 	valIndex = 0;
 	token = compile->getToken(VM_ARG);
+	// 如果def的宏值是ID标识符，则将标识符对应的字符串作为查询名称，传递给用户自定义的查询函数，并将查询结果作为最终的宏值
 	if(token == ZL_TK_ID)
 	{
 		if(compile->def_lookup.lookupHandle != ZL_NULL)

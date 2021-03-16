@@ -342,6 +342,7 @@ FindGlobalSymLoc:
 
 /*
 	调试器根据节点号查找类ID信息
+	由于目前调试表达式中不能使用类声明语句，也不能调用类中的方法，因此，下面函数会直接报不能在调试表达式中使用类名的语法错误
 */
 ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 {
@@ -384,6 +385,10 @@ ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT pa
 	return -1;
 }
 
+/**
+ * 调试器中根据节点号查找函数ID信息
+ * 由于目前调试表达式中只能调用模块函数，不能调用用户自定义的脚本函数，因此，下面函数在查找到自定义的脚本函数时就会报相应的错误
+ */
 ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;

@@ -315,12 +315,12 @@ typedef struct _ZENGL_DEF_TABLE{
 } ZENGL_DEF_TABLE;  //def宏定义动态数组
 
 typedef struct _ZENGL_DEF_LOOKUP_TYPE{
-	ZL_BOOL isInLookupHandle;
-	ZL_VM_API_DEF_LOOKUP_HANDLE lookupHandle;
-	ZL_BOOL hasFound;
-	ZENGL_TOKENTYPE token;
-	ZL_INT valIndex;
-} ZENGL_DEF_LOOKUP_TYPE;
+	ZL_BOOL isInLookupHandle;  // 判断当前是否处于下面设置的lookupHandle函数调用当中，像zenglApi_SetDefLookupResult接口只能在用户设置的lookupHandle函数中使用
+	ZL_VM_API_DEF_LOOKUP_HANDLE lookupHandle; // 用户自定义的def宏值查询函数，通过该函数可以根据自定义的查询名称来返回相应的宏值(从而实现用户程序向脚本中导入自定义的宏值)
+	ZL_BOOL hasFound;          // 该字段用于判断是否查询到了对应的宏值
+	ZENGL_TOKENTYPE token;     // 查询到的宏值的token节点类型，用于判断宏值是整数类型，还是浮点数类型，或者是字符串类型
+	ZL_INT valIndex;           // 查询到的宏值在def_StringPool字符串池中的索引(宏值在编译时是以字符串形式进行存储的，在生成虚拟汇编指令时才转为对应的整数，浮点数等)
+} ZENGL_DEF_LOOKUP_TYPE; // 该结构用于存储和def宏值查询相关的用户自定义函数，以及存储根据该查询函数查询出来的宏值结果
 
 typedef struct _ZENGL_LINECOL{
 	ZL_INT lineno;
@@ -356,13 +356,13 @@ typedef struct _ZENGL_FILE_STACKLIST_TYPE{
 		下面是和zengl_symbol.c符号表处理相关的结构体和枚举等定义
 ********************************************************************************/
 
-#define ZL_SYM_SELF_TOKEN_STR "self"
+#define ZL_SYM_SELF_TOKEN_STR "self" // 使用self这种特殊类名来表示当前所在类的类名
 #define ZL_SYM_GLOBAL_TABLE_SIZE 211 //全局变量符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_LOCAL_TABLE_SIZE 211	 //局部变量(包括函数参数)符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_CLASS_TABLE_SIZE 50 //存放类信息的动态数组初始化和动态扩容的大小
 #define ZL_SYM_CLASSMEMBER_TABLE_SIZE 211 //类成员符号表动态数组初始化和动态扩容的大小
 #define ZL_SYM_FUN_TABLE_SIZE 100 //函数符号表的动态数组初始化和动态扩容的大小
-#define ZL_SYM_SELF_CLASS_TABLE_SIZE 20
+#define ZL_SYM_SELF_CLASS_TABLE_SIZE 20 // self节点对应的类信息的动态数组的初始化和动态扩容的大小
 
 typedef enum _ZENGL_SYM_ENUM_LOCAL_TYPE{
 	ZL_SYM_ENUM_LOCAL_TYPE_START,	//默认初始值，不对应任何类型
@@ -458,18 +458,18 @@ typedef struct _ZENGL_SYM_FUN_TABLE{
 }ZENGL_SYM_FUN_TABLE; //函数表动态数组的结构定义
 
 typedef struct _ZENGL_SYM_SELF_CLASS_TABLE_MEMBER{
-	ZL_BOOL isvalid;
-	ZL_INT self_nodenum;
-	ZL_INT class_nodenum;
-	ZL_INT classid;
+	ZL_BOOL isvalid;       // 判断当前成员是否有效
+	ZL_INT self_nodenum;   // self节点的AST节点号
+	ZL_INT class_nodenum;  // self节点所在的类的class节点的AST节点号
+	ZL_INT classid;        // self节点对应的类ID
 }ZENGL_SYM_SELF_CLASS_TABLE_MEMBER; // self节点对应的类信息的动态数组的成员的结构定义
 
 typedef struct _ZENGL_SYM_SELF_CLASS_TABLE{
-	ZL_BOOL isInit;
-	ZL_INT size;
-	ZL_INT count;
-	ZENGL_SYM_SELF_CLASS_TABLE_MEMBER * members;
-	ZL_INT cur_class_nodenum;
+	ZL_BOOL isInit; // 判断self节点对应的类信息的动态数组是否初始化
+	ZL_INT size;    // 动态数组小大，当前最大可容纳的成员数，当count有效成员数等于size时，会对动态数组进行动态扩容，同时增加size的值
+	ZL_INT count;   // 动态数组中的有效成员数
+	ZENGL_SYM_SELF_CLASS_TABLE_MEMBER * members; // 指向动态数组的指针，动态数组中的每个成员的结构都是ZENGL_SYM_SELF_CLASS_TABLE_MEMBER类型
+	ZL_INT cur_class_nodenum; // 编译器在将类的class节点加入AST抽象语法树时，会将该节点的AST节点号记录到cur_class_nodenum字段，这样类里面的self节点就可以和该class节点建立关联了，从而可以知道self节点属于哪个类了
 }ZENGL_SYM_SELF_CLASS_TABLE; // 存储self节点对应的类信息的动态数组的结构定义
 
 /********************************************************************************
@@ -1188,7 +1188,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT TokenOperateStringCount; //TokenOperateString成员的个数
 	ZENGL_STRING_POOL_TYPE def_StringPool; //def宏定义常量的字符串池
 	ZENGL_DEF_TABLE def_table; //宏定义动态数组。
-	ZENGL_DEF_LOOKUP_TYPE def_lookup;
+	ZENGL_DEF_LOOKUP_TYPE def_lookup; // 该结构用于存储和def宏值查询相关的用户自定义函数，以及存储根据该查询函数查询出来的宏值结果
 	ZL_BOOL isinCompiling; //判断编译器是否正在编译
 	ZL_BOOL isDestroyed; //判断编译器的内存池等资源是否被释放了
 	ZL_BOOL isReUse;	//用户是否需要重利用虚拟机之前已经编译好的资源，如果需要则不执行具体的编译操作，可以直接执行之前编译好的指令代码
@@ -1295,8 +1295,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_BOOL (* SymInsertHashTableForLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中 对应 zengl_SymInsertHashTableForLocal
 	ZL_INT (* SymInsertLocalTable)(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量名和局部变量的类型插入到SymLocalTable动态数组中。对应 zengl_SymInsertLocalTable
 	ZL_VOID (* SymInitLocalTable)(ZL_VOID * VM_ARG); //初始化SymLocalTable局部符号表对应的动态数组 对应 zengl_SymInitLocalTable
-	ZL_BOOL (* SymIsSelfToken)(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
-	ZL_BOOL (* SymAddNodeNumToSelfClassTable)(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
+	ZL_BOOL (* SymIsSelfToken)(ZL_VOID * VM_ARG, ZL_CHAR * token_name); // 根据token名称判断是否是self的token 对应 zengl_SymIsSelfToken
+	ZL_BOOL (* SymAddNodeNumToSelfClassTable)(ZL_VOID * VM_ARG, ZL_INT self_nodenum); // 如果某个标识符节点是self节点，则将该节点的AST节点号加入到self节点类信息动态数组中 对应 zengl_SymAddNodeNumToSelfClassTable
 	ZL_VOID (* SymPrintTables)(ZL_VOID * VM_ARG);	  //打印符号表 对应 zengl_SymPrintTables
 	/*定义在zengl_assemble.c中的相关函数*/
 	ZL_VOID (* buildAsmCode)(ZL_VOID * VM_ARG); //组建汇编代码的主程式 对应 zengl_buildAsmCode
@@ -1514,7 +1514,7 @@ typedef struct _ZENGL_DEBUG_TYPE
 	ZL_INT (* SymLookupID_ForDot)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时 对应 zenglDebug_SymLookupID_ForDot
 	ZL_INT (* SymLookupClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息 对应 zenglDebug_SymLookupClass
 	ZL_INT (* SymLookupClassMember)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息 对应 zenglDebug_SymLookupClassMember
-	ZL_INT (* SymLookupFun)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
+	ZL_INT (* SymLookupFun)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid); // 调试器中根据节点号查找函数ID信息 对应 zenglDebug_SymLookupFun
 	ZL_INT (* LookupModFunTable)(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引 对应 zenglDebug_LookupModFunTable
 	ZL_INT (* LookupFunID)(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值 对应 zenglDebug_LookupFunID
 	ZL_INT (* SetFunInfo)(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境 对应 zenglDebug_SetFunInfo
@@ -1650,8 +1650,8 @@ ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum); //使用AST扫�
 ZL_BOOL zengl_SymInsertHashTableForLocal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量和参数插入到局部变量符号表中，并将符号表动态数组的索引加入到哈希表中
 ZL_INT zengl_SymInsertLocalTable(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //将局部变量名和局部变量的类型插入到SymLocalTable动态数组中。
 ZL_VOID zengl_SymInitLocalTable(ZL_VOID * VM_ARG); //初始化SymLocalTable局部符号表对应的动态数组
-ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
-ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
+ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name); // 根据token名称判断是否是self的token
+ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum); // 如果某个标识符节点是self节点，则将该节点的AST节点号加入到self节点类信息动态数组中
 ZL_VOID zengl_SymPrintTables(ZL_VOID * VM_ARG);		//打印符号表
 
 //下面是定义在zengl_assemble.c中的函数
@@ -1821,7 +1821,7 @@ ZENGL_RUN_INST_OP_DATA zenglDebug_SymLookupID(ZL_VOID * VM_ARG,ZL_INT nodenum); 
 ZL_INT zenglDebug_SymLookupID_ForDot(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器查找nodenum对应节点的classid值，主要用于生成点运算符的汇编指令时
 ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器根据节点号查找类ID信息
 ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //调试器从SymClassMemberTable中查找parent_classid对应的类的成员nodenum的信息
-ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
+ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid); // 调试器中根据节点号查找函数ID信息
 ZL_INT zenglDebug_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //调试器中查找某模块函数的信息，返回该模块函数在动态数组中的索引
 ZL_INT zenglDebug_LookupFunID(ZL_VOID * VM_ARG,ZL_INT nodenum); //调试器通过函数名所在的节点索引值来查找函数的ID值
 ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG); //设置调试器所在的脚本函数环境
