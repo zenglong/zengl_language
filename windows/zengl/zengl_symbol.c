@@ -26,6 +26,9 @@
 
 #include "zengl_global.h"
 
+/**
+ * 初始化self节点类信息动态数组
+ */
 static ZL_VOID zengl_static_SymInitSelfClassTable(ZL_VOID * VM_ARG)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -40,6 +43,10 @@ static ZL_VOID zengl_static_SymInitSelfClassTable(ZL_VOID * VM_ARG)
 	compile->SymSelfClassTable.isInit = ZL_TRUE;
 }
 
+/**
+ * 根据class的AST节点号，得到所属类的类名，再由类名查找出所属类的类ID，并将类ID设置到self节点类信息动态数组中
+ * 从而可以在类结构中使用self来表示所属类的类名了，因为动态数组中存储了self节点对应的类ID信息，这些类ID与直接使用所属类的类名查出来的类ID是相同的
+ */
 static ZL_VOID zengl_static_SymSelfClassTableSetClassID(ZL_VOID * VM_ARG, ZL_INT class_nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -60,6 +67,9 @@ static ZL_VOID zengl_static_SymSelfClassTableSetClassID(ZL_VOID * VM_ARG, ZL_INT
 	}
 }
 
+/**
+ * 根据self节点的AST节点号，从self节点类信息动态数组中，查找出该self节点所对应的类ID
+ */
 static ZL_INT zengl_static_SymSelfClassTableFindClassID(ZL_VOID * VM_ARG, ZL_INT self_nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -600,6 +610,7 @@ ZL_INT zengl_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum)
 	ZL_INT h = compile->hash(VM_ARG,name) + ZL_SYM_HASH_SIZE * ZL_HASH_TYPE_CLASS_TABLE;
 	ZL_INT tmpindex = compile->HashTable[h];
 	ZL_INT self_classid = 0;
+	// 如果是self节点，则直接从self节点类信息动态数组中查找类ID
 	if(compile->SymIsSelfToken(VM_ARG, name))
 	{
 		self_classid = zengl_static_SymSelfClassTableFindClassID(VM_ARG, nodenum);
@@ -1687,6 +1698,9 @@ ZL_VOID zengl_SymInitLocalTable(ZL_VOID * VM_ARG)
 	compile->SymLocalTable.isInit = ZL_TRUE;
 }
 
+/**
+ * 根据token名称判断是否是self的token，self的token在类结构中可以用于表示当前所在类的类名
+ */
 ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;
@@ -1700,6 +1714,11 @@ ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name)
 		return ZL_FALSE;
 }
 
+/**
+ * 如果某个标识符节点是self节点，则将该节点的AST节点号加入到self节点类信息动态数组中
+ * self节点类信息动态数组中的每个成员中，都包含了self节点的AST节点号，以及该self节点所在的类的class节点的AST节点号，从而将self和所在的类建立了关联，
+ * 以后就可以根据这种关联来设置这些self节点对应的类ID信息，从而实现用self来表示所在类的类名的语法了
+ */
 ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum)
 {
 	ZENGL_COMPILE_TYPE * compile = &((ZENGL_VM_TYPE *)VM_ARG)->compile;

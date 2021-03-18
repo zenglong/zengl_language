@@ -3411,6 +3411,7 @@ ZL_EXPORT ZL_EXP_INT zenglApi_ReUseCacheMemData(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOI
 	return 0;
 }
 
+/* API接口，设置用户自定义的def宏值查询函数，通过该查询函数可以根据自定义的查询名称来返回相应的宏值(从而实现用户程序向脚本中导入自定义的宏值) */
 ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupHandle(ZL_EXP_VOID * VM_ARG, ZL_EXP_VOID * argDefLookupHandle)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;
@@ -3423,6 +3424,12 @@ ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupHandle(ZL_EXP_VOID * VM_ARG, ZL_EXP_VO
 	return 0;
 }
 
+/**
+ * API接口，在用户自定义的def宏值查询函数中，可以使用该接口来设置查询到的宏值
+ * valType表示宏值的类型，可以是整数，浮点数或者是字符串类型，valStr表示宏值的字符串形式，
+ * 宏值在编译时都是以字符串的形式进行存储的，因此，即便是浮点数(例如：3.1415926)，也需要将浮点数的字符串形式传递过来，
+ * 整数类型也是一样的，也需要将整数的字符串形式传递过来
+ */
 ZL_EXPORT ZL_EXP_INT zenglApi_SetDefLookupResult(ZL_EXP_VOID * VM_ARG, ZENGL_EXPORT_MOD_FUN_ARG_TYPE valType, ZL_EXP_CHAR * valStr)
 {
 	ZENGL_VM_TYPE * VM = (ZENGL_VM_TYPE *)VM_ARG;

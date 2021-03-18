@@ -24,7 +24,7 @@
 
 #define STRNULL '\0'
 #define DEBUG_INPUT_MAX 50
-#define DEF_VERSION "dv01"
+#define DEF_VERSION "dv01" // 针对用户自定义的宏值设置的版本号，该版本号会写入缓存路径中，这样当用户的def查询函数查询到的宏值发生变化时，只要调整版本号，就可以及时更新脚本的缓存了
 
 #define MAIN_INFO_STRING_SIZE 200 // 动态字符串的初始化和动态扩容的字节大小
 
@@ -1534,6 +1534,11 @@ ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG)
 	zenglApi_SetModInitHandle(VM_ARG,"sdl",main_sdl_module_init);
 }
 
+/**
+ * 用户自定义的def宏值查询函数，该查询函数会根据查询名称返回对应的宏值
+ * 例如：def TRUE ___TRUE___; 这个语句，就会调用下面这个函数，并将___TRUE___作为查询名称传递给该函数，
+ * 函数在经过查询后，就会设置整数1作为TRUE的宏值，因此这个语句等效于 def TRUE 1;
+ */
 ZL_EXP_VOID main_def_lookup_handle(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defValName)
 {
 	if(strcmp(defValName, "___TRUE___") == 0)
@@ -1833,6 +1838,7 @@ int main(int argc,char * argv[])
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
 
+	// 设置用户自定义的def宏值查询函数
 	zenglApi_SetDefLookupHandle(VM, main_def_lookup_handle);
 
 	// 根据脚本文件名得到缓存文件的路径信息

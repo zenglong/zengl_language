@@ -315,12 +315,12 @@ typedef struct _ZENGL_DEF_TABLE{
 } ZENGL_DEF_TABLE;  //defºê¶¨Òå¶¯Ì¬Êı×é
 
 typedef struct _ZENGL_DEF_LOOKUP_TYPE{
-	ZL_BOOL isInLookupHandle;
-	ZL_VM_API_DEF_LOOKUP_HANDLE lookupHandle;
-	ZL_BOOL hasFound;
-	ZENGL_TOKENTYPE token;
-	ZL_INT valIndex;
-} ZENGL_DEF_LOOKUP_TYPE;
+	ZL_BOOL isInLookupHandle;  // ÅĞ¶Ïµ±Ç°ÊÇ·ñ´¦ÓÚÏÂÃæÉèÖÃµÄlookupHandleº¯Êıµ÷ÓÃµ±ÖĞ£¬ÏñzenglApi_SetDefLookupResult½Ó¿ÚÖ»ÄÜÔÚÓÃ»§ÉèÖÃµÄlookupHandleº¯ÊıÖĞÊ¹ÓÃ
+	ZL_VM_API_DEF_LOOKUP_HANDLE lookupHandle; // ÓÃ»§×Ô¶¨ÒåµÄdefºêÖµ²éÑ¯º¯Êı£¬Í¨¹ı¸Ãº¯Êı¿ÉÒÔ¸ù¾İ×Ô¶¨ÒåµÄ²éÑ¯Ãû³ÆÀ´·µ»ØÏàÓ¦µÄºêÖµ(´Ó¶øÊµÏÖÓÃ»§³ÌĞòÏò½Å±¾ÖĞµ¼Èë×Ô¶¨ÒåµÄºêÖµ)
+	ZL_BOOL hasFound;          // ¸Ã×Ö¶ÎÓÃÓÚÅĞ¶ÏÊÇ·ñ²éÑ¯µ½ÁË¶ÔÓ¦µÄºêÖµ
+	ZENGL_TOKENTYPE token;     // ²éÑ¯µ½µÄºêÖµµÄtoken½ÚµãÀàĞÍ£¬ÓÃÓÚÅĞ¶ÏºêÖµÊÇÕûÊıÀàĞÍ£¬»¹ÊÇ¸¡µãÊıÀàĞÍ£¬»òÕßÊÇ×Ö·û´®ÀàĞÍ
+	ZL_INT valIndex;           // ²éÑ¯µ½µÄºêÖµÔÚdef_StringPool×Ö·û´®³ØÖĞµÄË÷Òı(ºêÖµÔÚ±àÒëÊ±ÊÇÒÔ×Ö·û´®ĞÎÊ½½øĞĞ´æ´¢µÄ£¬ÔÚÉú³ÉĞéÄâ»ã±àÖ¸ÁîÊ±²Å×ªÎª¶ÔÓ¦µÄÕûÊı£¬¸¡µãÊıµÈ)
+} ZENGL_DEF_LOOKUP_TYPE; // ¸Ã½á¹¹ÓÃÓÚ´æ´¢ºÍdefºêÖµ²éÑ¯Ïà¹ØµÄÓÃ»§×Ô¶¨Òåº¯Êı£¬ÒÔ¼°´æ´¢¸ù¾İ¸Ã²éÑ¯º¯Êı²éÑ¯³öÀ´µÄºêÖµ½á¹û
 
 typedef struct _ZENGL_LINECOL{
 	ZL_INT lineno;
@@ -356,13 +356,13 @@ typedef struct _ZENGL_FILE_STACKLIST_TYPE{
 		ÏÂÃæÊÇºÍzengl_symbol.c·ûºÅ±í´¦ÀíÏà¹ØµÄ½á¹¹ÌåºÍÃ¶¾ÙµÈ¶¨Òå
 ********************************************************************************/
 
-#define ZL_SYM_SELF_TOKEN_STR "self"
+#define ZL_SYM_SELF_TOKEN_STR "self" // Ê¹ÓÃselfÕâÖÖÌØÊâÀàÃûÀ´±íÊ¾µ±Ç°ËùÔÚÀàµÄÀàÃû
 #define ZL_SYM_GLOBAL_TABLE_SIZE 211 //È«¾Ö±äÁ¿·ûºÅ±í¶¯Ì¬Êı×é³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
 #define ZL_SYM_LOCAL_TABLE_SIZE 211	 //¾Ö²¿±äÁ¿(°üÀ¨º¯Êı²ÎÊı)·ûºÅ±í¶¯Ì¬Êı×é³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
 #define ZL_SYM_CLASS_TABLE_SIZE 50 //´æ·ÅÀàĞÅÏ¢µÄ¶¯Ì¬Êı×é³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
 #define ZL_SYM_CLASSMEMBER_TABLE_SIZE 211 //Àà³ÉÔ±·ûºÅ±í¶¯Ì¬Êı×é³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
 #define ZL_SYM_FUN_TABLE_SIZE 100 //º¯Êı·ûºÅ±íµÄ¶¯Ì¬Êı×é³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
-#define ZL_SYM_SELF_CLASS_TABLE_SIZE 20
+#define ZL_SYM_SELF_CLASS_TABLE_SIZE 20 // self½Úµã¶ÔÓ¦µÄÀàĞÅÏ¢µÄ¶¯Ì¬Êı×éµÄ³õÊ¼»¯ºÍ¶¯Ì¬À©ÈİµÄ´óĞ¡
 
 typedef enum _ZENGL_SYM_ENUM_LOCAL_TYPE{
 	ZL_SYM_ENUM_LOCAL_TYPE_START,	//Ä¬ÈÏ³õÊ¼Öµ£¬²»¶ÔÓ¦ÈÎºÎÀàĞÍ
@@ -458,18 +458,18 @@ typedef struct _ZENGL_SYM_FUN_TABLE{
 }ZENGL_SYM_FUN_TABLE; //º¯Êı±í¶¯Ì¬Êı×éµÄ½á¹¹¶¨Òå
 
 typedef struct _ZENGL_SYM_SELF_CLASS_TABLE_MEMBER{
-	ZL_BOOL isvalid;
-	ZL_INT self_nodenum;
-	ZL_INT class_nodenum;
-	ZL_INT classid;
+	ZL_BOOL isvalid;       // ÅĞ¶Ïµ±Ç°³ÉÔ±ÊÇ·ñÓĞĞ§
+	ZL_INT self_nodenum;   // self½ÚµãµÄAST½ÚµãºÅ
+	ZL_INT class_nodenum;  // self½ÚµãËùÔÚµÄÀàµÄclass½ÚµãµÄAST½ÚµãºÅ
+	ZL_INT classid;        // self½Úµã¶ÔÓ¦µÄÀàID
 }ZENGL_SYM_SELF_CLASS_TABLE_MEMBER; // self½Úµã¶ÔÓ¦µÄÀàĞÅÏ¢µÄ¶¯Ì¬Êı×éµÄ³ÉÔ±µÄ½á¹¹¶¨Òå
 
 typedef struct _ZENGL_SYM_SELF_CLASS_TABLE{
-	ZL_BOOL isInit;
-	ZL_INT size;
-	ZL_INT count;
-	ZENGL_SYM_SELF_CLASS_TABLE_MEMBER * members;
-	ZL_INT cur_class_nodenum;
+	ZL_BOOL isInit; // ÅĞ¶Ïself½Úµã¶ÔÓ¦µÄÀàĞÅÏ¢µÄ¶¯Ì¬Êı×éÊÇ·ñ³õÊ¼»¯
+	ZL_INT size;    // ¶¯Ì¬Êı×éĞ¡´ó£¬µ±Ç°×î´ó¿ÉÈİÄÉµÄ³ÉÔ±Êı£¬µ±countÓĞĞ§³ÉÔ±ÊıµÈÓÚsizeÊ±£¬»á¶Ô¶¯Ì¬Êı×é½øĞĞ¶¯Ì¬À©Èİ£¬Í¬Ê±Ôö¼ÓsizeµÄÖµ
+	ZL_INT count;   // ¶¯Ì¬Êı×éÖĞµÄÓĞĞ§³ÉÔ±Êı
+	ZENGL_SYM_SELF_CLASS_TABLE_MEMBER * members; // Ö¸Ïò¶¯Ì¬Êı×éµÄÖ¸Õë£¬¶¯Ì¬Êı×éÖĞµÄÃ¿¸ö³ÉÔ±µÄ½á¹¹¶¼ÊÇZENGL_SYM_SELF_CLASS_TABLE_MEMBERÀàĞÍ
+	ZL_INT cur_class_nodenum; // ±àÒëÆ÷ÔÚ½«ÀàµÄclass½Úµã¼ÓÈëAST³éÏóÓï·¨Ê÷Ê±£¬»á½«¸Ã½ÚµãµÄAST½ÚµãºÅ¼ÇÂ¼µ½cur_class_nodenum×Ö¶Î£¬ÕâÑùÀàÀïÃæµÄself½Úµã¾Í¿ÉÒÔºÍ¸Ãclass½Úµã½¨Á¢¹ØÁªÁË£¬´Ó¶ø¿ÉÒÔÖªµÀself½ÚµãÊôÓÚÄÄ¸öÀàÁË
 }ZENGL_SYM_SELF_CLASS_TABLE; // ´æ´¢self½Úµã¶ÔÓ¦µÄÀàĞÅÏ¢µÄ¶¯Ì¬Êı×éµÄ½á¹¹¶¨Òå
 
 /********************************************************************************
@@ -1188,7 +1188,7 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_INT TokenOperateStringCount; //TokenOperateString³ÉÔ±µÄ¸öÊı
 	ZENGL_STRING_POOL_TYPE def_StringPool; //defºê¶¨Òå³£Á¿µÄ×Ö·û´®³Ø
 	ZENGL_DEF_TABLE def_table; //ºê¶¨Òå¶¯Ì¬Êı×é¡£
-	ZENGL_DEF_LOOKUP_TYPE def_lookup;
+	ZENGL_DEF_LOOKUP_TYPE def_lookup; // ¸Ã½á¹¹ÓÃÓÚ´æ´¢ºÍdefºêÖµ²éÑ¯Ïà¹ØµÄÓÃ»§×Ô¶¨Òåº¯Êı£¬ÒÔ¼°´æ´¢¸ù¾İ¸Ã²éÑ¯º¯Êı²éÑ¯³öÀ´µÄºêÖµ½á¹û
 	ZL_BOOL isinCompiling; //ÅĞ¶Ï±àÒëÆ÷ÊÇ·ñÕıÔÚ±àÒë
 	ZL_BOOL isDestroyed; //ÅĞ¶Ï±àÒëÆ÷µÄÄÚ´æ³ØµÈ×ÊÔ´ÊÇ·ñ±»ÊÍ·ÅÁË
 	ZL_BOOL isReUse;	//ÓÃ»§ÊÇ·ñĞèÒªÖØÀûÓÃĞéÄâ»úÖ®Ç°ÒÑ¾­±àÒëºÃµÄ×ÊÔ´£¬Èç¹ûĞèÒªÔò²»Ö´ĞĞ¾ßÌåµÄ±àÒë²Ù×÷£¬¿ÉÒÔÖ±½ÓÖ´ĞĞÖ®Ç°±àÒëºÃµÄÖ¸Áî´úÂë
@@ -1295,8 +1295,8 @@ typedef struct _ZENGL_COMPILE_TYPE
 	ZL_BOOL (* SymInsertHashTableForLocal)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ºÍ²ÎÊı²åÈëµ½¾Ö²¿±äÁ¿·ûºÅ±íÖĞ£¬²¢½«·ûºÅ±í¶¯Ì¬Êı×éµÄË÷Òı¼ÓÈëµ½¹şÏ£±íÖĞ ¶ÔÓ¦ zengl_SymInsertHashTableForLocal
 	ZL_INT (* SymInsertLocalTable)(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ÃûºÍ¾Ö²¿±äÁ¿µÄÀàĞÍ²åÈëµ½SymLocalTable¶¯Ì¬Êı×éÖĞ¡£¶ÔÓ¦ zengl_SymInsertLocalTable
 	ZL_VOID (* SymInitLocalTable)(ZL_VOID * VM_ARG); //³õÊ¼»¯SymLocalTable¾Ö²¿·ûºÅ±í¶ÔÓ¦µÄ¶¯Ì¬Êı×é ¶ÔÓ¦ zengl_SymInitLocalTable
-	ZL_BOOL (* SymIsSelfToken)(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
-	ZL_BOOL (* SymAddNodeNumToSelfClassTable)(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
+	ZL_BOOL (* SymIsSelfToken)(ZL_VOID * VM_ARG, ZL_CHAR * token_name); // ¸ù¾İtokenÃû³ÆÅĞ¶ÏÊÇ·ñÊÇselfµÄtoken ¶ÔÓ¦ zengl_SymIsSelfToken
+	ZL_BOOL (* SymAddNodeNumToSelfClassTable)(ZL_VOID * VM_ARG, ZL_INT self_nodenum); // Èç¹ûÄ³¸ö±êÊ¶·û½ÚµãÊÇself½Úµã£¬Ôò½«¸Ã½ÚµãµÄAST½ÚµãºÅ¼ÓÈëµ½self½ÚµãÀàĞÅÏ¢¶¯Ì¬Êı×éÖĞ ¶ÔÓ¦ zengl_SymAddNodeNumToSelfClassTable
 	ZL_VOID (* SymPrintTables)(ZL_VOID * VM_ARG);	  //´òÓ¡·ûºÅ±í ¶ÔÓ¦ zengl_SymPrintTables
 	/*¶¨ÒåÔÚzengl_assemble.cÖĞµÄÏà¹Øº¯Êı*/
 	ZL_VOID (* buildAsmCode)(ZL_VOID * VM_ARG); //×é½¨»ã±à´úÂëµÄÖ÷³ÌÊ½ ¶ÔÓ¦ zengl_buildAsmCode
@@ -1514,7 +1514,7 @@ typedef struct _ZENGL_DEBUG_TYPE
 	ZL_INT (* SymLookupID_ForDot)(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷²éÕÒnodenum¶ÔÓ¦½ÚµãµÄclassidÖµ£¬Ö÷ÒªÓÃÓÚÉú³ÉµãÔËËã·ûµÄ»ã±àÖ¸ÁîÊ± ¶ÔÓ¦ zenglDebug_SymLookupID_ForDot
 	ZL_INT (* SymLookupClass)(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷¸ù¾İ½ÚµãºÅ²éÕÒÀàIDĞÅÏ¢ ¶ÔÓ¦ zenglDebug_SymLookupClass
 	ZL_INT (* SymLookupClassMember)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //µ÷ÊÔÆ÷´ÓSymClassMemberTableÖĞ²éÕÒparent_classid¶ÔÓ¦µÄÀàµÄ³ÉÔ±nodenumµÄĞÅÏ¢ ¶ÔÓ¦ zenglDebug_SymLookupClassMember
-	ZL_INT (* SymLookupFun)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
+	ZL_INT (* SymLookupFun)(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid); // µ÷ÊÔÆ÷ÖĞ¸ù¾İ½ÚµãºÅ²éÕÒº¯ÊıIDĞÅÏ¢ ¶ÔÓ¦ zenglDebug_SymLookupFun
 	ZL_INT (* LookupModFunTable)(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //µ÷ÊÔÆ÷ÖĞ²éÕÒÄ³Ä£¿éº¯ÊıµÄĞÅÏ¢£¬·µ»Ø¸ÃÄ£¿éº¯ÊıÔÚ¶¯Ì¬Êı×éÖĞµÄË÷Òı ¶ÔÓ¦ zenglDebug_LookupModFunTable
 	ZL_INT (* LookupFunID)(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷Í¨¹ıº¯ÊıÃûËùÔÚµÄ½ÚµãË÷ÒıÖµÀ´²éÕÒº¯ÊıµÄIDÖµ ¶ÔÓ¦ zenglDebug_LookupFunID
 	ZL_INT (* SetFunInfo)(ZL_VOID * VM_ARG); //ÉèÖÃµ÷ÊÔÆ÷ËùÔÚµÄ½Å±¾º¯Êı»·¾³ ¶ÔÓ¦ zenglDebug_SetFunInfo
@@ -1650,8 +1650,8 @@ ZL_VOID zengl_SymScanFunLocal(ZL_VOID * VM_ARG,ZL_INT nodenum); //Ê¹ÓÃASTÉ¨Ãè¶ÑÕ
 ZL_BOOL zengl_SymInsertHashTableForLocal(ZL_VOID * VM_ARG,ZL_INT nodenum,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ºÍ²ÎÊı²åÈëµ½¾Ö²¿±äÁ¿·ûºÅ±íÖĞ£¬²¢½«·ûºÅ±í¶¯Ì¬Êı×éµÄË÷Òı¼ÓÈëµ½¹şÏ£±íÖĞ
 ZL_INT zengl_SymInsertLocalTable(ZL_VOID * VM_ARG,ZL_INT nameIndex,ZENGL_SYM_ENUM_LOCAL_TYPE type); //½«¾Ö²¿±äÁ¿ÃûºÍ¾Ö²¿±äÁ¿µÄÀàĞÍ²åÈëµ½SymLocalTable¶¯Ì¬Êı×éÖĞ¡£
 ZL_VOID zengl_SymInitLocalTable(ZL_VOID * VM_ARG); //³õÊ¼»¯SymLocalTable¾Ö²¿·ûºÅ±í¶ÔÓ¦µÄ¶¯Ì¬Êı×é
-ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name);
-ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum);
+ZL_BOOL zengl_SymIsSelfToken(ZL_VOID * VM_ARG, ZL_CHAR * token_name); // ¸ù¾İtokenÃû³ÆÅĞ¶ÏÊÇ·ñÊÇselfµÄtoken
+ZL_BOOL zengl_SymAddNodeNumToSelfClassTable(ZL_VOID * VM_ARG, ZL_INT self_nodenum); // Èç¹ûÄ³¸ö±êÊ¶·û½ÚµãÊÇself½Úµã£¬Ôò½«¸Ã½ÚµãµÄAST½ÚµãºÅ¼ÓÈëµ½self½ÚµãÀàĞÅÏ¢¶¯Ì¬Êı×éÖĞ
 ZL_VOID zengl_SymPrintTables(ZL_VOID * VM_ARG);		//´òÓ¡·ûºÅ±í
 
 //ÏÂÃæÊÇ¶¨ÒåÔÚzengl_assemble.cÖĞµÄº¯Êı
@@ -1821,7 +1821,7 @@ ZENGL_RUN_INST_OP_DATA zenglDebug_SymLookupID(ZL_VOID * VM_ARG,ZL_INT nodenum); 
 ZL_INT zenglDebug_SymLookupID_ForDot(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷²éÕÒnodenum¶ÔÓ¦½ÚµãµÄclassidÖµ£¬Ö÷ÒªÓÃÓÚÉú³ÉµãÔËËã·ûµÄ»ã±àÖ¸ÁîÊ±
 ZL_INT zenglDebug_SymLookupClass(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷¸ù¾İ½ÚµãºÅ²éÕÒÀàIDĞÅÏ¢
 ZL_INT zenglDebug_SymLookupClassMember(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT parent_classid); //µ÷ÊÔÆ÷´ÓSymClassMemberTableÖĞ²éÕÒparent_classid¶ÔÓ¦µÄÀàµÄ³ÉÔ±nodenumµÄĞÅÏ¢
-ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid);
+ZL_INT zenglDebug_SymLookupFun(ZL_VOID * VM_ARG,ZL_INT nodenum,ZL_INT classid); // µ÷ÊÔÆ÷ÖĞ¸ù¾İ½ÚµãºÅ²éÕÒº¯ÊıIDĞÅÏ¢
 ZL_INT zenglDebug_LookupModFunTable(ZL_VOID * VM_ARG,ZL_CHAR * functionName); //µ÷ÊÔÆ÷ÖĞ²éÕÒÄ³Ä£¿éº¯ÊıµÄĞÅÏ¢£¬·µ»Ø¸ÃÄ£¿éº¯ÊıÔÚ¶¯Ì¬Êı×éÖĞµÄË÷Òı
 ZL_INT zenglDebug_LookupFunID(ZL_VOID * VM_ARG,ZL_INT nodenum); //µ÷ÊÔÆ÷Í¨¹ıº¯ÊıÃûËùÔÚµÄ½ÚµãË÷ÒıÖµÀ´²éÕÒº¯ÊıµÄIDÖµ
 ZL_INT zenglDebug_SetFunInfo(ZL_VOID * VM_ARG); //ÉèÖÃµ÷ÊÔÆ÷ËùÔÚµÄ½Å±¾º¯Êı»·¾³
