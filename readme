@@ -1,3 +1,9 @@
+  v1.9.0 可以在class类结构中使用self来表示当前所在类的类名。增加zenglApi_SetDefLookupHandle和zenglApi_SetDefLookupResult接口，通过这两个接口用户就可以自定义def宏值查询函数，该查询函数会根据查询名称返回对应的宏值，例如：def TRUE ___TRUE___; 这个语句，就会调用用户自定义的查询函数，并将___TRUE___作为查询名称传递给查询函数，经过查询后，就会设置整数1(假设用户自定义的值是1)作为TRUE的宏值，因此这个语句等效于 def TRUE 1，如果用户自定义的___TRUE___这个查询名称的查询结果是2，则等效于 def TRUE 2; 从而实现用户程序向脚本中导入宏值。
+
+  作者：zenglong
+  时间：2021年3月20日
+  官网：www.zengl.com
+
   v1.8.3 修复zenglApi_ReUse接口可能导致Call接口无法获取正确参数的问题，修复ReUse后因重复关闭文件可能报的段错误问题，完善语法错误检测，尤其是和print相关的表达式的语法检测，android测试项目使用android studio进行开发，当前版本在windows(vc6和vs2008)，linux(主要是CentOS和Ubuntu)，Mac OS X(10.13)，android(使用android studio开发)，zenglOX(3.2.0版本)中进行了相关测试。
 
   作者：zenglong

@@ -1209,6 +1209,11 @@ ZL_EXP_VOID main_userdef_module_init(ZL_EXP_VOID * VM_ARG)
 	zenglApi_SetModInitHandle(VM_ARG,"sdl",main_sdl_module_init);
 }
 
+/**
+ * 用户自定义的def宏值查询函数，该查询函数会根据查询名称返回对应的宏值
+ * 例如：def TRUE ___TRUE___; 这个语句，就会调用下面这个函数，并将___TRUE___作为查询名称传递给该函数，
+ * 函数在经过查询后，就会设置整数1作为TRUE的宏值，因此这个语句等效于 def TRUE 1;
+ */
 ZL_EXP_VOID main_def_lookup_handle(ZL_EXP_VOID * VM_ARG, ZL_EXP_CHAR * defValName)
 {
 	if(strcmp(defValName, "___TRUE___") == 0)
@@ -1439,6 +1444,7 @@ int main(VOID * task, int argc, char * argv[])
 	if(argc >= 3 && strcmp(argv[2],"-d") == 0)
 		zenglApi_DebugSetBreakHandle(VM,main_debug_break,main_debug_conditionError,ZL_EXP_TRUE,ZL_EXP_FALSE); //设置调试API
 
+	// 设置用户自定义的def宏值查询函数
 	zenglApi_SetDefLookupHandle(VM, main_def_lookup_handle);
 
 	if(zenglApi_Run(VM,argv[1]) == -1) { //编译执行zengl脚本
