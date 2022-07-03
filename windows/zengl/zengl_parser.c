@@ -1694,6 +1694,22 @@ ZL_INT zengl_detectSetRBracketToSemi(ZL_VOID * VM_ARG)
 						case ZL_TK_NUM:
 						case ZL_TK_FLOAT:
 						case ZL_TK_STR:
+						case ZL_TK_NEGATIVE:
+							break;
+						default:
+							compile->parser_curnode = tmpNodeNum+1; //使错误信息指向无效的token
+							compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_FUN_ARGLIST_INVALID_TOKEN);
+							break;
+						}
+					}
+					break;
+				case ZL_TK_NEGATIVE:
+					if((tmpNodeNum + 1) <= compile->AST_nodes.count - 1)
+					{
+						switch(nodes[tmpNodeNum+1].toktype)
+						{
+						case ZL_TK_NUM:
+						case ZL_TK_FLOAT:
 							break;
 						default:
 							compile->parser_curnode = tmpNodeNum+1; //使错误信息指向无效的token

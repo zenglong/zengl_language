@@ -25,7 +25,7 @@
 
 #define ZL_EXP_MAJOR_VERSION 1 //zengl主版本号
 #define ZL_EXP_MINOR_VERSION 9 //zengl子版本号
-#define ZL_EXP_REVISION 0      //zengl修正版本号
+#define ZL_EXP_REVISION 1      //zengl修正版本号
 #define ZL_EXP_VOID void //采用自定义的宏来代替void , char之类的C标准类型，方便以后的统一调整，这几个类型宏也可以用typedef来处理。
 #ifdef ZL_EXP_OS_IN_ARM_GCC
 	#define ZL_EXP_CHAR signed char //使用signed表示有符号的意思，因为ARM GCC下char默认是unsigned的(嵌入式上面会引发很多问题！)，所以有必要在这里指明是signed

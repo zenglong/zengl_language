@@ -1082,6 +1082,8 @@ ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum)
 	ZENGL_AST_SCAN_STACK_TYPE tmpstack;
 	ZENGL_AST_NODE_TYPE * nodes = compile->AST_nodes.nodes;
 	ZL_INT * chnum;
+	ZL_INT chnum_0, chnum_1;
+	ZL_BOOL is_negative;
 	ZENGL_RUN_INST_OP_DATA_TYPE tmpInstType = ZL_R_DT_NONE;
 	ZL_DOUBLE tmpInstData = 0;
 	if(compile->AST_TreeScanStackList.count != 0)
@@ -1109,29 +1111,41 @@ ZL_VOID zengl_SymScanFunArg(ZL_VOID * VM_ARG,ZL_INT nodenum)
 				break;
 			case ZL_TK_ASSIGN:
 				chnum = nodes[nodenum].childs.childnum;
-				switch(nodes[chnum[1]].toktype)
+				is_negative = ZL_FALSE;
+				chnum_0 = chnum[0];
+				if(nodes[chnum[1]].toktype == ZL_TK_NEGATIVE && nodes[chnum[1]].childs.count == 1) {
+					chnum_1 = nodes[chnum[1]].childs.childnum[0];
+					is_negative = ZL_TRUE;
+				}
+				else {
+					chnum_1 = chnum[1];
+				}
+				switch(nodes[chnum_1].toktype)
 				{
 				case ZL_TK_NUM:
 					tmpInstType = ZL_R_DT_NUM;
-					tmpInstData = (ZL_DOUBLE)ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					tmpInstData = (ZL_DOUBLE)ZENGL_SYS_STR_TO_LONG_NUM(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum_1].strindex));
 					break;
 				case ZL_TK_FLOAT:
 					tmpInstType = ZL_R_DT_FLOAT;
-					tmpInstData = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					tmpInstData = ZENGL_SYS_STR_TO_FLOAT(compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum_1].strindex));
 					break;
 				case ZL_TK_STR:
 					tmpInstType = ZL_R_DT_STR;
-					tmpInstData = (ZL_DOUBLE)((ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum[1]].strindex));
+					tmpInstData = (ZL_DOUBLE)((ZL_LONG)compile->TokenStringPoolGetPtr(VM_ARG,nodes[chnum_1].strindex));
 					break;
 				default:
 					compile->parser_curnode = nodenum;
 					compile->parser_errorExit(VM_ARG,ZL_ERR_CP_SYNTAX_FUN_ARGLIST_INVALID_TOKEN);
 					break;
 				}
+				if((tmpInstType == ZL_R_DT_NUM || tmpInstType == ZL_R_DT_FLOAT) && is_negative) {
+					tmpInstData = -tmpInstData;
+				}
 				run->AddInst(VM_ARG,compile->gencode_struct.pc++,nodenum,
 					ZL_R_IT_ARG_SET , ZL_R_DT_ARGMEM , compile->gencode_struct.localID,
 					tmpInstType , tmpInstData); //对应汇编指令 类似 "ARG_SET arg(%d) 123" 当某个参数没有被赋值时，设置的默认值
-				if(compile->SymInsertHashTableForLocal(VM_ARG,chnum[0],ZL_SYM_ENUM_LOCAL_TYPE_ARG) == ZL_TRUE)
+				if(compile->SymInsertHashTableForLocal(VM_ARG,chnum_0,ZL_SYM_ENUM_LOCAL_TYPE_ARG) == ZL_TRUE)
 					compile->gencode_struct.localID++;
 				break;
 			default:
