@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         // 获取zengl测试脚本的存放路径
         data_scripts_dir = getScriptPath();
-        String script_exist_flag_file = data_scripts_dir + "/script_exist_flag4";
+        String script_exist_flag_file = data_scripts_dir + "/script_exist_flag5";
         // 如果手机存储空间存放zengl测试脚本的目录中没有script_exist_flag3文件，
         // 则将app中打包进来的assets资源中的scripts目录下存放的zengl测试脚本等文件，拷贝到data_scripts_dir对应的手机存储位置
         if(!fileIsExists(script_exist_flag_file))
